@@ -1,4 +1,3 @@
-// src/app/api/home/[homeId]/warranties/[warrantyId]/attachments/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -40,7 +39,6 @@ export async function POST(req: Request, ctx: { params: Promise<Params> }) {
       recordId: null,
       reminderId: null,
 
-      // NEW
       visibility: i.visibility,
       notes: i.notes,
     })),

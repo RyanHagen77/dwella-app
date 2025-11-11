@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { ClaimHomeModal } from "../_components/ClaimHomeModal";
-import { AddRecordModal, type CreateRecordPayload } from "@/app/home/_components/AddRecordModal";
+import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
 import { ShareAccessModal } from "@/app/home/_components/ShareAccessModal";
-import { AddReminderModal } from "@/app/home/_components/AddReminderModal";
-import { FindVendorsModal, type VendorDirectoryItem } from "@/app/home/_components/FindVendorModal";
-import { AddWarrantyModal } from "@/app/home/_components/AddWarrantyModal";
+import { ClientCard } from "@/app/home/_components/ClientCard";
 import { saveJSON, loadJSON } from "@/lib/storage";
 import { glass, glassTight, textMeta, ctaPrimary, ctaGhost, heading } from "@/lib/glass";
 import { lookupByAddress } from "@/lib/mock";
@@ -16,50 +15,49 @@ import HomeTopBar from "../_components/HomeTopBar";
 /* ---------- Types ---------- */
 type RecordItem = {
   id: string;
-  date: string;
   title: string;
-  vendor: string;
-  cost: number;
-  verified: boolean;
-  attachments: string[];
-  category: string;
+  note: string | null;
+  kind: string | null;
+  date: Date | null;
+  vendor: string | null;
+  cost: number | null;
+};
+
+type Reminder = {
+  id: string;
+  title: string;
+  dueAt: Date;
+};
+
+type Warranty = {
+  id: string;
+  item: string;
+  provider: string | null;
+  expiresAt: Date | null;
 };
 
 type Property = {
   id: string;
   address: string;
+  city: string;
+  state: string;
+  zip: string;
   photo: string;
   yearBuilt?: number;
   sqft?: number;
   beds?: number;
   baths?: number;
-  estValue: number;
-  healthScore: number;
+  estValue?: number;
+  healthScore?: number;
   lastUpdated?: string;
 };
 
-type Reminder = { id: string; title: string; due: string };
-type Warranty = { id: string; item: string; vendor: string; expires: string };
-type Vendor = { id: string; name: string; type: string; verified: boolean; rating: number };
 type HomeData = {
   property: Property;
-  records?: RecordItem[];
+  records: RecordItem[];
   reminders: Reminder[];
   warranties: Warranty[];
-  vendors: Vendor[];
 };
-type PurchasedHome = { id: string; address: string; photo?: string; readonly?: boolean };
-
-/* Safe shapes for mock mapping (to avoid any) */
-type MockRecord = Partial<{
-  id: string;
-  date: string;
-  category: string;
-  vendor: string;
-  cost: number;
-  verified: boolean;
-}>;
-type MockVendor = Partial<{ id: string; name: string; type: string; verified: boolean; rating: number }>;
 
 /* ---------- Helpers ---------- */
 const s = (v: unknown, f = ""): string => (typeof v === "string" && v.length ? v : f);
@@ -67,254 +65,142 @@ const n = (v: unknown, f = 0): number => {
   const x = typeof v === "number" ? v : Number(v);
   return Number.isFinite(x) ? x : f;
 };
-const b = (v: unknown, f = false): boolean => (typeof v === "boolean" ? v : f);
 const todayISO = () => new Date().toISOString();
-const yearNow = new Date().getFullYear();
-const toDateSafe = (v: unknown): Date =>
-  v instanceof Date ? v : typeof v === "string" || typeof v === "number" ? new Date(v) : new Date();
-
-/* Upload support types */
-type PresignResponse = { key: string; url: string; publicUrl: string | null };
-type PersistAttachment = {
-  filename: string;
-  size: number;
-  contentType: string;
-  storageKey: string;
-  url: string | null;
-};
-
-/* Service request local storage shape */
-type StoredServiceRequest = {
-  id: string;
-  vendorId: string;
-  vendorName: string;
-  summary: string;
-  preferred: string;
-  contact: string;
-  createdAt: string;
-  status: "pending" | "sent" | "done";
-};
 
 export default function HomePage() {
-  /* ---------- State ---------- */
   const [data, setData] = useState<HomeData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
 
-  // Modals (existing)
+  // Modals
   const [addOpen, setAddOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-
-  // Modals (new)
-  const [hydrated, setHydrated] = useState(false);
-  const [switchOpen, setSwitchOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [serviceOpen, setServiceOpen] = useState(false);
-  const [serviceVendor, setServiceVendor] = useState<Vendor | null>(null);
-  const [reminderOpen, setReminderOpen] = useState(false);
-  const [findVendorsOpen, setFindVendorsOpen] = useState(false);
-  const [warrantyOpen, setWarrantyOpen] = useState(false);
-
-  // claim flow
   const [claimOpen, setClaimOpen] = useState(false);
-  const [claiming, setClaiming] = useState(false);
-  const [claim, setClaim] = useState({ address: "", city: "", state: "", zip: "" });
-  const [msg, setMsg] = useState<string | null>(null);
 
-  /* ---------- Load dummy payload (or cached) ---------- */
+  /* ---------- Load sample data ---------- */
   useEffect(() => {
     async function load() {
       setLoading(true);
 
-      // Prefer cached payload from landing; fall back to mock.ts
-      const cached = loadJSON<HomeData | null>("currentHome", null);
-      if (cached) {
-        const persistedRecords = loadJSON<RecordItem[] | null>("records", null);
-        const persistedRem = loadJSON<Reminder[] | null>("reminders", null);
-        const persistedWar = loadJSON<Warranty[] | null>("warranties", null);
-        const persistedVendors = loadJSON<Vendor[] | null>("vendors", null);
-        setData({
-          ...cached,
-          records: persistedRecords ?? cached.records,
-          reminders: persistedRem ?? cached.reminders ?? [],
-          warranties: persistedWar ?? cached.warranties ?? [],
-          vendors: persistedVendors ?? cached.vendors,
-        });
-        setHydrated(true);
-        setLoading(false);
-        return;
-      }
-
-      // Address handoff or default
-      const addr = loadJSON<string>("lastSearchedAddress", "1842 Maple St, Austin, TX 78704");
-      const { property, records, vendors } = await lookupByAddress(addr);
-
-      const d: HomeData = {
+      // Sample data for pre-claim view
+      const sampleData: HomeData = {
         property: {
-          id: s(property?.id, "prop_1"),
-          address: s(addr, "Unknown address"),
+          id: "sample_home_1",
+          address: "1842 Maple St",
+          city: "Austin",
+          state: "TX",
+          zip: "78704",
           photo: "/myhomedox_homeowner1.jpg",
-          yearBuilt: n(property?.yearBuilt, yearNow),
-          sqft: n(property?.sqft, 0),
-          beds: n(property?.beds, 0),
-          baths: n(property?.baths, 0),
-          estValue: n(property?.estValue, 0),
-          healthScore: n(property?.healthScore, 0),
-          lastUpdated: s(property?.lastUpdated, todayISO()),
+          yearBuilt: 2015,
+          sqft: 2400,
+          beds: 4,
+          baths: 3,
+          estValue: 450000,
+          healthScore: 85,
+          lastUpdated: todayISO(),
         },
-        records: (records ?? []).map((r, i) => {
-          const rec = r as MockRecord;
-          return {
-            id: s(rec.id, `rec_${i}`),
-            date: s(rec.date, todayISO()),
-            title: s(rec.category, "General"),
-            vendor: s(rec.vendor, "Unknown vendor"),
-            cost: n(rec.cost, 0),
-            verified: b(rec.verified, false),
-            attachments: [],
-            category: s(rec.category, "General"),
-          };
-        }),
+        records: [
+          {
+            id: "rec1",
+            title: "HVAC Annual Maintenance",
+            note: "System cleaned and filters replaced",
+            kind: "maintenance",
+            date: new Date(2024, 10, 1),
+            vendor: "Cool Breeze HVAC",
+            cost: 150,
+          },
+          {
+            id: "rec2",
+            title: "Roof Inspection",
+            note: null,
+            kind: "inspection",
+            date: new Date(2024, 9, 15),
+            vendor: "Apex Roofing",
+            cost: 0,
+          },
+          {
+            id: "rec3",
+            title: "Water Heater Repair",
+            note: "Replaced heating element",
+            kind: "repair",
+            date: new Date(2024, 8, 22),
+            vendor: "Fast Plumbing",
+            cost: 285,
+          },
+        ],
         reminders: [
-          { id: "rem1", title: "Change HVAC Filter", due: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString() },
-          { id: "rem2", title: "Clean Gutters", due: new Date(Date.now() + 1000 * 60 * 60 * 24 * 90).toISOString() },
+          {
+            id: "rem1",
+            title: "Replace HVAC filter",
+            dueAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days
+          },
+          {
+            id: "rem2",
+            title: "Gutter cleaning",
+            dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          },
+          {
+            id: "rem3",
+            title: "Water heater flush",
+            dueAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          },
         ],
         warranties: [
-          { id: "war1", item: "Water Heater", vendor: "AquaFix Plumbing", expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365).toISOString() },
-          { id: "war2", item: "Roof Shingles", vendor: "Lone Star Roofing", expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 365 * 5).toISOString() },
+          {
+            id: "war1",
+            item: "Water Heater",
+            provider: "AO Smith",
+            expiresAt: new Date(2026, 2, 27),
+          },
+          {
+            id: "war2",
+            item: "HVAC System",
+            provider: "Carrier",
+            expiresAt: new Date(2025, 11, 15),
+          },
         ],
-        vendors: (vendors ?? []).map((v, i) => {
-          const vv = v as MockVendor;
-          return {
-            id: s(vv.id, `ven_${i}`),
-            name: s(vv.name, "Unknown vendor"),
-            type: s(vv.type, "general"),
-            verified: b(vv.verified, false),
-            rating: n(vv.rating, 0),
-          };
-        }),
       };
 
-      // Rehydrate locally-saved lists
-      const persistedRecords = loadJSON<RecordItem[] | null>("records", null);
-      const persistedRem = loadJSON<Reminder[] | null>("reminders", null);
-      const persistedWar = loadJSON<Warranty[] | null>("warranties", null);
-      const persistedVendors = loadJSON<Vendor[] | null>("vendors", null);
-
-      const withLists: HomeData = {
-        ...d,
-        records: persistedRecords ?? d.records,
-        reminders: persistedRem ?? d.reminders,
-        warranties: persistedWar ?? d.warranties,
-        vendors: persistedVendors ?? d.vendors,
-      };
-
-      setData(withLists);
+      setData(sampleData);
+      setHydrated(true);
       setLoading(false);
     }
 
     load();
   }, []);
 
-  /* ---------- Persist lists when they change ---------- */
-  useEffect(() => {
-    if (hydrated && data) saveJSON("records", data.records);
-  }, [hydrated, data?.records]);
-
-  useEffect(() => {
-    if (hydrated && data) saveJSON("reminders", data.reminders);
-  }, [hydrated, data?.reminders]);
-
-  useEffect(() => {
-    if (hydrated && data) saveJSON("warranties", data.warranties);
-  }, [hydrated, data?.warranties]);
-
-  useEffect(() => {
-    if (hydrated && data) saveJSON("vendors", data.vendors);
-  }, [hydrated, data?.vendors]);
-
-  /* ---------- Handlers: record create → presign → PUT → persist ---------- */
-  async function onCreateRecord(args: { payload: CreateRecordPayload; files: File[] }) {
+  /* ---------- Handler for unified modal ---------- */
+  async function onCreateUnified(args: { payload: UnifiedRecordPayload; files: File[] }) {
     if (!data) return;
-    const homeId = data.property.id;
-    const { payload, files } = args;
+    const { payload } = args;
 
-    // 1) Create record first (presign requires recordId)
-    const recRes = await fetch(`/api/home/${homeId}/records`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    if (payload.type === "record") {
+      const newRecord: RecordItem = {
+        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
         title: payload.title,
-        note: payload.note ?? null,
-        date: payload.date,
-        kind: payload.kind ?? (payload.category ? payload.category.toLowerCase() : null),
-        vendor: payload.vendor ?? null,
-        cost: typeof payload.cost === "number" ? payload.cost : payload.cost ? Number(payload.cost) : null,
-        verified: payload.verified ?? null,
-      }),
-    });
-    const recJson = (await recRes.json().catch(() => ({}))) as { id?: string; error?: string };
-    if (!recRes.ok || !recJson?.id) throw new Error(recJson.error || "Failed to create record");
-    const recordId = recJson.id as string;
-
-    // 2) Presign → PUT each file
-    const uploaded: PersistAttachment[] = [];
-    for (const f of files) {
-      const preRes = await fetch(`/api/uploads/presign`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          homeId,
-          recordId,
-          filename: f.name,
-          mimeType: f.type || "application/octet-stream",
-          size: f.size,
-        }),
-      });
-      if (!preRes.ok) throw new Error(`Presign failed: ${await preRes.text()}`);
-      const { key, url, publicUrl } = (await preRes.json()) as PresignResponse;
-      if (!key || !url) throw new Error("Presign missing key/url");
-
-      const putRes = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": f.type || "application/octet-stream" },
-        body: f,
-      });
-      if (!putRes.ok) throw new Error(`S3 PUT failed: ${await putRes.text().catch(() => "")}`);
-
-      uploaded.push({
-        filename: f.name,
-        size: f.size,
-        contentType: f.type || "application/octet-stream",
-        storageKey: key,
-        url: publicUrl,
-      });
-    }
-
-    // 3) Persist attachment rows (batch)
-    if (uploaded.length) {
-      const persistRes = await fetch(`/api/home/${homeId}/records/${recordId}/attachments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(uploaded),
-      });
-      if (!persistRes.ok) throw new Error(`Persist attachments failed: ${await persistRes.text()}`);
-    }
-
-    // 4) Update local UI
-    setData((d) => {
-      if (!d) return d;
-      const newItem: RecordItem = {
-        id: recordId,
-        date: payload.date,
-        title: payload.title,
-        vendor: payload.vendor ?? "Unknown vendor",
-        cost: typeof payload.cost === "number" ? payload.cost : 0,
-        verified: !!payload.verified,
-        attachments: uploaded.map((u) => u.url || "#"),
-        category: payload.category ?? (payload.kind ?? "general"),
+        note: payload.note || null,
+        kind: payload.kind || null,
+        date: payload.date ? new Date(payload.date) : new Date(),
+        vendor: payload.vendor || null,
+        cost: typeof payload.cost === "number" ? payload.cost : null,
       };
-      return { ...d, records: [newItem, ...(d.records ?? [])] };
-    });
+      setData((d) => (d ? { ...d, records: [newRecord, ...d.records] } : d));
+    } else if (payload.type === "reminder") {
+      const newReminder: Reminder = {
+        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        title: payload.title,
+        dueAt: new Date(payload.dueAt!),
+      };
+      setData((d) => (d ? { ...d, reminders: [newReminder, ...d.reminders] } : d));
+    } else if (payload.type === "warranty") {
+      const newWarranty: Warranty = {
+        id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        item: payload.item!,
+        provider: payload.provider || null,
+        expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,
+      };
+      setData((d) => (d ? { ...d, warranties: [newWarranty, ...d.warranties] } : d));
+    }
 
     setAddOpen(false);
   }
@@ -324,625 +210,353 @@ export default function HomePage() {
     return (
       <main className="relative min-h-screen text-white">
         <div className="fixed inset-0 -z-50">
-          <div className="relative h-64 md:h-[400px] lg:h-[520px]">
-            <Image src="/myhomedox_home3.webp" alt="" fill sizes="100vw" className="object-cover object-center" priority />
-          </div>
+          <Image src="/myhomedox_home3.webp" alt="" fill sizes="100vw" className="object-cover object-center" priority />
           <div className="absolute inset-0 bg-black/45" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
         </div>
-
         <div className="mx-auto max-w-7xl p-6 space-y-6">
           <div className="h-9 w-40 animate-pulse rounded-xl bg-white/10 backdrop-blur-sm" />
           <div className="h-64 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm" />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl bg-white/10 backdrop-blur-sm" />
-            ))}
-          </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <div className="h-96 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm lg:col-span-2" />
-            <div className="h-96 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm" />
-          </div>
         </div>
       </main>
     );
   }
 
-  const { property, records = [], reminders, warranties, vendors } = data;
+  const { property, records, reminders, warranties } = data;
+  const addrLine = `${property.address}, ${property.city}, ${property.state} ${property.zip}`;
 
-  /* ---------- Page ---------- */
+  // Separate overdue and upcoming reminders
+  const now = new Date();
+  const overdueReminders = reminders.filter(r => new Date(r.dueAt) < now);
+  const upcomingReminders = reminders.filter(r => new Date(r.dueAt) >= now);
+
+  // Separate expiring soon warranties
+  const ninetyDaysFromNow = new Date();
+  ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+  const expiringSoonWarranties = warranties.filter(w =>
+    w.expiresAt && new Date(w.expiresAt) <= ninetyDaysFromNow && new Date(w.expiresAt) >= now
+  );
+
   return (
     <main className="relative min-h-screen text-white">
-      {/* Background */}
       <div className="fixed inset-0 -z-50">
-        <Image src="/myhomedox_home3.webp" alt="" fill sizes="100vw" className="object-cover object-center" priority />
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
         <div className="absolute inset-0 bg-black/45" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-        {/* Top bar */}
-        <HomeTopBar onSwitch={() => setSwitchOpen(true)} onAccount={() => setAccountOpen(true)} />
+        <HomeTopBar />
 
         {/* Claim banner */}
-        <section className={`${glass} flex items-center justify-between`}>
+        <section className={`${glass} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4`}>
           <div>
-            <p className="font-medium">This is a sample view.</p>
-            <p className={`${textMeta} text-sm`}>Claim your home to load your real listing and start storing records.</p>
+            <p className="font-medium text-white">This is a sample view.</p>
+            <p className={`${textMeta} text-sm`}>Claim your home to load your real data and start storing records.</p>
           </div>
           <button className={ctaPrimary} onClick={() => setClaimOpen(true)}>
-            Claim your address
+            Claim Your Home
           </button>
-          <ClaimHomeModal open={claimOpen} onClose={() => setClaimOpen(false)} />
         </section>
 
-        {/* Hero */}
+        {/* Hero section */}
         <section aria-labelledby="home-hero" className={glass}>
           <h2 id="home-hero" className="sr-only">
             Home overview
           </h2>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <Image
-                src={property.photo}
-                alt={`Photo of ${property.address}`}
-                width={640}
-                height={360}
-                className="aspect-video w-full rounded-md object-cover"
-              />
-            </div>
-            <div className="space-y-3">
-              <h3 className={`text-lg font-medium ${heading}`}>{property.address}</h3>
-              <div className="flex flex-wrap gap-2">
-                <button onClick={() => setAddOpen(true)} className={ctaPrimary}>
-                  Add Record
-                </button>
-                <button onClick={() => setShareOpen(true)} className={ctaGhost}>
-                  Share Access
-                </button>
-                <a href="/report" className={ctaGhost}>
-                  View Report
-                </a>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <Image
+                  src={property.photo}
+                  alt={addrLine}
+                  width={800}
+                  height={450}
+                  className="aspect-video w-full rounded-md object-cover"
+                />
               </div>
-              <p className={`text-sm ${textMeta}`}>Last updated {toDateSafe(property?.lastUpdated).toLocaleDateString()}</p>
+
+              <div className="space-y-3">
+                <h3 className={`text-lg font-medium ${heading}`}>{addrLine}</h3>
+                <p className={`text-sm ${textMeta}`}>
+                  Last updated{" "}
+                  {property.lastUpdated
+                    ? new Date(property.lastUpdated).toLocaleDateString()
+                    : "—"}
+                </p>
+              </div>
+            </div>
+
+            {/* Actions - matches ClientActions component */}
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setAddOpen(true)} className={ctaPrimary}>
+                + Add Record
+              </button>
+              <button onClick={() => setShareOpen(true)} className={ctaGhost}>
+                Share Access
+              </button>
+              <a href="/report" className={ctaGhost}>
+                View Report
+              </a>
             </div>
           </div>
         </section>
 
         {/* Stats */}
         <section aria-labelledby="stats" className="grid grid-cols-1 gap-4 md:grid-cols-5">
-          <Stat label="Health Score" value={`${property.healthScore}/100`} hint="A 0–100 score based on recent maintenance." />
-          <Stat label="Est. Value" value={`$${(property.estValue ?? 0).toLocaleString()}`} />
-          <Stat label="Beds / Baths" value={`${property.beds ?? 0} / ${property.baths ?? 0}`} />
-          <Stat label="Sq Ft" value={(property.sqft ?? 0).toLocaleString()} />
+          <Stat label="Health Score" value={property.healthScore != null ? `${property.healthScore}/100` : "—"} hint="A 0–100 score based on recent maintenance." />
+          <Stat label="Est. Value" value={property.estValue != null ? `$${Number(property.estValue).toLocaleString()}` : "—"} />
+          <Stat label="Beds / Baths" value={`${property.beds ?? "—"} / ${property.baths ?? "—"}`} />
+          <Stat label="Sq Ft" value={property.sqft != null ? Number(property.sqft).toLocaleString() : "—"} />
           <Stat label="Year Built" value={property.yearBuilt ?? "—"} />
         </section>
 
-        {/* Body */}
+        {/* Alert section for overdue items */}
+        {(overdueReminders.length > 0 || expiringSoonWarranties.length > 0) && (
+          <section className="space-y-3">
+            {overdueReminders.length > 0 && (
+              <div className={`${glass} border-l-4 border-red-400`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className={`text-lg font-medium text-red-400 ${heading}`}>
+                      ⚠️ Overdue Reminders ({overdueReminders.length})
+                    </h3>
+                    <ul className="mt-2 space-y-1">
+                      {overdueReminders.map((r) => (
+                        <li key={r.id} className="text-sm text-white/90">
+                          • {r.title} (due {new Date(r.dueAt).toLocaleDateString()})
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {expiringSoonWarranties.length > 0 && (
+              <div className={`${glass} border-l-4 border-yellow-400`}>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className={`text-lg font-medium text-yellow-400 ${heading}`}>
+                      ⏰ Warranties Expiring Soon ({expiringSoonWarranties.length})
+                    </h3>
+                    <ul className="mt-2 space-y-1">
+                      {expiringSoonWarranties.map((w) => (
+                        <li key={w.id} className="text-sm text-white/90">
+                          • {w.item} expires {new Date(w.expiresAt!).toLocaleDateString()}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Main content grid - EXACT STRUCTURE */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Timeline */}
-          <div className="space-y-3 lg:col-span-2">
-            <Card title="Home History">
+          {/* Left column - Recent History */}
+          <div className="lg:col-span-2 space-y-6">
+            <ClientCard
+              title="Recent Maintenance & Repairs"
+              viewAllLink="#"
+              homeId={property.id}
+              addType="record"
+            >
               {records.length === 0 ? (
-                <Empty message="No records yet" actionLabel="Add your first record" onAction={() => setAddOpen(true)} />
+                <div className="py-8 text-center text-white/70">
+                  <p className="mb-3">No records yet</p>
+                  <p className="text-sm text-white/60 mb-4">Start tracking your home&apos;s maintenance history</p>
+                </div>
               ) : (
-                <ul className="divide-y divide-white/10">
+                <div className="space-y-3">
                   {records.map((r) => (
-                    <li key={r.id} className="flex items-start justify-between gap-4 py-4">
-                      <div>
-                        <p className="font-medium text-white">
-                          {r.title} <span className="text-white/70">• {r.vendor}</span>
-                        </p>
-                        <p className="text-sm text-white/70">
-                          {new Date(r.date).toLocaleDateString()} • {r.category}
-                        </p>
-                        {r.attachments.length > 0 && (
-                          <div className="mt-2 flex gap-2">
-                            {r.attachments.map((a, i) => (
-                              <a key={i} href={a} className="text-sm text-white underline">
-                                Attachment {i + 1}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <span className="block font-semibold text-white">${r.cost.toLocaleString()}</span>
-                        <span
-                          className={`mt-1 inline-flex items-center rounded px-2 py-1 text-xs ${
-                            r.verified ? "bg-green-500/15 text-green-200 ring-1 ring-green-500/30" : "bg-white/10 text-white/85 ring-1 ring-white/20"
-                          }`}
-                          aria-label={r.verified ? "Verified record" : "Unverified record"}
-                        >
-                          {r.verified ? "Verified" : "Unverified"}
-                        </span>
-                      </div>
-                    </li>
+                    <RecordItem key={r.id} record={r} homeId={property.id} />
                   ))}
-                </ul>
+                </div>
               )}
-            </Card>
+            </ClientCard>
           </div>
 
-          {/* Right rail */}
-          <div className="space-y-3">
-            <Card title="Upcoming Reminders">
-              <div className="mb-2 flex justify-end">
-                <button className={ctaPrimary} onClick={() => setReminderOpen(true)}>
-                  Add
-                </button>
-              </div>
-              {reminders.length === 0 ? (
-                <Empty message="No upcoming reminders" actionLabel="Add reminder" onAction={() => setReminderOpen(true)} />
+          {/* Right column - Reminders & Warranties */}
+          <div className="space-y-6">
+            <ClientCard
+              title="Upcoming Reminders"
+              viewAllLink="#"
+              homeId={property.id}
+              addType="reminder"
+            >
+              {upcomingReminders.length === 0 ? (
+                <div className="py-8 text-center text-white/70">
+                  <p className="mb-2 text-sm">No upcoming reminders</p>
+                </div>
               ) : (
-                <ul className="space-y-2">
-                  {reminders.map((m) => (
-                    <li key={m.id} className="flex items-center justify-between text-white">
-                      <span className="text-white">{m.title}</span>
-                      <span className="text-sm text-white/70">{new Date(m.due).toLocaleDateString()}</span>
-                    </li>
+                <ul className="space-y-3">
+                  {upcomingReminders.map((m) => (
+                    <ReminderItem key={m.id} reminder={m} homeId={property.id} />
                   ))}
                 </ul>
               )}
-            </Card>
+            </ClientCard>
 
-            <Card title="Warranties & Manuals">
-              <div className="mb-2 flex justify-end">
-                <button className={ctaPrimary} onClick={() => setWarrantyOpen(true)}>
-                  Add
-                </button>
-              </div>
+            <ClientCard
+              title="Active Warranties"
+              viewAllLink="#"
+              homeId={property.id}
+              addType="warranty"
+            >
               {warranties.length === 0 ? (
-                <Empty message="No warranties on file" actionLabel="Add warranty" onAction={() => setWarrantyOpen(true)} />
+                <div className="py-8 text-center text-white/70">
+                  <p className="mb-2 text-sm">No warranties on file</p>
+                </div>
               ) : (
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {warranties.map((w) => (
-                    <li key={w.id} className="flex items-center justify-between text-white">
-                      <span>
-                        {w.item} • <span className="text-white/70">{w.vendor}</span>
-                      </span>
-                      <span className="text-sm text-white/70">Expires {new Date(w.expires).toLocaleDateString()}</span>
-                    </li>
+                    <WarrantyItem key={w.id} warranty={w} homeId={property.id} />
                   ))}
                 </ul>
               )}
-            </Card>
-
-            <Card title="Vendors">
-              <div className="mb-2 flex justify-end">
-                <button className={ctaPrimary} onClick={() => setFindVendorsOpen(true)}>
-                  Find vendors
-                </button>
-              </div>
-              {vendors.length === 0 ? (
-                <Empty message="No vendors linked" actionLabel="Find vendors" onAction={() => setFindVendorsOpen(true)} />
-              ) : (
-                <ul className="space-y-2">
-                  {vendors.map((v) => (
-                    <li key={v.id} className="flex items-center justify-between text-white">
-                      <span>
-                        {v.name} • <span className="text-white/70">{v.type}</span>
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          className={ctaGhost}
-                          onClick={() => {
-                            setServiceVendor(v);
-                            setServiceOpen(true);
-                          }}
-                          aria-haspopup="dialog"
-                        >
-                          Request
-                        </button>
-                        <span
-                          className={`rounded px-2 py-1 text-xs ${
-                            v.verified ? "bg-green-500/15 text-green-200 ring-1 ring-green-500/30" : "bg-white/10 text-white/85 ring-1 ring-white/20"
-                          }`}
-                        >
-                          {v.verified ? "Verified" : "Unverified"}
-                        </span>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
+            </ClientCard>
           </div>
         </section>
 
-        {/* Modals */}
-        <AddRecordModal open={addOpen} onCloseAction={() => setAddOpen(false)} onCreateAction={onCreateRecord} />
-
-        <ShareAccessModal open={shareOpen} onCloseAction={() => setShareOpen(false)} />
-
-        <SwitchPropertyModal open={switchOpen} onClose={() => setSwitchOpen(false)} currentId={property.id} />
-
-        <AccountModal open={accountOpen} onClose={() => setAccountOpen(false)} email={undefined} />
-
-        <VendorServiceModal
-          open={serviceOpen}
-          onClose={() => {
-            setServiceOpen(false);
-            setServiceVendor(null);
-          }}
-          vendor={serviceVendor}
-        />
-
-        <AddReminderModal
-          open={reminderOpen}
-          onCloseAction={() => setReminderOpen(false)}
-          onCreateAction={(rem) =>
-            setData((d) => (d ? { ...d, reminders: [rem, ...(d.reminders ?? [])] } : d))
-          }
-          propertyYearBuilt={property.yearBuilt}
-        />
-
-        <AddWarrantyModal
-          open={warrantyOpen}
-          onCloseAction={() => setWarrantyOpen(false)}
-          onCreateAction={(war) =>
-            setData((d) => (d ? { ...d, warranties: [war, ...(d.warranties ?? [])] } : d))
-          }
-        />
-
-        <FindVendorsModal
-          open={findVendorsOpen}
-          onCloseAction={() => setFindVendorsOpen(false)}
-          onAdd={(v: VendorDirectoryItem) => {
-            const newVendor: Vendor = {
-              id: v.id,
-              name: v.name,
-              type: v.type,
-              verified: v.verified,
-              rating: v.rating,
-            };
-            setData((d) => {
-              if (!d) return d;
-              if (d.vendors.some((x) => x.id === newVendor.id)) return d;
-              return { ...d, vendors: [newVendor, ...d.vendors] };
-            });
-          }}
-        />
-
-        {/* Claim Home modal */}
-        <ModalShell open={claimOpen} onClose={() => setClaimOpen(false)} title="Claim your home">
-          <form
-            className="space-y-3 mt-4"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setClaiming(true);
-              setMsg(null);
-              try {
-                const res = await fetch("/api/home/claim", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(claim),
-                });
-                const j = await res.json();
-                if (!res.ok) throw new Error(j.error || "Failed to claim home");
-                window.location.href = `/home/${j.id}`;
-              } catch (err: unknown) {
-                const message = err instanceof Error ? err.message : "Failed to claim home";
-                setMsg(message);
-              } finally {
-                setClaiming(false);
-              }
-            }}
-          >
-            <input
-              type="text"
-              className="w-full rounded-lg bg-black/30 text-white placeholder:text-white/50
-                       border border-white/20 p-2 focus:ring-2 focus:ring-white/60"
-              placeholder="Street address"
-              value={claim.address}
-              onChange={(e) => setClaim({ ...claim, address: e.target.value })}
-              required
-            />
-            <input
-              type="text"
-              className="w-full rounded-lg bg-black/30 text-white placeholder:text-white/50
-                       border border-white/20 p-2 focus:ring-2 focus:ring-white/60"
-              placeholder="City"
-              value={claim.city}
-              onChange={(e) => setClaim({ ...claim, city: e.target.value })}
-            />
-            <input
-              type="text"
-              className="w-full rounded-lg bg-black/30 text-white placeholder:text-white/50
-                       border border-white/20 p-2 focus:ring-2 focus:ring-white/60"
-              placeholder="State"
-              value={claim.state}
-              onChange={(e) => setClaim({ ...claim, state: e.target.value })}
-            />
-            <input
-              type="text"
-              className="w-full rounded-lg bg-black/30 text-white placeholder:text-white/50
-                       border border-white/20 p-2 focus:ring-2 focus:ring-white/60"
-              placeholder="ZIP"
-              value={claim.zip}
-              onChange={(e) => setClaim({ ...claim, zip: e.target.value })}
-            />
-
-            <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                disabled={claiming}
-                className="rounded-lg bg-white/20 hover:bg-white/30
-                         px-4 py-2 text-white font-medium focus:ring-2 focus:ring-white/50"
-              >
-                {claiming ? "Claiming…" : "Claim this home"}
-              </button>
-            </div>
-            {msg && <p className="mt-2 text-red-200 text-sm">{msg}</p>}
-          </form>
-        </ModalShell>
-
         <div className="h-12" />
       </div>
+
+      {/* Modals */}
+      <AddRecordModal
+        open={addOpen}
+        onCloseAction={() => setAddOpen(false)}
+        onCreateAction={onCreateUnified}
+      />
+
+      <ShareAccessModal open={shareOpen} onCloseAction={() => setShareOpen(false)} />
+
+      <ClaimHomeModal open={claimOpen} onClose={() => setClaimOpen(false)} />
     </main>
   );
 }
 
-/* ---------- Bits ---------- */
+/* ------- Component Helpers - EXACT SAME as authenticated page ------- */
+
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
     <div className={glassTight} role="group" aria-label={label}>
       <div className="flex items-center gap-1 text-sm text-white/70">
         <span>{label}</span>
-        {hint && (
-          <span aria-label={hint} title={hint} className="cursor-help">
-            ⓘ
-          </span>
-        )}
+        {hint && <span aria-label={hint} title={hint} className="cursor-help">ⓘ</span>}
       </div>
       <div className="mt-1 text-xl font-semibold text-white">{value}</div>
     </div>
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function RecordItem({ record, homeId }: { record: RecordItem; homeId: string }) {
   return (
-    <section className={glass}>
-      <h2 className={`mb-2 text-lg font-medium ${heading}`}>{title}</h2>
-      {children}
-    </section>
-  );
-}
-
-function Empty({
-  message,
-  actionLabel,
-  onAction,
-}: {
-  message: string;
-  actionLabel: string;
-  onAction?: () => void;
-}) {
-  return (
-    <div className="py-8 text-center text-white/70">
-      <p className="mb-2">{message}</p>
-      <button className={ctaGhost} onClick={onAction}>
-        {actionLabel}
-      </button>
-    </div>
-  );
-}
-
-function ModalShell({
-  open,
-  onClose,
-  title,
-  labelledBy,
-  children,
-}: {
-  open: boolean;
-  onClose: () => void;
-  title: string;
-  labelledBy?: string;
-  children: React.ReactNode;
-}) {
-  if (!open) return null;
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={labelledBy || "modal-title"}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
+    <Link
+      href="#"
+      className="block p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
     >
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className={`${glass} relative z-10 w-full max-w-lg`}>
-        <div className="flex items-start justify-between">
-          <h2 id={labelledBy || "modal-title"} className={`text-xl font-semibold ${heading}`}>
-            {title}
-          </h2>
-          <button className={ctaGhost} onClick={onClose} aria-label="Close">
-            Close
-          </button>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-medium text-white">{record.title}</h3>
+            {record.kind && (
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-400/20 text-blue-300">
+                {record.kind}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 mt-1 text-sm text-white/70">
+            {record.date && (
+              <span>📅 {new Date(record.date).toLocaleDateString()}</span>
+            )}
+            {record.vendor && (
+              <span>🔧 {record.vendor}</span>
+            )}
+            {record.cost != null && (
+              <span className="font-medium text-green-300">
+                ${Number(record.cost).toLocaleString()}
+              </span>
+            )}
+          </div>
+
+          {record.note && (
+            <p className="mt-2 text-sm text-white/80 line-clamp-2">{record.note}</p>
+          )}
         </div>
-        <div className="mt-3">{children}</div>
       </div>
-    </div>
+    </Link>
   );
 }
 
-function SwitchPropertyModal({
-  open,
-  onClose,
-  currentId,
-}: {
-  open: boolean;
-  onClose: () => void;
-  currentId: string;
-}) {
-  const [homes, setHomes] = useState<PurchasedHome[]>([]);
-  useEffect(() => {
-    if (!open) return;
-    const list = loadJSON<PurchasedHome[]>("purchasedHomes", []);
-    setHomes(list || []);
-  }, [open]);
+function ReminderItem({ reminder, homeId }: { reminder: Reminder; homeId: string }) {
+  const dueDate = new Date(reminder.dueAt);
+  const isOverdue = dueDate < new Date();
+  const daysUntilDue = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <ModalShell open={open} onClose={onClose} title="Switch Home" labelledBy="switch-properties">
-      {homes.length === 0 ? (
-        <p className={textMeta}>No purchased reports yet. When you buy a Homefax, it appears here as read-only.</p>
-      ) : (
-        <ul className="mt-2 space-y-3">
-          {homes.map((h) => (
-            <li key={h.id} className={`${glassTight} flex items-center gap-3`}>
-              <Image src={h.photo || "/placeholder.jpg"} alt="" width={48} height={48} className="h-12 w-12 rounded-md object-cover" />
-              <div className="flex-1">
-                <p className="text-white/85">{h.address}</p>
-                <p className={textMeta}>{h.readonly ? "Read-only report" : "Owner access"}</p>
-              </div>
-              {h.id === currentId ? (
-                <span className="inline-flex items-center rounded px-2 py-1 text-xs border border-white/20 bg-white/10 text-white/85" aria-current="true">
-                  Current
-                </span>
-              ) : (
-                <a className={ctaPrimary} href={`/home/${h.id}${h.readonly ? "?readonly=1" : ""}`}>
-                  View {h.readonly ? "(RO)" : ""}
-                </a>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="mt-4">
-        <a className={ctaGhost} href="/buy">
-          Buy another report
-        </a>
+    <Link
+      href="#"
+      className="block p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-white truncate">{reminder.title}</h3>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <span className={`text-xs font-medium ${isOverdue ? 'text-red-400' : 'text-white/70'}`}>
+            {dueDate.toLocaleDateString()}
+          </span>
+          {!isOverdue && daysUntilDue <= 7 && (
+            <span className="text-xs text-yellow-400">
+              {daysUntilDue} day{daysUntilDue !== 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
       </div>
-    </ModalShell>
+    </Link>
   );
 }
 
-function AccountModal({ open, onClose, email }: { open: boolean; onClose: () => void; email?: string }) {
+function WarrantyItem({ warranty, homeId }: { warranty: Warranty; homeId: string }) {
+  const expiresAt = warranty.expiresAt ? new Date(warranty.expiresAt) : null;
+  const isExpiringSoon = expiresAt && expiresAt <= new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
   return (
-    <ModalShell open={open} onClose={onClose} title="Account" labelledBy="account-menu">
-      <div className="space-y-4">
-        <div className={glassTight}>
-          <p className="text-white/70 text-sm">Signed in as</p>
-          <p className="text-white font-medium">{email || "you@example.com"}</p>
+    <Link
+      href="#"
+      className="block p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-medium text-white truncate">{warranty.item}</h3>
+          {warranty.provider && (
+            <p className="text-sm text-white/70">{warranty.provider}</p>
+          )}
         </div>
-        <div className="grid gap-2 sm:grid-cols-2">
-          <a className={ctaGhost} href="/account">
-            Profile &amp; Settings
-          </a>
-          <a className={ctaGhost} href="/billing">
-            Billing
-          </a>
-          <a className={ctaGhost} href="/access">
-            Shared Access
-          </a>
-          <button className={ctaGhost} onClick={() => alert("Signed out (stub).")}>
-            Sign out
-          </button>
+        <div className="flex flex-col items-end gap-1">
+          {expiresAt ? (
+            <>
+              <span className={`text-xs font-medium ${isExpiringSoon ? 'text-yellow-400' : 'text-white/70'}`}>
+                {expiresAt.toLocaleDateString()}
+              </span>
+              <span className="text-xs text-white/60">Expires</span>
+            </>
+          ) : (
+            <span className="text-xs text-white/60">No expiry</span>
+          )}
         </div>
-        <p className={`${textMeta}`}>Tip: Use Shared Access to grant read-only Homefax to buyers or agents.</p>
       </div>
-    </ModalShell>
-  );
-}
-
-function VendorServiceModal({
-  open,
-  onClose,
-  vendor,
-}: {
-  open: boolean;
-  onClose: () => void;
-  vendor: Vendor | null;
-}) {
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState({ summary: "", preferred: "", contact: "" });
-
-  useEffect(() => {
-    if (open) setForm({ summary: "", preferred: "", contact: "" });
-  }, [open]);
-
-  // ✅ Don’t render form until vendor exists
-  if (!open || !vendor) return null;
-
-  function submit() {
-    if (!vendor) return; // ✅ extra guard for TS
-    setSubmitting(true);
-
-    const reqs = loadJSON<StoredServiceRequest[] | null>("serviceRequests", null) || [];
-    const payload: StoredServiceRequest = {
-      id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
-      vendorId: vendor.id,
-      vendorName: vendor.name,
-      summary: form.summary,
-      preferred: form.preferred,
-      contact: form.contact,
-      createdAt: new Date().toISOString(),
-      status: "pending",
-    };
-    saveJSON("serviceRequests", [...reqs, payload]);
-
-    setTimeout(() => {
-      setSubmitting(false);
-      onClose();
-      alert("Request sent to vendor (stub).");
-    }, 600);
-  }
-
-  return (
-    <ModalShell open={open} onClose={onClose} title={`Request service — ${vendor.name}`}>
-      <form
-        className="space-y-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          submit();
-        }}
-      >
-        <label className="block">
-          <span className="text-white/70 text-sm">What do you need?</span>
-          <textarea
-            required
-            value={form.summary}
-            onChange={(e) => setForm({ ...form, summary: e.target.value })}
-            className="mt-1 w-full rounded-lg bg-black/30 text-white placeholder:text-white/50 border border-white/20 p-2 resize-y min-h-[90px] focus:ring-2 focus:ring-white/60"
-            placeholder="e.g., Water heater making noise, installed 2018..."
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-white/70 text-sm">Preferred date/time</span>
-          <input
-            type="text"
-            value={form.preferred}
-            onChange={(e) => setForm({ ...form, preferred: e.target.value })}
-            className="mt-1 w-full rounded-lg bg-black/30 text-white placeholder:text-white/50 border border-white/20 p-2 focus:ring-2 focus:ring-white/60"
-            placeholder="This Friday afternoon, or next week Mon/Tue morning"
-          />
-        </label>
-
-        <label className="block">
-          <span className="text-white/70 text-sm">Contact phone or email</span>
-          <input
-            required
-            type="text"
-            value={form.contact}
-            onChange={(e) => setForm({ ...form, contact: e.target.value })}
-            className="mt-1 w-full rounded-lg bg-black/30 text-white placeholder:text-white/50 border border-white/20 p-2 focus:ring-2 focus:ring-white/60"
-            placeholder="(555) 123-4567"
-          />
-        </label>
-
-        <div className="flex items-center justify-end gap-2 pt-2">
-          <button type="button" className={ctaGhost} onClick={onClose}>
-            Cancel
-          </button>
-          <button type="submit" className={ctaPrimary} disabled={submitting}>
-            {submitting ? "Sending…" : "Send request"}
-          </button>
-        </div>
-      </form>
-      <p className={`mt-2 ${textMeta} text-xs`}>We’ll notify you in the timeline when the vendor confirms.</p>
-    </ModalShell>
+    </Link>
   );
 }

@@ -7,13 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Modal } from "@/components/ui/Modal";
 import { Button, GhostButton } from "@/components/ui/Button";
-import { Input, Textarea, fieldLabel } from "@/components/ui";
+import { Input, fieldLabel } from "@/components/ui";
 import { loadJSON, saveJSON } from "@/lib/storage";
-
-import ContractorTopBar from "@/app/pro/_components/ContractorTopBar";
-
-// ❌ remove next/navigation hooks here (no need anymore)
-// import { useRouter, useSearchParams } from "next/navigation";
 
 // ---- Types ----
 type Pro = {
@@ -69,8 +64,6 @@ type ProData = {
 export default function ProClient() {
   const [data, setData] = useState<ProData | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // ❌ remove router/searchParams + redirect effect entirely (server handles it)
 
   // Modals
   const [addJobOpen, setAddJobOpen] = useState(false);
@@ -157,7 +150,6 @@ export default function ProClient() {
       <Bg />
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <ContractorTopBar />
 
         {/* Hero / Profile */}
         <section className={glass}>
@@ -430,7 +422,7 @@ function AddJobModal({ open, onClose, onCreate }: { open: boolean; onClose: () =
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Add Job / Request">
+    <Modal open={open} onCloseAction={onClose} title="Add Job / Request">
       <div className="space-y-3">
         <label className="block">
           <span className={fieldLabel}>Title</span>
@@ -461,7 +453,7 @@ function AddJobModal({ open, onClose, onCreate }: { open: boolean; onClose: () =
 
 function VerifyDocsModal({ open, onClose, onVerified }: { open: boolean; onClose: () => void; onVerified: () => void }) {
   return (
-    <Modal open={open} onClose={onClose} title="Get Verified">
+    <Modal open={open} onCloseAction={onClose} title="Get Verified">
       <div className="space-y-3">
         <p className={`text-sm ${textMeta}`}>Upload your license, insurance, and W-9. We’ll review and notify you.</p>
         <div className={`${glassTight}`}>
@@ -496,7 +488,7 @@ function EditProfileModal({
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Edit Profile">
+    <Modal open={open} onCloseAction={onClose} title="Edit Profile">
       <div className="space-y-3">
         <label className="block">
           <span className={fieldLabel}>Business name</span>

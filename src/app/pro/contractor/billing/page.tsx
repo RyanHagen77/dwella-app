@@ -9,7 +9,6 @@ import { Button, GhostButton } from "@/components/ui/Button";
 import { Input, fieldLabel } from "@/components/ui";
 import { Modal } from "@/components/ui/Modal";
 import { loadJSON, saveJSON } from "@/lib/storage";
-import ContractorTopBar from "@/app/pro/_components/ContractorTopBar";
 
 /* ---------------- Types ---------------- */
 type JobStatus = "requested" | "scheduled" | "in_progress" | "complete";
@@ -154,8 +153,6 @@ export default function BillingPage() {
       <Bg />
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-      {/* Logo + nav */}
-      <ContractorTopBar />
 
         {/* KPI cards */}
         <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">

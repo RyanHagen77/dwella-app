@@ -1,50 +1,78 @@
-// app/pro/account/page.tsx
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { glass, glassTight, heading, textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
 import { Button, GhostButton } from "@/components/ui/Button";
 import { Input, Textarea, fieldLabel } from "@/components/ui";
 import { Modal } from "@/components/ui/Modal";
 import { loadJSON, saveJSON } from "@/lib/storage";
-import ContractorTopBar from "@/app/pro/_components/ContractorTopBar";
-
 
 /* ---------------- Types ---------------- */
-type Pro = { id: string; business: string; category: string; rating: number; verified: boolean; logo?: string };
+type Pro = { 
+  id: string; 
+  business: string; 
+  category: string; 
+  rating: number; 
+  verified: boolean; 
+  logo?: string 
+};
+
+type Job = {
+  id: string;
+  title: string;
+  clientAddress: string;
+  due: string;
+  status: "requested" | "scheduled" | "in_progress" | "complete";
+  estAmount?: number;
+};
+
+type RecordItem = {
+  id: string;
+  title: string;
+  date: string;
+  address: string;
+  amount?: number;
+};
+
+type ClientHome = {
+  id: string;
+  address: string;
+  sharedLink: string;
+  owner?: string;
+};
+
+type Review = {
+  id: string;
+  author: string;
+  rating: number;
+  text: string;
+  date: string;
+};
+
 type ProData = {
   pro: Pro;
-  jobs: any[];
-  records: any[];
-  clients: { id: string; address: string; sharedLink: string; owner?: string }[];
-  reviews: any[];
+  jobs: Job[];
+  records: RecordItem[];
+  clients: ClientHome[];
+  reviews: Review[];
 };
 
 type AccountSettings = {
-  // Business & contact
   businessPhone?: string;
   businessEmail?: string;
   website?: string;
-  serviceArea?: string; // free text for demo
+  serviceArea?: string;
   logoUrl?: string;
-
-  // Notifications
   notifyNewRequests: boolean;
   notifyJobUpdates: boolean;
   notifyReviews: boolean;
   notifyPayouts: boolean;
-
-  // Security
   twoFactor: boolean;
   lastPasswordChange?: string;
-
-  // Subscription
   plan: "Free" | "Pro" | "Team";
   renewalDate?: string;
-
-  // Team (demo only)
   team: { id: string; name: string; role: "Owner" | "Technician" | "Admin"; email: string }[];
 };
 
@@ -56,7 +84,6 @@ export default function ContractorAccountPage() {
   const [acct, setAcct] = useState<AccountSettings | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Modals
   const [editBizOpen, setEditBizOpen] = useState(false);
   const [securityOpen, setSecurityOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
@@ -76,7 +103,9 @@ export default function ContractorAccountPage() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (acct && !loading) saveJSON(ACCOUNT_KEY, acct); }, [acct, loading]);
+  useEffect(() => { 
+    if (acct && !loading) saveJSON(ACCOUNT_KEY, acct); 
+  }, [acct, loading]);
 
   if (loading || !acct) {
     return (
@@ -85,10 +114,6 @@ export default function ContractorAccountPage() {
         <div className="mx-auto max-w-7xl p-6 space-y-6">
           <div className="h-9 w-48 animate-pulse rounded-xl bg-white/10 backdrop-blur-sm" />
           <div className="h-40 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm" />
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="h-64 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm md:col-span-2" />
-            <div className="h-64 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm" />
-          </div>
         </div>
       </main>
     );
@@ -102,15 +127,11 @@ export default function ContractorAccountPage() {
       <Bg />
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-      {/* Logo + nav */}
-      <ContractorTopBar />
-
         {/* Business summary card */}
         <section className={glass}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[auto_1fr_auto] sm:items-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-white/20 bg-white/10 overflow-hidden">
               {acct.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img src={acct.logoUrl} alt={`${pro?.business ?? "Business"} logo`} className="h-full w-full object-cover" />
               ) : (
                 <span className="text-lg">🏷️</span>
@@ -213,7 +234,7 @@ export default function ContractorAccountPage() {
               </div>
             </Card>
 
-            {/* Team (demo) */}
+            {/* Team */}
             <Card title="Team">
               {acct.team.length === 0 ? (
                 <p className={textMeta}>No team members yet.</p>
@@ -265,13 +286,12 @@ export default function ContractorAccountPage() {
         {pro && (
           <EditBusinessModal
             open={editBizOpen}
-            onClose={() => setEditBizOpen(false)}
+            onCloseAction={() => setEditBizOpen(false)}
             pro={pro}
             acct={acct}
             onSave={(patchPro, patchAcct) => {
               setProDb(d => (d ? { ...d, pro: { ...d.pro, ...patchPro } } : d));
               setAcct(a => (a ? { ...a, ...patchAcct } : a));
-              // persist to their respective stores
               setTimeout(() => { if (proDb) saveJSON("proData", { ...proDb, pro: { ...proDb.pro, ...patchPro } }); }, 0);
             }}
           />
@@ -279,27 +299,27 @@ export default function ContractorAccountPage() {
 
         <BrandingModal
           open={brandingOpen}
-          onClose={() => setBrandingOpen(false)}
+          onCloseAction={() => setBrandingOpen(false)}
           logoUrl={acct.logoUrl}
           onSave={(logoUrl) => setAcct(a => (a ? { ...a, logoUrl } : a))}
         />
 
         <ChangePasswordModal
           open={securityOpen}
-          onClose={() => setSecurityOpen(false)}
+          onCloseAction={() => setSecurityOpen(false)}
           onSaved={(when) => setAcct(a => (a ? { ...a, lastPasswordChange: when } : a))}
         />
 
         <ChangePlanModal
           open={planOpen}
           current={acct.plan}
-          onClose={() => setPlanOpen(false)}
+          onCloseAction={() => setPlanOpen(false)}
           onSave={(plan) => setAcct(a => (a ? { ...a, plan, renewalDate: addDays(30) } : a))}
         />
 
         <InviteTeamModal
           open={addTeamOpen}
-          onClose={() => setAddTeamOpen(false)}
+          onCloseAction={() => setAddTeamOpen(false)}
           onInvite={(m) => setAcct(a => (a ? { ...a, team: [m, ...a.team] } : a))}
         />
 
@@ -309,16 +329,8 @@ export default function ContractorAccountPage() {
   );
 }
 
-/* ---------------- Reusable bits ---------------- */
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked?: boolean;
-  onChange?: (val: boolean) => void;
-}) {
+/* ---------------- Components ---------------- */
+function Toggle({ label, checked, onChange }: { label: string; checked?: boolean; onChange?: (val: boolean) => void }) {
   return (
     <label className="flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2 hover:bg-white/10">
       <span className="text-sm text-white/90">{label}</span>
@@ -348,7 +360,6 @@ function Bg() {
     </div>
   );
 }
-
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -388,12 +399,11 @@ function Badge({ active, children }: { active?: boolean; children: React.ReactNo
 }
 
 /* ---------------- Modals ---------------- */
-
 function EditBusinessModal({
-  open, onClose, pro, acct, onSave,
+  open, onCloseAction, pro, acct, onSave,
 }: {
   open: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   pro: Pro;
   acct: AccountSettings;
   onSave: (proPatch: Partial<Pro>, acctPatch: Partial<AccountSettings>) => void;
@@ -426,48 +436,48 @@ function EditBusinessModal({
         serviceArea: serviceArea.trim() || undefined,
       }
     );
-    onClose();
+    onCloseAction();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Edit Business Profile">
+    <Modal open={open} onCloseAction={onCloseAction} title="Edit Business Profile">
       <div className="space-y-3">
-        <label className="block"><span className={fieldLabel}>Business name</span><Input value={business} onChange={e => setBusiness((e.target as HTMLInputElement).value)} /></label>
-        <label className="block"><span className={fieldLabel}>Category</span><Input value={category} onChange={e => setCategory((e.target as HTMLInputElement).value)} placeholder="e.g., HVAC, Plumber" /></label>
+        <label className="block"><span className={fieldLabel}>Business name</span><Input value={business} onChange={e => setBusiness(e.target.value)} /></label>
+        <label className="block"><span className={fieldLabel}>Category</span><Input value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g., HVAC, Plumber" /></label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="block"><span className={fieldLabel}>Business email</span><Input type="email" value={email} onChange={e => setEmail((e.target as HTMLInputElement).value)} /></label>
-          <label className="block"><span className={fieldLabel}>Business phone</span><Input value={phone} onChange={e => setPhone((e.target as HTMLInputElement).value)} placeholder="(555) 555-5555" /></label>
+          <label className="block"><span className={fieldLabel}>Business email</span><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
+          <label className="block"><span className={fieldLabel}>Business phone</span><Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(555) 555-5555" /></label>
         </div>
-        <label className="block"><span className={fieldLabel}>Website</span><Input value={website} onChange={e => setWebsite((e.target as HTMLInputElement).value)} placeholder="https://…" /></label>
-        <label className="block"><span className={fieldLabel}>Service area</span><Textarea value={serviceArea} onChange={e => setServiceArea((e.target as HTMLTextAreaElement).value)} placeholder="Neighborhoods/cities you cover" /></label>
-        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onClose}>Cancel</GhostButton><Button onClick={submit}>Save</Button></div>
+        <label className="block"><span className={fieldLabel}>Website</span><Input value={website} onChange={e => setWebsite(e.target.value)} placeholder="https://…" /></label>
+        <label className="block"><span className={fieldLabel}>Service area</span><Textarea value={serviceArea} onChange={e => setServiceArea(e.target.value)} placeholder="Neighborhoods/cities you cover" /></label>
+        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onCloseAction}>Cancel</GhostButton><Button onClick={submit}>Save</Button></div>
       </div>
     </Modal>
   );
 }
 
 function BrandingModal({
-  open, onClose, logoUrl, onSave,
-}: { open: boolean; onClose: () => void; logoUrl?: string; onSave: (url?: string) => void }) {
+  open, onCloseAction, logoUrl, onSave,
+}: { open: boolean; onCloseAction: () => void; logoUrl?: string; onSave: (url?: string) => void }) {
   const [url, setUrl] = useState(logoUrl ?? "");
   useEffect(() => { if (open) setUrl(logoUrl ?? ""); }, [open, logoUrl]);
 
-  function submit() { onSave(url.trim() || undefined); onClose(); }
+  function submit() { onSave(url.trim() || undefined); onCloseAction(); }
 
   return (
-    <Modal open={open} onClose={onClose} title="Branding">
+    <Modal open={open} onCloseAction={onCloseAction} title="Branding">
       <div className="space-y-3">
         <p className={textMeta}>For the demo, paste a logo URL. In production, wire to your uploader.</p>
-        <label className="block"><span className={fieldLabel}>Logo URL</span><Input value={url} onChange={e => setUrl((e.target as HTMLInputElement).value)} placeholder="https://…" /></label>
-        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onClose}>Cancel</GhostButton><Button onClick={submit}>Save</Button></div>
+        <label className="block"><span className={fieldLabel}>Logo URL</span><Input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://…" /></label>
+        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onCloseAction}>Cancel</GhostButton><Button onClick={submit}>Save</Button></div>
       </div>
     </Modal>
   );
 }
 
 function ChangePasswordModal({
-  open, onClose, onSaved,
-}: { open: boolean; onClose: () => void; onSaved: (whenISO: string) => void }) {
+  open, onCloseAction, onSaved,
+}: { open: boolean; onCloseAction: () => void; onSaved: (whenISO: string) => void }) {
   const [cur, setCur] = useState("");
   const [next, setNext] = useState("");
   const [conf, setConf] = useState("");
@@ -475,55 +485,47 @@ function ChangePasswordModal({
   function submit() {
     if (!next || next !== conf) return;
     onSaved(new Date().toISOString());
-    onClose();
+    onCloseAction();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Change Password (Demo)">
+    <Modal open={open} onCloseAction={onCloseAction} title="Change Password (Demo)">
       <div className="space-y-3">
-        <label className="block"><span className={fieldLabel}>Current password</span><Input type="password" value={cur} onChange={e => setCur((e.target as HTMLInputElement).value)} /></label>
-        <label className="block"><span className={fieldLabel}>New password</span><Input type="password" value={next} onChange={e => setNext((e.target as HTMLInputElement).value)} /></label>
-        <label className="block"><span className={fieldLabel}>Confirm new password</span><Input type="password" value={conf} onChange={e => setConf((e.target as HTMLInputElement).value)} /></label>
-        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onClose}>Cancel</GhostButton><Button onClick={submit}>Save</Button></div>
+        <label className="block"><span className={fieldLabel}>Current password</span><Input type="password" value={cur} onChange={e => setCur(e.target.value)} /></label>
+        <label className="block"><span className={fieldLabel}>New password</span><Input type="password" value={next} onChange={e => setNext(e.target.value)} /></label>
+        <label className="block"><span className={fieldLabel}>Confirm new password</span><Input type="password" value={conf} onChange={e => setConf(e.target.value)} /></label>
+        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onCloseAction}>Cancel</GhostButton><Button onClick={submit}>Save</Button></div>
       </div>
     </Modal>
   );
 }
 
 function ChangePlanModal({
-  open,
-  onClose,
-  current,
-  onSave,
+  open, onCloseAction, current, onSave,
 }: {
   open: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   current: AccountSettings["plan"];
   onSave: (p: AccountSettings["plan"]) => void;
 }) {
-  // ✅ fixed generic syntax — added the missing `>` before the parenthesis
   const [plan, setPlan] = useState<AccountSettings["plan"]>(current);
 
-  useEffect(() => {
-    if (open) setPlan(current);
-  }, [open, current]);
+  useEffect(() => { if (open) setPlan(current); }, [open, current]);
 
   function submit() {
     onSave(plan);
-    onClose();
+    onCloseAction();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Change Plan (Demo)">
+    <Modal open={open} onCloseAction={onCloseAction} title="Change Plan (Demo)">
       <div className="space-y-3">
         <label className="block">
           <span className={fieldLabel}>Plan</span>
           <select
             className="w-full rounded-md border border-white/15 bg-white/10 px-2 py-2 text-sm outline-none backdrop-blur placeholder:text-white/60 focus:ring-2 focus:ring-white/30"
             value={plan}
-            onChange={(e) =>
-              setPlan(e.target.value as AccountSettings["plan"])
-            }
+            onChange={(e) => setPlan(e.target.value as AccountSettings["plan"])}
           >
             <option value="Free">Free</option>
             <option value="Pro">Pro</option>
@@ -531,7 +533,7 @@ function ChangePlanModal({
           </select>
         </label>
         <div className="mt-1 flex justify-end gap-2">
-          <GhostButton onClick={onClose}>Cancel</GhostButton>
+          <GhostButton onClick={onCloseAction}>Cancel</GhostButton>
           <Button onClick={submit}>Save</Button>
         </div>
       </div>
@@ -539,10 +541,9 @@ function ChangePlanModal({
   );
 }
 
-
 function InviteTeamModal({
-  open, onClose, onInvite,
-}: { open: boolean; onClose: () => void; onInvite: (m: AccountSettings["team"][number]) => void }) {
+  open, onCloseAction, onInvite,
+}: { open: boolean; onCloseAction: () => void; onInvite: (m: AccountSettings["team"][number]) => void }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"Owner" | "Technician" | "Admin">("Technician");
@@ -550,26 +551,26 @@ function InviteTeamModal({
   function submit() {
     if (!name.trim() || !email.trim()) return;
     onInvite({ id: cryptoId(), name: name.trim(), email: email.trim(), role });
-    onClose();
+    onCloseAction();
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Invite Team Member (Demo)">
+    <Modal open={open} onCloseAction={onCloseAction} title="Invite Team Member (Demo)">
       <div className="space-y-3">
-        <label className="block"><span className={fieldLabel}>Name</span><Input value={name} onChange={e => setName((e.target as HTMLInputElement).value)} /></label>
-        <label className="block"><span className={fieldLabel}>Email</span><Input type="email" value={email} onChange={e => setEmail((e.target as HTMLInputElement).value)} /></label>
+        <label className="block"><span className={fieldLabel}>Name</span><Input value={name} onChange={e => setName(e.target.value)} /></label>
+        <label className="block"><span className={fieldLabel}>Email</span><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></label>
         <label className="block"><span className={fieldLabel}>Role</span>
           <select
             className="w-full rounded-md border border-white/15 bg-white/10 px-2 py-2 text-sm outline-none backdrop-blur focus:ring-2 focus:ring-white/30"
             value={role}
-            onChange={(e) => setRole(e.target.value as any)}
+            onChange={(e) => setRole(e.target.value as "Owner" | "Technician" | "Admin")}
           >
             <option value="Technician">Technician</option>
             <option value="Admin">Admin</option>
             <option value="Owner">Owner</option>
           </select>
         </label>
-        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onClose}>Cancel</GhostButton><Button onClick={submit}>Send Invite</Button></div>
+        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onCloseAction}>Cancel</GhostButton><Button onClick={submit}>Send Invite</Button></div>
       </div>
     </Modal>
   );
@@ -594,16 +595,29 @@ function seedDefaultSettings(pro?: Pro): AccountSettings {
     team: [],
   };
 }
+
 function ensureHttp(url?: string) {
   if (!url) return "#";
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
 }
-function fmt(iso?: string) { return iso ? new Date(iso).toLocaleDateString() : ""; }
-function cryptoId() { return (globalThis.crypto && "randomUUID" in crypto) ? crypto.randomUUID() : String(Date.now()); }
-function addDays(n: number) { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); }
+
+function fmt(iso?: string) { 
+  return iso ? new Date(iso).toLocaleDateString() : ""; 
+}
+
+function cryptoId() { 
+  return (globalThis.crypto && "randomUUID" in crypto) ? crypto.randomUUID() : String(Date.now()); 
+}
+
+function addDays(n: number) { 
+  const d = new Date(); 
+  d.setDate(d.getDate() + n); 
+  return d.toISOString().slice(0,10); 
+}
+
 function planDescription(plan: AccountSettings["plan"]) {
   switch (plan) {
-    case "Free": return "Basics for getting started. Limited jobs and storage.";
+    case "Free": return "Basics for getting started. Limited work and storage.";
     case "Pro": return "All core features, priority support, and higher limits.";
     case "Team": return "Multi-user with roles, team-wide reporting, and SSO.";
   }

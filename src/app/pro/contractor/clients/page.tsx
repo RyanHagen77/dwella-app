@@ -4,12 +4,11 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { glass, glassTight, heading, textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
+import { glass, glassTight, textMeta, ctaGhost } from "@/lib/glass";
 import { Button, GhostButton } from "@/components/ui/Button";
 import { Input, fieldLabel } from "@/components/ui";
 import { Modal } from "@/components/ui/Modal";
 import { loadJSON, saveJSON } from "@/lib/storage";
-import ContractorTopBar from "@/app/pro/_components/ContractorTopBar";
 
 /* ------------ Types (aligned with /pro) ------------ */
 type ClientHome = { id: string; address: string; sharedLink: string; owner?: string; };
@@ -54,8 +53,6 @@ export default function ClientsPage() {
     <main className="relative min-h-screen text-white">
       <Bg />
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-      {/* Logo + nav */}
-      <ContractorTopBar />
 
         {/* Search / actions */}
         <section className={glass}>
@@ -144,7 +141,7 @@ function AddClientModal({ open, onClose, onCreate }: { open: boolean; onClose: (
     onClose();
   }
   return (
-    <Modal open={open} onClose={onClose} title="Add Client">
+    <Modal open={open} onCloseAction={onClose} title="Add Client">
       <div className="space-y-3">
         <label className="block"><span className={fieldLabel}>Address</span><Input value={form.address} onChange={e => setForm({ ...form, address: (e.target as HTMLInputElement).value })} placeholder="123 Main St" /></label>
         <label className="block"><span className={fieldLabel}>Owner (optional)</span><Input value={form.owner} onChange={e => setForm({ ...form, owner: (e.target as HTMLInputElement).value })} placeholder="e.g., Nguyen" /></label>

@@ -1,4 +1,4 @@
-// app/pro/record/[id]/JobRecordClient.tsx
+// app/pro/record/[Id]/JobRecordClient.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";

@@ -20,7 +20,7 @@ export async function buildProDataFromAddress(address: string): Promise<ProData>
   const verified = !!primary.verified;
   const rating = primary.rating ?? 4.6;
 
-  // derive a few jobs from homeowner records (future → active)
+  // derive a few work from homeowner records (future → active)
   const today = new Date();
   const addDays = (n:number)=>{ const d=new Date(today); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 

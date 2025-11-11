@@ -83,7 +83,7 @@ export default function LoginClient() {
           <a href="/register" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
             I’m a Homeowner — Create an account
           </a>
-          <a href="/pro/apply" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
+          <a href="/apply" className="rounded-lg border px-3 py-2 text-center hover:bg-gray-50">
             I’m a Professional — Apply for access
           </a>
         </div>

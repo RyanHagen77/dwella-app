@@ -5,41 +5,53 @@ import Image from "next/image";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea, fieldLabel } from "@/components/ui";
 import { Button, GhostButton } from "@/components/ui/Button";
-import { RecordSchema, type RecordInput } from "@/lib/validators";
 import { uid } from "@/lib/storage";
 import { useToast } from "@/components/ui/Toast";
 import { textMeta } from "@/lib/glass";
 
-/** Public payload type this modal returns */
-export type CreateRecordPayload = {
+type RecordType = "record" | "reminder" | "warranty";
+
+/** Unified payload for all record types */
+export type UnifiedRecordPayload = {
   id: string;
+  type: RecordType;
+  // Common fields
   title: string;
-  date: string;
+  note?: string;
+  // Record-specific
+  date?: string;
   category?: string;
   vendor?: string;
   cost?: number;
   verified?: boolean;
-  note: string;
   kind?: string;
+  // Reminder-specific
+  dueAt?: string;
+  // Warranty-specific
+  item?: string;
+  provider?: string;
+  expiresAt?: string;
+  purchasedAt?: string;
 };
 
 type Props = {
   open: boolean;
-  /** TS71007-safe prop name */
   onCloseAction: () => void;
-  /** TS71007-safe prop name */
-  onCreateAction: (args: { payload: CreateRecordPayload; files: File[] }) => void;
+  onCreateAction: (args: { payload: UnifiedRecordPayload; files: File[] }) => void;
+  defaultType?: RecordType;
 };
 
-type RecordForm = RecordInput & { note: string };
-
-export function AddRecordModal({ open, onCloseAction, onCreateAction }: Props) {
+export function AddRecordModal({ open, onCloseAction, onCreateAction, defaultType = "record" }: Props) {
   const { push } = useToast();
   const today = React.useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const [recordType, setRecordType] = React.useState<RecordType>(defaultType);
   const [step, setStep] = React.useState(1);
   const [files, setFiles] = React.useState<File[]>([]);
   const [previews, setPreviews] = React.useState<string[]>([]);
-  const [form, setForm] = React.useState<RecordForm>({
+
+  // Form state for all types
+  const [form, setForm] = React.useState({
+    // Record fields
     title: "",
     date: today,
     category: "Maintenance",
@@ -47,15 +59,21 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction }: Props) {
     cost: 0,
     verified: false,
     note: "",
-    attachments: [],
+    // Reminder fields
+    dueAt: today,
+    // Warranty fields
+    item: "",
+    provider: "",
+    expiresAt: "",
+    purchasedAt: today,
   });
 
-  // Reset when modal opens - exactly like AddWarrantyModal
+  // Reset when modal opens
   React.useEffect(() => {
     if (!open) return;
+    setRecordType(defaultType);
     setStep(1);
     setFiles([]);
-    // Clean up old previews
     previews.forEach(url => URL.revokeObjectURL(url));
     setPreviews([]);
     setForm({
@@ -66,11 +84,16 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction }: Props) {
       cost: 0,
       verified: false,
       note: "",
-      attachments: [],
+      dueAt: today,
+      item: "",
+      provider: "",
+      expiresAt: "",
+      purchasedAt: today,
     });
-  }, [open, today]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultType, today]);
 
-  function set<K extends keyof RecordForm>(k: K, v: RecordForm[K]) {
+  function set<K extends keyof typeof form>(k: K, v: typeof form[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
@@ -78,7 +101,6 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction }: Props) {
     if (!list) return;
     const arr = Array.from(list);
     setFiles(arr);
-    // Create previews for images
     const newPreviews = arr.map(f => URL.createObjectURL(f));
     setPreviews(newPreviews);
   }
@@ -89,56 +111,123 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction }: Props) {
     setPreviews(p => p.filter((_, i) => i !== index));
   }
 
-  const next = () => setStep((s) => Math.min(3, s + 1));
+  const next = () => setStep((s) => Math.min(maxSteps, s + 1));
   const back = () => setStep((s) => Math.max(1, s - 1));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
 
-    const candidate = {
-      title: form.title,
-      date: form.date,
-      category: form.category,
-      vendor: form.vendor,
-      cost: form.cost,
-      verified: form.verified,
-      attachments: [],
-    };
-
-    const parsed = RecordSchema.safeParse(candidate);
-    if (!parsed.success) {
-      push("Please complete required fields");
+    // Validate based on type
+    if (recordType === "record" && !form.title) {
+      push("Title is required");
+      return;
+    }
+    if (recordType === "reminder" && !form.title) {
+      push("Title is required");
+      return;
+    }
+    if (recordType === "warranty" && !form.item) {
+      push("Item is required");
       return;
     }
 
-    const payload: CreateRecordPayload = {
-      id: uid(),
-      title: parsed.data.title,
-      date: parsed.data.date,
-      category: parsed.data.category,
-      vendor: parsed.data.vendor,
-      cost: parsed.data.cost,
-      verified: parsed.data.verified,
-      note: form.note ?? "",
-      kind: parsed.data.category ? String(parsed.data.category).toLowerCase() : undefined,
-    };
+    let payload: UnifiedRecordPayload;
+
+    if (recordType === "record") {
+      payload = {
+        id: uid(),
+        type: "record",
+        title: form.title,
+        date: form.date,
+        category: form.category,
+        vendor: form.vendor,
+        cost: form.cost,
+        verified: form.verified,
+        note: form.note,
+        kind: form.category?.toLowerCase(),
+      };
+    } else if (recordType === "reminder") {
+      payload = {
+        id: uid(),
+        type: "reminder",
+        title: form.title,
+        dueAt: form.dueAt,
+        note: form.note,
+      };
+    } else {
+      // warranty
+      payload = {
+        id: uid(),
+        type: "warranty",
+        title: form.item,
+        item: form.item,
+        provider: form.provider,
+        expiresAt: form.expiresAt,
+        purchasedAt: form.purchasedAt,
+        note: form.note,
+      };
+    }
 
     onCreateAction({ payload, files });
     onCloseAction();
-    push("Record added");
+    push(`${recordType.charAt(0).toUpperCase() + recordType.slice(1)} added`);
   }
 
+  const typeLabels = {
+    record: "Maintenance Record",
+    reminder: "Reminder",
+    warranty: "Warranty",
+  };
+
+  const stepLabels = ["Type", "Upload", "Details", "Review"];
+  const maxSteps = stepLabels.length;
+
   return (
-    <Modal open={open} onCloseAction={onCloseAction} title="Add Record">
-      <form className="space-y-4" onSubmit={submit}>
+    <div className="relative z-[100]">
+      <Modal open={open} onCloseAction={onCloseAction} title="Add to Home">
+        <form className="space-y-4" onSubmit={submit}>
         <div className="mb-3">
-          <Stepper step={step} />
+          <Stepper step={step} labels={stepLabels} />
         </div>
 
+        {/* Step 1: Choose Type */}
         {step === 1 && (
           <div className="space-y-3">
+            <div className="text-sm text-white/70 mb-3">What would you like to add?</div>
+            <div className="grid grid-cols-3 gap-3">
+              <TypeCard
+                selected={recordType === "record"}
+                onClick={() => setRecordType("record")}
+                icon="🔧"
+                label="Maintenance Record"
+                description="Track repairs, upgrades, and maintenance"
+              />
+              <TypeCard
+                selected={recordType === "reminder"}
+                onClick={() => setRecordType("reminder")}
+                icon="⏰"
+                label="Reminder"
+                description="Schedule future tasks"
+              />
+              <TypeCard
+                selected={recordType === "warranty"}
+                onClick={() => setRecordType("warranty")}
+                icon="📄"
+                label="Warranty"
+                description="Store warranty info and docs"
+              />
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button type="button" onClick={next}>Next</Button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 2: Upload */}
+        {step === 2 && (
+          <div className="space-y-3">
             <label className="block">
-              <span className={fieldLabel}>Upload files</span>
+              <span className={fieldLabel}>Upload files (optional)</span>
               <input
                 type="file"
                 multiple
@@ -172,139 +261,243 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction }: Props) {
             )}
 
             <div className="flex justify-between items-center">
-              <span className={`text-sm ${textMeta}`}>Images or PDFs welcome</span>
-              <Button type="button" className="px-4" onClick={next}>Next</Button>
+              <span className={`text-sm ${textMeta}`}>
+                {recordType === "record" && "Photos of work, receipts, etc."}
+                {recordType === "reminder" && "Supporting documents"}
+                {recordType === "warranty" && "Warranty documents, manuals, receipts"}
+              </span>
+              <div className="flex gap-2">
+                <GhostButton type="button" onClick={back}>Back</GhostButton>
+                <Button type="button" onClick={next}>Next</Button>
+              </div>
             </div>
           </div>
         )}
 
-        {step === 2 && (
+        {/* Step 3: Details */}
+        {step === 3 && (
           <div className="space-y-3">
-            <label className="block">
-              <span className={fieldLabel}>Title</span>
-              <Input
-                value={form.title}
-                onChange={(e) => set("title", e.target.value)}
-                placeholder="e.g., HVAC Tune-up"
-              />
-            </label>
+            {recordType === "record" && (
+              <>
+                <label className="block">
+                  <span className={fieldLabel}>Title</span>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => set("title", e.target.value)}
+                    placeholder="e.g., HVAC Tune-up"
+                  />
+                </label>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className={fieldLabel}>Date</span>
-                <Input
-                  type="date"
-                  value={form.date}
-                  onChange={(e) => set("date", e.target.value)}
-                />
-              </label>
-              <label className="block">
-                <span className={fieldLabel}>Category</span>
-                <Select
-                  value={form.category}
-                  onChange={(e) => set("category", e.target.value as RecordForm["category"])}
-                >
-                  <option>Maintenance</option>
-                  <option>Repair</option>
-                  <option>Upgrade</option>
-                  <option>Inspection</option>
-                  <option>Warranty</option>
-                </Select>
-              </label>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className={fieldLabel}>Date</span>
+                    <Input
+                      type="date"
+                      value={form.date}
+                      onChange={(e) => set("date", e.target.value)}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className={fieldLabel}>Category</span>
+                    <Select
+                      value={form.category}
+                      onChange={(e) => set("category", e.target.value)}
+                    >
+                      <option>Maintenance</option>
+                      <option>Repair</option>
+                      <option>Upgrade</option>
+                      <option>Inspection</option>
+                    </Select>
+                  </label>
+                </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className={fieldLabel}>Vendor</span>
-                <Input
-                  value={form.vendor}
-                  onChange={(e) => set("vendor", e.target.value)}
-                  placeholder="e.g., ChillRight Heating"
-                />
-              </label>
-              <label className="block">
-                <span className={fieldLabel}>Cost</span>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.cost}
-                  onChange={(e) => set("cost", Number(e.target.value))}
-                />
-              </label>
-            </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className={fieldLabel}>Vendor</span>
+                    <Input
+                      value={form.vendor}
+                      onChange={(e) => set("vendor", e.target.value)}
+                      placeholder="e.g., ChillRight Heating"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className={fieldLabel}>Cost</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.cost}
+                      onChange={(e) => set("cost", Number(e.target.value))}
+                    />
+                  </label>
+                </div>
 
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={form.verified}
-                onChange={(e) => set("verified", e.target.checked)}
-                className="h-4 w-4 rounded border-white/30 bg-black/30"
-              />
-              <span className="text-sm text-white/85">Mark as verified by vendor</span>
-            </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.verified}
+                    onChange={(e) => set("verified", e.target.checked)}
+                    className="h-4 w-4 rounded border-white/30 bg-black/30"
+                  />
+                  <span className="text-sm text-white/85">Mark as verified by vendor</span>
+                </label>
 
-            <label className="block">
-              <span className={fieldLabel}>Notes</span>
-              <Textarea
-                rows={3}
-                value={form.note}
-                onChange={(e) => set("note", e.target.value)}
-                placeholder="Optional details…"
-              />
-            </label>
+                <label className="block">
+                  <span className={fieldLabel}>Notes (optional)</span>
+                  <Textarea
+                    rows={3}
+                    value={form.note}
+                    onChange={(e) => set("note", e.target.value)}
+                    placeholder="Optional details…"
+                  />
+                </label>
+              </>
+            )}
 
-            <div className="flex justify-between">
+            {recordType === "reminder" && (
+              <>
+                <label className="block">
+                  <span className={fieldLabel}>Title</span>
+                  <Input
+                    value={form.title}
+                    onChange={(e) => set("title", e.target.value)}
+                    placeholder="e.g., Replace HVAC filter"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className={fieldLabel}>Due Date</span>
+                  <Input
+                    type="date"
+                    value={form.dueAt}
+                    onChange={(e) => set("dueAt", e.target.value)}
+                  />
+                </label>
+
+                <label className="block">
+                  <span className={fieldLabel}>Notes (optional)</span>
+                  <Textarea
+                    rows={3}
+                    value={form.note}
+                    onChange={(e) => set("note", e.target.value)}
+                    placeholder="Additional details…"
+                  />
+                </label>
+              </>
+            )}
+
+            {recordType === "warranty" && (
+              <>
+                <label className="block">
+                  <span className={fieldLabel}>Item</span>
+                  <Input
+                    value={form.item}
+                    onChange={(e) => set("item", e.target.value)}
+                    placeholder="e.g., Water Heater"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className={fieldLabel}>Provider (optional)</span>
+                  <Input
+                    value={form.provider}
+                    onChange={(e) => set("provider", e.target.value)}
+                    placeholder="e.g., AO Smith"
+                  />
+                </label>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="block">
+                    <span className={fieldLabel}>Purchase Date</span>
+                    <Input
+                      type="date"
+                      value={form.purchasedAt}
+                      onChange={(e) => set("purchasedAt", e.target.value)}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className={fieldLabel}>Expires (optional)</span>
+                    <Input
+                      type="date"
+                      value={form.expiresAt}
+                      onChange={(e) => set("expiresAt", e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <label className="block">
+                  <span className={fieldLabel}>Notes (optional)</span>
+                  <Textarea
+                    rows={3}
+                    value={form.note}
+                    onChange={(e) => set("note", e.target.value)}
+                    placeholder="Coverage details, serial numbers, etc."
+                  />
+                </label>
+              </>
+            )}
+
+            <div className="flex justify-between pt-2">
               <GhostButton type="button" onClick={back}>Back</GhostButton>
               <Button type="button" onClick={next}>Review</Button>
             </div>
           </div>
         )}
 
-        {step === 3 && (
+        {/* Final Step: Review */}
+        {step === maxSteps && (
           <div className="space-y-4">
             <div className="rounded-lg border border-white/20 bg-white/5 p-4 space-y-3">
-              <div>
-                <div className="text-xs text-white/60 uppercase tracking-wide mb-1">Title</div>
-                <div className="text-white">{form.title || <span className="text-white/40">No title</span>}</div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-2xl">
+                  {recordType === "record" ? "🔧" : recordType === "reminder" ? "⏰" : "📄"}
+                </span>
+                <span className="text-sm text-white/60 uppercase tracking-wide">
+                  {typeLabels[recordType]}
+                </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs text-white/60 uppercase tracking-wide mb-1">Date</div>
-                  <div className="text-white">{form.date}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-white/60 uppercase tracking-wide mb-1">Category</div>
-                  <div className="text-white">{form.category}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs text-white/60 uppercase tracking-wide mb-1">Vendor</div>
-                  <div className="text-white">{form.vendor || <span className="text-white/40">Not specified</span>}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-white/60 uppercase tracking-wide mb-1">Cost</div>
-                  <div className="text-white">${form.cost?.toFixed(2) || "0.00"}</div>
-                </div>
-              </div>
-
-              {form.verified && (
-                <div className="flex items-center gap-2 text-sm text-green-400">
-                  <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Verified by vendor
-                </div>
+              {recordType === "record" && (
+                <>
+                  <ReviewField label="Title" value={form.title} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <ReviewField label="Date" value={form.date} />
+                    <ReviewField label="Category" value={form.category} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <ReviewField label="Vendor" value={form.vendor} />
+                    <ReviewField label="Cost" value={`$${form.cost?.toFixed(2) || "0.00"}`} />
+                  </div>
+                  {form.verified && (
+                    <div className="flex items-center gap-2 text-sm text-green-400">
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Verified by vendor
+                    </div>
+                  )}
+                  {form.note && <ReviewField label="Notes" value={form.note} />}
+                </>
               )}
 
-              {form.note && (
-                <div>
-                  <div className="text-xs text-white/60 uppercase tracking-wide mb-1">Notes</div>
-                  <div className="text-white/85 text-sm">{form.note}</div>
-                </div>
+              {recordType === "reminder" && (
+                <>
+                  <ReviewField label="Title" value={form.title} />
+                  <ReviewField label="Due Date" value={form.dueAt} />
+                  {form.note && <ReviewField label="Notes" value={form.note} />}
+                </>
+              )}
+
+              {recordType === "warranty" && (
+                <>
+                  <ReviewField label="Item" value={form.item} />
+                  {form.provider && <ReviewField label="Provider" value={form.provider} />}
+                  <div className="grid grid-cols-2 gap-4">
+                    <ReviewField label="Purchased" value={form.purchasedAt} />
+                    {form.expiresAt && <ReviewField label="Expires" value={form.expiresAt} />}
+                  </div>
+                  {form.note && <ReviewField label="Notes" value={form.note} />}
+                </>
               )}
 
               {previews.length > 0 && (
@@ -328,27 +521,69 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction }: Props) {
 
             <div className="flex justify-between">
               <GhostButton type="button" onClick={back}>Back</GhostButton>
-              <Button type="submit">Save Record</Button>
+              <Button type="submit">
+                Save {typeLabels[recordType]}
+              </Button>
             </div>
           </div>
         )}
       </form>
     </Modal>
+    </div>
   );
 }
 
-function Stepper({ step }: { step: number }) {
+function TypeCard({
+  selected,
+  onClick,
+  icon,
+  label,
+  description
+}: {
+  selected: boolean;
+  onClick: () => void;
+  icon: string;
+  label: string;
+  description: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`p-4 rounded-lg border-2 transition-all text-left ${
+        selected
+          ? "border-white/50 bg-white/15 scale-105"
+          : "border-white/20 bg-white/5 hover:bg-white/10"
+      }`}
+    >
+      <div className="text-3xl mb-2">{icon}</div>
+      <div className="font-medium text-white text-sm mb-1">{label}</div>
+      <div className="text-xs text-white/60">{description}</div>
+    </button>
+  );
+}
+
+function ReviewField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-xs text-white/60 uppercase tracking-wide mb-1">{label}</div>
+      <div className="text-white">{value || <span className="text-white/40">Not specified</span>}</div>
+    </div>
+  );
+}
+
+function Stepper({ step, labels }: { step: number; labels: string[] }) {
   return (
     <div className="flex items-center gap-2 text-sm">
-      {["Upload", "Details", "Review"].map((label, i) => {
+      {labels.map((label, i) => {
         const active = step === i + 1;
         const completed = step > i + 1;
         return (
           <div
             key={label}
-            className={`rounded-full border px-2 py-1 ${
+            className={`rounded-full border px-2 py-0.5 text-xs ${
               active 
-                ? "border-white/30 bg-white/20 text-white" 
+                ? "border-white/30 bg-white/20 text-white font-medium" 
                 : completed
                 ? "border-green-400/30 bg-green-400/10 text-green-400"
                 : "border-white/20 bg-white/10 text-white/70"
@@ -362,5 +597,4 @@ function Stepper({ step }: { step: number }) {
   );
 }
 
-/** Also export default so either import style works */
 export default AddRecordModal;

@@ -7,11 +7,8 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, ctaPrimary, ctaGhost, heading } from "@/lib/glass";
-import HomeTopBar from "@/app/home/_components/HomeTopBar";
 import ClientActions from "@/app/home/_components/ClientActions";
-import AddRecordButton from "@/app/home/_components/AddRecordButton";
-import AddReminderButton from "@/app/home/_components/AddReminderButton";
-import AddWarrantyButton from "@/app/home/_components/AddWarrantyButton";
+import { ClientCard } from "@/app/home/_components/ClientCard";
 
 type HomeMeta = {
   attrs?: {
@@ -150,7 +147,6 @@ export default async function HomePage({
       </div>
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <HomeTopBar />
 
         <section aria-labelledby="home-hero" className={glass}>
           <h2 id="home-hero" className="sr-only">
@@ -159,9 +155,11 @@ export default async function HomePage({
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="lg:col-span-2">
-                <img
+                <Image
                   src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
                   alt={addrLine}
+                  width={800}
+                  height={450}
                   className="aspect-video w-full rounded-md object-cover"
                 />
               </div>
@@ -242,16 +240,16 @@ export default async function HomePage({
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Left column - Recent History */}
           <div className="lg:col-span-2 space-y-6">
-            <Card
+            <ClientCard
               title="Recent Maintenance & Repairs"
-              action={<AddRecordButton homeId={home.id} variant="ghost" label="+ Add Record" />}
               viewAllLink={`/home/${home.id}/records`}
+              homeId={home.id}
+              addType="record"
             >
               {home.records.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
                   <p className="mb-3">No records yet</p>
-                  <p className="text-sm text-white/60 mb-4">Start tracking your home's maintenance history</p>
-                  <AddRecordButton homeId={home.id} variant="primary" label="Add Your First Record" />
+                  <p className="text-sm text-white/60 mb-4">Start tracking your home&apos;s maintenance history</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -260,20 +258,20 @@ export default async function HomePage({
                   ))}
                 </div>
               )}
-            </Card>
+            </ClientCard>
           </div>
 
           {/* Right column - Reminders & Warranties */}
           <div className="space-y-6">
-            <Card
+            <ClientCard
               title="Upcoming Reminders"
-              action={<AddReminderButton homeId={home.id} />}
               viewAllLink={`/home/${home.id}/reminders`}
+              homeId={home.id}
+              addType="reminder"
             >
               {upcomingReminders.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
                   <p className="mb-2 text-sm">No upcoming reminders</p>
-                  <AddReminderButton homeId={home.id} />
                 </div>
               ) : (
                 <ul className="space-y-3">
@@ -282,17 +280,17 @@ export default async function HomePage({
                   ))}
                 </ul>
               )}
-            </Card>
+            </ClientCard>
 
-            <Card
+            <ClientCard
               title="Active Warranties"
-              action={<AddWarrantyButton homeId={home.id} />}
               viewAllLink={`/home/${home.id}/warranties`}
+              homeId={home.id}
+              addType="warranty"
             >
               {home.warranties.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
                   <p className="mb-2 text-sm">No warranties on file</p>
-                  <AddWarrantyButton homeId={home.id} />
                 </div>
               ) : (
                 <ul className="space-y-3">
@@ -301,7 +299,7 @@ export default async function HomePage({
                   ))}
                 </ul>
               )}
-            </Card>
+            </ClientCard>
           </div>
         </section>
 
@@ -322,35 +320,6 @@ function Stat({ label, value, hint }: { label: string; value: string | number; h
       </div>
       <div className="mt-1 text-xl font-semibold text-white">{value}</div>
     </div>
-  );
-}
-
-function Card({
-  title,
-  children,
-  action,
-  viewAllLink
-}: {
-  title: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-  viewAllLink?: string;
-}) {
-  return (
-    <section className={glass}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className={`text-lg font-medium ${heading}`}>{title}</h2>
-        {action}
-      </div>
-      {children}
-      {viewAllLink && (
-        <div className="mt-4 pt-3 border-t border-white/10 text-right">
-          <Link href={viewAllLink} className={`${ctaGhost} text-sm`}>
-            View All →
-          </Link>
-        </div>
-      )}
-    </section>
   );
 }
 

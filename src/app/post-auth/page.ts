@@ -1,4 +1,3 @@
-// src/app/post-auth/page.tsx
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -19,9 +18,23 @@ export default async function PostAuth() {
     select: { role: true, proStatus: true },
   });
 
+  // Admin users
   if (user?.role === "ADMIN") redirect("/admin");
-  if (user?.proStatus && user.proStatus !== "APPROVED") redirect("/pro/onboarding");
-  if (user?.proStatus === "APPROVED") redirect("/pro");
+
+  // Pro users
+  if (user?.role === "PRO") {
+    if (user.proStatus === "PENDING") {
+      redirect("/pro/dashboard"); // Shows pending view
+    }
+    if (user.proStatus === "APPROVED") {
+      redirect("/pro/dashboard"); // Shows full dashboard
+    }
+    if (user.proStatus === "REJECTED") {
+      redirect("/pro/rejected"); // Optional: create rejection page
+    }
+    // Fallback for pros with no status
+    redirect("/pro/dashboard");
+  }
 
   // Homeowners go to /home; that page will self-redirect if they already claimed
   redirect("/home");

@@ -5,16 +5,8 @@ import { useRouter } from "next/navigation";
 import { ctaPrimary, ctaGhost } from "@/lib/glass";
 
 /** Client modals */
-import { AddRecordModal, type CreateRecordPayload } from "@/app/home/_components/AddRecordModal";
+import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
 import { ShareAccessModal } from "@/app/home/_components/ShareAccessModal";
-import {
-  AddReminderModal,
-  type ReminderModalPayload,
-} from "@/app/home/_components/AddReminderModal";
-import {
-  AddWarrantyModal,
-  type WarrantyModalPayload,
-} from "@/app/home/_components/AddWarrantyModal";
 import { FindVendorsModal, type VendorDirectoryItem } from "@/app/home/_components/FindVendorModal";
 
 /* ---------- Types ---------- */
@@ -25,6 +17,8 @@ type PersistAttachment = {
   contentType: string;
   storageKey: string;
   url: string | null;
+  visibility: "OWNER" | "HOME" | "PUBLIC";
+  notes?: string;
 };
 
 /* ---------- Component ---------- */
@@ -33,19 +27,17 @@ export default function ClientActions({ homeId }: { homeId: string }) {
 
   const [addOpen, setAddOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [reminderOpen, setReminderOpen] = useState(false);
   const [findVendorsOpen, setFindVendorsOpen] = useState(false);
-  const [warrantyOpen, setWarrantyOpen] = useState(false);
 
   /* ---------- API Helpers ---------- */
   async function createRecord(payload: {
     title: string;
-    note?: string | null;
-    date?: string;
-    kind?: string | null;
-    vendor?: string | null;
-    cost?: number | null;
-    verified?: boolean | null;
+    note?: string | null | undefined;
+    date?: string | undefined;
+    kind?: string | null | undefined;
+    vendor?: string | null | undefined;
+    cost?: number | null | undefined;
+    verified?: boolean | null | undefined;
   }): Promise<{ id: string }> {
     const res = await fetch(`/api/home/${homeId}/records`, {
       method: "POST",
@@ -60,8 +52,7 @@ export default function ClientActions({ homeId }: { homeId: string }) {
   async function createReminder(payload: {
     title: string;
     dueAt: string;
-    note?: string | null;
-    repeat?: ReminderModalPayload["repeat"];
+    note?: string | null | undefined;
   }): Promise<{ id: string }> {
     const res = await fetch(`/api/home/${homeId}/reminders`, {
       method: "POST",
@@ -75,10 +66,10 @@ export default function ClientActions({ homeId }: { homeId: string }) {
 
   async function createWarranty(payload: {
     item: string;
-    provider?: string | null;
-    policyNo?: string | null;
-    expiresAt?: string | null;
-    note?: string | null;
+    provider?: string | null | undefined;
+    policyNo?: string | null | undefined;
+    expiresAt?: string | null | undefined;
+    note?: string | null | undefined;
   }): Promise<{ id: string }> {
     const res = await fetch(`/api/home/${homeId}/warranties`, {
       method: "POST",
@@ -109,7 +100,15 @@ export default function ClientActions({ homeId }: { homeId: string }) {
     const uploaded: PersistAttachment[] = [];
     for (const f of files) {
       // Build presign payload - only include the ID that's actually present
-      const presignPayload: any = {
+      const presignPayload: {
+        homeId: string;
+        filename: string;
+        contentType: string;
+        size: number;
+        recordId?: string;
+        warrantyId?: string;
+        reminderId?: string;
+      } = {
         homeId,
         filename: f.name,
         contentType: f.type || "application/octet-stream",
@@ -148,6 +147,8 @@ export default function ClientActions({ homeId }: { homeId: string }) {
         contentType: f.type || "application/octet-stream",
         storageKey: key,
         url: publicUrl,
+        visibility: "OWNER",
+        notes: undefined,
       });
     }
 
@@ -166,70 +167,44 @@ export default function ClientActions({ homeId }: { homeId: string }) {
     if (!persist.ok) throw new Error(`Persist attachments failed: ${await persist.text()}`);
   }
 
-  /* ---------- Record: create → presign → PUT → persist ---------- */
-  async function onCreateRecord({
+  /* ---------- Unified handler for all types ---------- */
+  async function onCreateUnified({
     payload,
     files,
   }: {
-    payload: CreateRecordPayload;
+    payload: UnifiedRecordPayload;
     files: File[];
   }) {
-    const record = await createRecord({
-      title: payload.title,
-      note: payload.note ?? null,
-      date: payload.date,
-      kind: payload.kind ?? (payload.category ? payload.category.toLowerCase() : null),
-      vendor: payload.vendor ?? null,
-      cost: typeof payload.cost === "number" ? payload.cost : Number(payload.cost) || null,
-      verified: payload.verified ?? null,
-    });
+    if (payload.type === "record") {
+      const record = await createRecord({
+        title: payload.title,
+        note: payload.note ?? undefined,
+        date: payload.date ?? undefined,
+        kind: payload.kind ?? undefined,
+        vendor: payload.vendor ?? undefined,
+        cost: typeof payload.cost === "number" ? payload.cost : undefined,
+        verified: payload.verified ?? undefined,
+      });
+      await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
+    } else if (payload.type === "reminder") {
+      const reminder = await createReminder({
+        title: payload.title,
+        dueAt: payload.dueAt!,
+        note: payload.note ?? undefined,
+      });
+      await uploadAndPersistAttachments({ homeId, reminderId: reminder.id, files });
+    } else if (payload.type === "warranty") {
+      const warranty = await createWarranty({
+        item: payload.item!,
+        provider: payload.provider ?? undefined,
+        policyNo: undefined,
+        expiresAt: payload.expiresAt ?? undefined,
+        note: payload.note ?? undefined,
+      });
+      await uploadAndPersistAttachments({ homeId, warrantyId: warranty.id, files });
+    }
 
-    const recordId = record.id;
-    await uploadAndPersistAttachments({ homeId, recordId, files });
     setAddOpen(false);
-    router.refresh();
-  }
-
-  /* ---------- Reminder: create → presign → PUT → persist ---------- */
-  async function onCreateReminder({
-    payload,
-    files,
-  }: {
-    payload: ReminderModalPayload;
-    files: File[];
-  }) {
-    const created = await createReminder({
-      title: payload.title,
-      dueAt: payload.dueAt,
-      note: payload.note ?? null,
-      repeat: payload.repeat ?? "none",
-    });
-    const reminderId = created.id;
-
-    await uploadAndPersistAttachments({ homeId, reminderId, files });
-    setReminderOpen(false);
-    router.refresh();
-  }
-
-  /* ---------- Warranty: create → presign → PUT → persist ---------- */
-  async function onCreateWarranty({
-    payload,
-    files,
-  }: {
-    payload: WarrantyModalPayload;
-    files: File[];
-  }) {
-    const warranty = await createWarranty({
-      item: payload.item,
-      provider: payload.provider ?? null,
-      policyNo: payload.policyNo ?? null,
-      expiresAt: payload.expiresAt ?? null,
-      note: payload.note ?? null,
-    });
-
-    const warrantyId = warranty.id;
-    await uploadAndPersistAttachments({ homeId, warrantyId, files });
-    setWarrantyOpen(false);
     router.refresh();
   }
 
@@ -238,13 +213,7 @@ export default function ClientActions({ homeId }: { homeId: string }) {
     <>
       <div className="flex flex-wrap gap-2">
         <button onClick={() => setAddOpen(true)} className={ctaPrimary}>
-          Add Record
-        </button>
-        <button onClick={() => setReminderOpen(true)} className={ctaGhost}>
-          Add Reminder
-        </button>
-        <button onClick={() => setWarrantyOpen(true)} className={ctaGhost}>
-          Add Warranty
+          + Add Record
         </button>
         <button onClick={() => setShareOpen(true)} className={ctaGhost}>
           Share Access
@@ -254,25 +223,11 @@ export default function ClientActions({ homeId }: { homeId: string }) {
         </a>
       </div>
 
-      {/* Record Modal */}
+      {/* Unified Add Modal */}
       <AddRecordModal
         open={addOpen}
         onCloseAction={() => setAddOpen(false)}
-        onCreateAction={onCreateRecord}
-      />
-
-      {/* Reminder Modal */}
-      <AddReminderModal
-        open={reminderOpen}
-        onCloseAction={() => setReminderOpen(false)}
-        onCreateAction={onCreateReminder}
-      />
-
-      {/* Warranty Modal */}
-      <AddWarrantyModal
-        open={warrantyOpen}
-        onCloseAction={() => setWarrantyOpen(false)}
-        onCreateAction={onCreateWarranty}
+        onCreateAction={onCreateUnified}
       />
 
       {/* Share Access */}

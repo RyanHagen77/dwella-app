@@ -1,17 +1,9 @@
 "use client";
 
-import * as React from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ctaPrimary, ctaGhost } from "@/lib/glass";
-import { useToast } from "@/components/ui/Toast";
-import { AddRecordModal, type CreateRecordPayload } from "./AddRecordModal";
-
-type Props = {
-  homeId: string;
-  variant?: "primary" | "ghost";
-  label?: string;
-  className?: string;
-};
+import { ctaPrimary } from "@/lib/glass";
+import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
 
 type PresignResponse = { key: string; url: string; publicUrl: string | null };
 type PersistAttachment = {
@@ -20,61 +12,69 @@ type PersistAttachment = {
   contentType: string;
   storageKey: string;
   url: string | null;
+  visibility: "OWNER" | "HOME" | "PUBLIC";
+  notes?: string;
 };
 
-export default function AddRecordButton({
+export function AddRecordButton({
   homeId,
-  variant = "primary",
-  label = "Add Record",
-  className,
-}: Props) {
+  label = "+ Add Record",
+  defaultType = "record"
+}: {
+  homeId: string;
+  label?: string;
+  defaultType?: "record" | "reminder" | "warranty";
+}) {
   const router = useRouter();
-  const { push } = useToast();
-  const [open, setOpen] = React.useState(false);
-  const [busy, setBusy] = React.useState(false);
-
-  async function createRecord(payload: {
-    title: string;
-    note?: string | null;
-    date?: string;
-    kind?: string | null;
-    vendor?: string | null;
-    cost?: number | null;
-    verified?: boolean | null;
-  }): Promise<{ id: string }> {
-    const res = await fetch(`/api/home/${homeId}/records`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create record");
-    return { id: json.id };
-  }
+  const [addOpen, setAddOpen] = useState(false);
 
   async function uploadAndPersistAttachments({
+    homeId,
     recordId,
+    warrantyId,
+    reminderId,
     files,
   }: {
-    recordId: string;
+    homeId: string;
+    recordId?: string;
+    warrantyId?: string;
+    reminderId?: string;
     files: File[];
   }) {
     if (!files.length) return;
 
     const uploaded: PersistAttachment[] = [];
     for (const f of files) {
+      const presignPayload: {
+        homeId: string;
+        filename: string;
+        contentType: string;
+        size: number;
+        recordId?: string;
+        warrantyId?: string;
+        reminderId?: string;
+      } = {
+        homeId,
+        filename: f.name,
+        contentType: f.type || "application/octet-stream",
+        size: f.size,
+      };
+
+      if (recordId) presignPayload.recordId = recordId;
+      if (warrantyId) presignPayload.warrantyId = warrantyId;
+      if (reminderId) presignPayload.reminderId = reminderId;
+
       const pre = await fetch(`/api/uploads/presign`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          homeId,
-          recordId,
-          filename: f.name,
-          mimeType: f.type || "application/octet-stream",
-          size: f.size,
-        }),
+        body: JSON.stringify(presignPayload),
       });
-      if (!pre.ok) throw new Error(`Presign failed: ${await pre.text()}`);
+
+      if (!pre.ok) {
+        const errorText = await pre.text();
+        throw new Error(`Presign failed: ${errorText}`);
+      }
+
       const { key, url, publicUrl } = (await pre.json()) as PresignResponse;
       if (!key || !url) throw new Error("Presign missing key/url");
 
@@ -91,10 +91,17 @@ export default function AddRecordButton({
         contentType: f.type || "application/octet-stream",
         storageKey: key,
         url: publicUrl,
+        visibility: "OWNER",
+        notes: undefined,
       });
     }
 
-    const endpoint = `/api/home/${homeId}/records/${recordId}/attachments`;
+    let endpoint = "";
+    if (recordId) endpoint = `/api/home/${homeId}/records/${recordId}/attachments`;
+    else if (warrantyId) endpoint = `/api/home/${homeId}/warranties/${warrantyId}/attachments`;
+    else if (reminderId) endpoint = `/api/home/${homeId}/reminders/${reminderId}/attachments`;
+    if (!endpoint) return;
+
     const persist = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -103,52 +110,111 @@ export default function AddRecordButton({
     if (!persist.ok) throw new Error(`Persist attachments failed: ${await persist.text()}`);
   }
 
-  async function onCreateAction({
+  async function onCreateUnified({
     payload,
     files,
   }: {
-    payload: CreateRecordPayload;
+    payload: UnifiedRecordPayload;
     files: File[];
   }) {
-    setBusy(true);
-    try {
+    if (payload.type === "record") {
       const record = await createRecord({
         title: payload.title,
-        note: payload.note ?? null,
-        date: payload.date,
-        kind: payload.kind ?? (payload.category ? payload.category.toLowerCase() : null),
-        vendor: payload.vendor ?? null,
-        cost: typeof payload.cost === "number" ? payload.cost : Number(payload.cost) || null,
-        verified: payload.verified ?? null,
+        note: payload.note ?? undefined,
+        date: payload.date ?? undefined,
+        kind: payload.kind ?? undefined,
+        vendor: payload.vendor ?? undefined,
+        cost: typeof payload.cost === "number" ? payload.cost : undefined,
+        verified: payload.verified ?? undefined,
       });
-
-      const recordId = record.id;
-      await uploadAndPersistAttachments({ recordId, files });
-
-      setOpen(false);
-      push("Record added");
-      router.refresh();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Could not add record";
-      push(msg);
-    } finally {
-      setBusy(false);
+      await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
+    } else if (payload.type === "reminder") {
+      const reminder = await createReminder({
+        title: payload.title,
+        dueAt: payload.dueAt!,
+        note: payload.note ?? undefined,
+      });
+      await uploadAndPersistAttachments({ homeId, reminderId: reminder.id, files });
+    } else if (payload.type === "warranty") {
+      const warranty = await createWarranty({
+        item: payload.item!,
+        provider: payload.provider ?? undefined,
+        policyNo: undefined,
+        expiresAt: payload.expiresAt ?? undefined,
+        note: payload.note ?? undefined,
+      });
+      await uploadAndPersistAttachments({ homeId, warrantyId: warranty.id, files });
     }
+
+    setAddOpen(false);
+    router.refresh();
   }
 
-  const btnClass = `${variant === "ghost" ? ctaGhost : ctaPrimary}${className ? ` ${className}` : ""}`;
+  async function createRecord(payload: {
+    title: string;
+    note?: string | null | undefined;
+    date?: string | undefined;
+    kind?: string | null | undefined;
+    vendor?: string | null | undefined;
+    cost?: number | null | undefined;
+    verified?: boolean | null | undefined;
+  }): Promise<{ id: string }> {
+    const res = await fetch(`/api/home/${homeId}/records`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create record");
+    return { id: json.id };
+  }
+
+  async function createReminder(payload: {
+    title: string;
+    dueAt: string;
+    note?: string | null | undefined;
+  }): Promise<{ id: string }> {
+    const res = await fetch(`/api/home/${homeId}/reminders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create reminder");
+    return { id: json.id };
+  }
+
+  async function createWarranty(payload: {
+    item: string;
+    provider?: string | null | undefined;
+    policyNo?: string | null | undefined;
+    expiresAt?: string | null | undefined;
+    note?: string | null | undefined;
+  }): Promise<{ id: string }> {
+    const res = await fetch(`/api/home/${homeId}/warranties`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create warranty");
+    return { id: json.id };
+  }
 
   return (
     <>
-      <button className={btnClass} onClick={() => setOpen(true)} disabled={busy}>
-        {busy ? "Saving…" : label}
+      <button onClick={() => setAddOpen(true)} className={ctaPrimary}>
+        {label}
       </button>
 
       <AddRecordModal
-        open={open}
-        onCloseAction={() => setOpen(false)}
-        onCreateAction={onCreateAction}
+        open={addOpen}
+        onCloseAction={() => setAddOpen(false)}
+        onCreateAction={onCreateUnified}
+        defaultType={defaultType}
       />
     </>
   );
 }
+
+export default AddRecordButton;

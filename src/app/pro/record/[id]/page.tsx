@@ -1,4 +1,4 @@
-// app/pro/record/[id]/page.tsx
+// app/pro/record/[Id]/page.tsx
 import JobRecordClient from "./JobRecordClient";
 
 export default async function Page({
