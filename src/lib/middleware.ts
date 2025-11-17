@@ -8,15 +8,16 @@ export async function middleware(request: NextRequest) {
   // Allow these paths without authentication
   const publicPaths = [
     "/",
-    "/home",           // Add this
     "/login",
     "/register",
     "/api/auth",
     "/api/register",
+    "/api/property",
     "/_next",
     "/favicon.ico",
   ];
 
+  // Check if the path is public
   const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
 
   if (isPublicPath) {
@@ -28,8 +29,9 @@ export async function middleware(request: NextRequest) {
                 request.cookies.get("__Secure-next-auth.session-token");
 
   if (!token) {
-    const homeUrl = new URL("/home", request.url);
-    return NextResponse.redirect(homeUrl);
+    // Redirect to root landing page, not /home
+    const rootUrl = new URL("/", request.url);
+    return NextResponse.redirect(rootUrl);
   }
 
   return NextResponse.next();
