@@ -40,7 +40,8 @@ export default function MainLanding() {
       if (!res.ok) throw new Error("Lookup failed");
       setData(await res.json());
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
+      const message =
+        err instanceof Error ? err.message : "Something went wrong";
       setError(message);
     } finally {
       setLoading(false);
@@ -51,7 +52,7 @@ export default function MainLanding() {
     if (aud === "home") {
       return {
         headline: "Your home's report card, built for trust.",
-        sub: "Store repairs, upgrades, reminders and warranties. Share a verified report in one click. Invite professionals to document their work-records-records and stay connected.",
+        sub: "Store repairs, upgrades, reminders and warranties. Share a verified report in one click. Invite professionals to document their work and stay connected.",
         primary: { label: "Create home record", href: "/home" },
         secondary: { label: "See sample report", href: "/report" },
         showAddress: true,
@@ -59,7 +60,7 @@ export default function MainLanding() {
     }
     return {
       headline: "Build your professional presence on the homes you serve.",
-      sub: "Document your work-records-records on client properties, maintain verified portfolios, and stay connected with homeowners and their trusted circle long after the job is done.",
+      sub: "Document your work records on client properties, maintain verified portfolios, and stay connected with homeowners and their trusted circle long after the job is done.",
       primary: { label: "Apply as a Pro", href: "/apply" },
       secondary: { label: "View sample record", href: "/report" },
       showAddress: false,
@@ -86,15 +87,14 @@ export default function MainLanding() {
       <div className="mx-auto max-w-6xl px-4 md:px-8 pt-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 shrink-0">
-            <Image
-              src="/myhomedox_logo.png"
-              alt="MyHomeDox"
-              width={180}
-              height={50}
-              priority
-              className="h-7 w-auto sm:h-9 cursor-pointer"
+            <button
+              type="button"
               onClick={() => router.push("/")}
-            />
+              className="cursor-pointer"
+              aria-label="HomeTrace home"
+            >
+              <HomeTraceLogo className="h-7 w-auto sm:h-9" />
+            </button>
           </div>
 
           <button
@@ -114,7 +114,9 @@ export default function MainLanding() {
             <button
               onClick={() => setAud("home")}
               className={`px-3 py-1 text-xs rounded-full transition ${
-                aud === "home" ? "bg-white text-slate-900" : "text-white/85 hover:text-white"
+                aud === "home"
+                  ? "bg-white text-slate-900"
+                  : "text-white/85 hover:text-white"
               }`}
             >
               For Homeowners
@@ -122,7 +124,9 @@ export default function MainLanding() {
             <button
               onClick={() => setAud("pro")}
               className={`px-3 py-1 text-xs rounded-full transition ${
-                aud === "pro" ? "bg-white text-slate-900" : "text-white/85 hover:text-white"
+                aud === "pro"
+                  ? "bg-white text-slate-900"
+                  : "text-white/85 hover:text-white"
               }`}
             >
               For Pros
@@ -132,7 +136,9 @@ export default function MainLanding() {
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-heading font-semibold leading-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
             {hero.headline}
           </h1>
-          <p className="mt-4 max-w-2xl text-base text-white/90 md:text-lg">{hero.sub}</p>
+          <p className="mt-4 max-w-2xl text-base text-white/90 md:text-lg">
+            {hero.sub}
+          </p>
 
           {/* CTAs */}
           <div className="mt-6 flex flex-col sm:flex-row gap-3">
@@ -157,11 +163,16 @@ export default function MainLanding() {
           {/* Address input */}
           <div className="mt-8">
             <div className={hero.showAddress ? "" : "invisible"}>
-              <form onSubmit={onLookup} className="flex w-full max-w-xl items-stretch gap-2 sm:gap-3">
+              <form
+                onSubmit={onLookup}
+                className="flex w-full max-w-xl items-stretch gap-2 sm:gap-3"
+              >
                 <Input
                   placeholder="Look up an address (e.g., 2147 Oakview Dr, Austin, TX)"
                   value={addr}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddr(e.target.value)}
+                  onChange={(
+                    e: React.ChangeEvent<HTMLInputElement>
+                  ) => setAddr(e.target.value)}
                   className="h-11 rounded-xl bg-white/95 text-slate-900 placeholder:text-slate-500
                              ring-1 ring-white/30 focus:ring-2 focus:ring-[#F35A1F]
                              shadow-[0_2px_12px_rgba(0,0,0,.12)] flex-1"
@@ -178,7 +189,9 @@ export default function MainLanding() {
                 </Button>
               </form>
             </div>
-            {error && <p className="mt-2 text-sm text-red-200">{error}</p>}
+            {error && (
+              <p className="mt-2 text-sm text-red-200">{error}</p>
+            )}
           </div>
         </div>
       </section>
@@ -189,16 +202,40 @@ export default function MainLanding() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {(aud === "home"
             ? [
-                ["Complete home history", "All repairs, upgrades, and warranties in one permanent record."],
-                ["Verified documentation", "Professionals document their work-records-records directly on your home's record."],
-                ["Easy sharing", "Give access to buyers, agents, or service providers with one link."],
-                ["Stay connected", "Maintain relationships with trusted contractors who know your home."],
+                [
+                  "Complete home history",
+                  "All repairs, upgrades, and warranties in one permanent record.",
+                ],
+                [
+                  "Verified documentation",
+                  "Professionals document their work records directly on your home's record.",
+                ],
+                [
+                  "Easy sharing",
+                  "Give access to buyers, agents, or service providers with one link.",
+                ],
+                [
+                  "Stay connected",
+                  "Maintain relationships with trusted contractors who know your home.",
+                ],
               ]
             : [
-                ["Document your work-records-records", "Create verified records of the work-records-records you do on client properties."],
-                ["Build your portfolio", "Show your craftsmanship with a history of completed projects."],
-                ["Stay connected", "Maintain relationships with homeowners and their trusted circle."],
-                ["Get discovered", "When homes change hands, new owners see your quality work-records-records."],
+                [
+                  "Document your work records",
+                  "Create verified records of the work you do on client properties.",
+                ],
+                [
+                  "Build your portfolio",
+                  "Show your craftsmanship with a history of completed projects.",
+                ],
+                [
+                  "Stay connected",
+                  "Maintain relationships with homeowners and their trusted circle.",
+                ],
+                [
+                  "Get discovered",
+                  "When homes change hands, new owners see your quality work.",
+                ],
               ]
           ).map(([t, d]) => (
             <div
@@ -216,14 +253,38 @@ export default function MainLanding() {
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
           {(aud === "home"
             ? [
-                ["1", "Create your record", "Start with your address and we'll help build your home's history."],
-                ["2", "Add documentation", "Upload receipts and invite professionals to document their work-records-records."],
-                ["3", "Share with confidence", "Give buyers, agents, or contractors secure access when needed."],
+                [
+                  "1",
+                  "Create your record",
+                  "Start with your address and we'll help build your home's history.",
+                ],
+                [
+                  "2",
+                  "Add documentation",
+                  "Upload receipts and invite professionals to document their work.",
+                ],
+                [
+                  "3",
+                  "Share with confidence",
+                  "Give buyers, agents, or contractors secure access when needed.",
+                ],
               ]
             : [
-                ["1", "Apply to join", "Get verified as a contractor, realtor, or inspector."],
-                ["2", "Document your work-records-records", "Add records to the homes you serve (with owner permission)."],
-                ["3", "Build your presence", "Create a verifiable portfolio that travels with the homes."],
+                [
+                  "1",
+                  "Apply to join",
+                  "Get verified as a contractor, realtor, or inspector.",
+                ],
+                [
+                  "2",
+                  "Document your work records",
+                  "Add records to the homes you serve (with owner permission).",
+                ],
+                [
+                  "3",
+                  "Build your presence",
+                  "Create a verifiable portfolio that travels with the homes.",
+                ],
               ]
           ).map(([s, t, d]) => (
             <div
@@ -256,7 +317,10 @@ export default function MainLanding() {
             <div className="rounded-2xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm">
               <div className="text-xs text-white/70">Est. Value</div>
               <div className="text-lg font-semibold">
-                {data.property.estValue.toLocaleString(undefined, { style: "currency", currency: "USD" })}
+                {data.property.estValue.toLocaleString(undefined, {
+                  style: "currency",
+                  currency: "USD",
+                })}
               </div>
             </div>
             <div className="rounded-2xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm">
@@ -271,5 +335,50 @@ export default function MainLanding() {
 
       <div className="h-16" />
     </main>
+  );
+}
+
+/** Inline HomeTrace logo based on your SVG */
+function HomeTraceLogo({ className }: { className?: string }) {
+  return (
+  <svg
+    viewBox="0 0 340 72"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    role="img"
+    aria-label="HomeTrace"
+  >
+    {/* House Outline */}
+    <path
+      d="M18 52C16.343 52 15 50.657 15 49V27.414C15 26.52 15.36 25.661 16 25.02L35.586 5.434C36.367 4.653 37.633 4.653 38.414 5.434L58 25.02C58.64 25.661 59 26.52 59 27.414V49C59 50.657 57.657 52 56 52H42C40.343 52 39 50.657 39 49V39H25V49C25 50.657 23.657 52 22 52H18Z"
+      stroke="#FFFFFF"
+      strokeWidth="6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+
+    {/* Checkmark */}
+    <path
+      d="M32.5 34L40 41.5L54 27.5"
+      stroke="#33C17D"
+      strokeWidth="6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
+
+    {/* HomeTrace Text – single node so it kerns correctly */}
+    <text
+      x="80"
+      y="48"
+      fontFamily="Inter, Arial, sans-serif"
+      fontSize="40"
+      fontWeight="600"
+      fill="#FFFFFF"
+    >
+      HomeTrace
+    </text>
+  </svg>
   );
 }

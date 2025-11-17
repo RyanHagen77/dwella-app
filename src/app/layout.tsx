@@ -5,7 +5,7 @@ import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata = {
-  title: "MyHomeDox",
+  title: "HomeTrace",
   description: "Your home's digital record",
 };
 

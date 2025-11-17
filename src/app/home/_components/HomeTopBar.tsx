@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
@@ -31,7 +30,7 @@ export default function HomeTopBar() {
     const match = pathname?.match(/\/home\/([^\/]+)/);
     if (match) {
       setCurrentHomeId(match[1]);
-      localStorage.setItem('lastHomeId', match[1]);
+      localStorage.setItem("lastHomeId", match[1]);
     }
   }, [pathname]);
 
@@ -39,13 +38,13 @@ export default function HomeTopBar() {
   useEffect(() => {
     async function fetchHomes() {
       try {
-        const res = await fetch('/api/user/homes');
+        const res = await fetch("/api/user/homes");
         if (res.ok) {
           const data = await res.json();
           setHomes(data.homes || []);
         }
       } catch (error) {
-        console.error('Failed to fetch homes:', error);
+        console.error("Failed to fetch homes:", error);
       }
     }
     if (session?.user?.id) {
@@ -53,11 +52,13 @@ export default function HomeTopBar() {
     }
   }, [session?.user?.id]);
 
-  const currentHome = homes.find(h => h.id === currentHomeId);
+  const currentHome = homes.find((h) => h.id === currentHomeId);
   const hasMultipleHomes = homes.length > 1;
 
   function formatAddress(home: Home) {
-    return `${home.address}${home.city ? `, ${home.city}` : ''}${home.state ? `, ${home.state}` : ''}`;
+    return `${home.address}${home.city ? `, ${home.city}` : ""}${
+      home.state ? `, ${home.state}` : ""
+    }`;
   }
 
   async function switchHome(homeId: string) {
@@ -65,17 +66,17 @@ export default function HomeTopBar() {
 
     // Update backend
     try {
-      await fetch('/api/user/last-home', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await fetch("/api/user/last-home", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ homeId }),
       });
     } catch (error) {
-      console.error('Failed to update last home:', error);
+      console.error("Failed to update last home:", error);
     }
 
     // Update localStorage
-    localStorage.setItem('lastHomeId', homeId);
+    localStorage.setItem("lastHomeId", homeId);
 
     // Navigate
     router.push(`/home/${homeId}`);
@@ -90,16 +91,9 @@ export default function HomeTopBar() {
             <Link
               href={currentHomeId ? `/home/${currentHomeId}` : "/"}
               className="inline-flex items-center gap-3 shrink-0 group"
+              aria-label="HomeTrace"
             >
-              <Image
-                src="/myhomedox_logo.png"
-                alt="MyHomeDox"
-                width={160}
-                height={44}
-                priority
-                className="h-7 w-auto sm:h-9 transition-opacity group-hover:opacity-90"
-                sizes="(min-width: 640px) 160px, 120px"
-              />
+              <HomeTraceLogo className="h-7 w-auto sm:h-9 transition-opacity group-hover:opacity-90" />
             </Link>
 
             {/* Current Home Selector (if multiple homes) */}
@@ -116,7 +110,11 @@ export default function HomeTopBar() {
                   stroke="currentColor"
                   className="w-4 h-4 flex-shrink-0"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                  />
                 </svg>
                 <span className="truncate">{formatAddress(currentHome)}</span>
                 <svg
@@ -127,7 +125,11 @@ export default function HomeTopBar() {
                   stroke="currentColor"
                   className="w-4 h-4 flex-shrink-0"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
+                  />
                 </svg>
               </button>
             )}
@@ -142,7 +144,7 @@ export default function HomeTopBar() {
                 >
                   {/* User avatar/icon */}
                   <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-medium">
-                    {session?.user?.email?.[0]?.toUpperCase() || 'U'}
+                    {session?.user?.email?.[0]?.toUpperCase() || "U"}
                   </div>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -150,9 +152,15 @@ export default function HomeTopBar() {
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
                     stroke="currentColor"
-                    className={`w-4 h-4 transition-transform ${accountMenuOpen ? 'rotate-180' : ''}`}
+                    className={`w-4 h-4 transition-transform ${
+                      accountMenuOpen ? "rotate-180" : ""
+                    }`}
                   >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                    />
                   </svg>
                 </button>
 
@@ -169,7 +177,7 @@ export default function HomeTopBar() {
                     <div className="absolute right-0 mt-2 w-56 rounded-lg border border-white/20 bg-black/90 backdrop-blur-xl shadow-xl z-50">
                       <div className="p-3 border-b border-white/10">
                         <p className="text-sm text-white/90 font-medium truncate">
-                          {session?.user?.name || 'Account'}
+                          {session?.user?.name || "Account"}
                         </p>
                         <p className="text-xs text-white/60 truncate">
                           {session?.user?.email}
@@ -179,7 +187,11 @@ export default function HomeTopBar() {
                       <div className="py-2">
                         <button
                           onClick={() => {
-                            router.push(`/account${currentHomeId ? `?homeId=${currentHomeId}` : ''}`);
+                            router.push(
+                              `/account${
+                                currentHomeId ? `?homeId=${currentHomeId}` : ""
+                              }`,
+                            );
                             setAccountMenuOpen(false);
                           }}
                           className="w-full px-4 py-2 text-left text-sm text-white/90 hover:bg-white/10 transition-colors flex items-center gap-2"
@@ -192,7 +204,11 @@ export default function HomeTopBar() {
                             stroke="currentColor"
                             className="w-4 h-4"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M17.982 18.725A7.488 7.488 0 0012 15.75a7.488 7.488 0 00-5.982 2.975m11.963 0a9 9 0 10-11.963 0m11.963 0A8.966 8.966 0 0112 21a8.966 8.966 0 01-5.982-2.275M15 9.75a3 3 0 11-6 0 3 3 0 016 0z"
+                            />
                           </svg>
                           Account Settings
                         </button>
@@ -212,7 +228,11 @@ export default function HomeTopBar() {
                             stroke="currentColor"
                             className="w-4 h-4"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 4.5v15m7.5-7.5h-15"
+                            />
                           </svg>
                           Add Another Home
                         </button>
@@ -233,7 +253,11 @@ export default function HomeTopBar() {
                               stroke="currentColor"
                               className="w-4 h-4"
                             >
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9" />
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M8.25 15L12 18.75 15.75 15m-7.5-6L12 5.25 15.75 9"
+                              />
                             </svg>
                             Switch Home
                           </button>
@@ -246,7 +270,9 @@ export default function HomeTopBar() {
 
               <button
                 type="button"
-                onClick={() => signOut({ callbackUrl: "/login?role=homeowner" })}
+                onClick={() =>
+                  signOut({ callbackUrl: "/login?role=homeowner" })
+                }
                 className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/15 transition-colors"
               >
                 Sign out
@@ -273,9 +299,9 @@ export default function HomeTopBar() {
           setClaimModalOpen(false);
           // Refresh homes after claiming
           if (session?.user?.id) {
-            fetch('/api/user/homes')
-              .then(res => res.json())
-              .then(data => setHomes(data.homes || []))
+            fetch("/api/user/homes")
+              .then((res) => res.json())
+              .then((data) => setHomes(data.homes || []))
               .catch(console.error);
           }
         }}
@@ -299,7 +325,9 @@ function HomeSwitcherModal({
   const [showClaimModal, setShowClaimModal] = React.useState(false);
 
   function formatAddress(home: Home) {
-    return `${home.address}${home.city ? `, ${home.city}` : ''}${home.state ? `, ${home.state}` : ''}`;
+    return `${home.address}${home.city ? `, ${home.city}` : ""}${
+      home.state ? `, ${home.state}` : ""
+    }`;
   }
 
   return (
@@ -328,7 +356,11 @@ function HomeSwitcherModal({
                   stroke="currentColor"
                   className="w-6 h-6"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
@@ -342,8 +374,8 @@ function HomeSwitcherModal({
                   onClick={() => onSwitch(home.id)}
                   className={`w-full p-4 rounded-lg text-left transition-colors ${
                     home.id === currentHomeId
-                      ? 'bg-white/15 border-2 border-white/30'
-                      : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                      ? "bg-white/15 border-2 border-white/30"
+                      : "bg-white/5 border border-white/10 hover:bg-white/10"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -355,12 +387,20 @@ function HomeSwitcherModal({
                       stroke="currentColor"
                       className="w-5 h-5 text-white/70 flex-shrink-0 mt-0.5"
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25"
+                      />
                     </svg>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium">{formatAddress(home)}</p>
+                      <p className="text-white font-medium">
+                        {formatAddress(home)}
+                      </p>
                       {home.id === currentHomeId && (
-                        <p className="text-xs text-green-400 mt-1">Current home</p>
+                        <p className="text-xs text-green-400 mt-1">
+                          Current home
+                        </p>
                       )}
                     </div>
                   </div>
@@ -386,7 +426,11 @@ function HomeSwitcherModal({
                 stroke="currentColor"
                 className="w-5 h-5"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 4.5v15m7.5-7.5h-15"
+                />
               </svg>
               Add Another Home
             </button>
@@ -402,5 +446,49 @@ function HomeSwitcherModal({
         />
       )}
     </>
+  );
+}
+
+/* --------------------------- HomeTrace Logo --------------------------- */
+
+function HomeTraceLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 340 72"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      role="img"
+      aria-label="HomeTrace"
+    >
+      {/* House Outline */}
+      <path
+        d="M18 52C16.343 52 15 50.657 15 49V27.414C15 26.52 15.36 25.661 16 25.02L35.586 5.434C36.367 4.653 37.633 4.653 38.414 5.434L58 25.02C58.64 25.661 59 26.52 59 27.414V49C59 50.657 57.657 52 56 52H42C40.343 52 39 50.657 39 49V39H25V49C25 50.657 23.657 52 22 52H18Z"
+        stroke="#FFFFFF"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Checkmark */}
+      <path
+        d="M32.5 34L40 41.5L54 27.5"
+        stroke="#33C17D"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* HomeTrace Text as a single node for proper kerning */}
+      <text
+        x="80"
+        y="48"
+        fontFamily="Inter, Arial, sans-serif"
+        fontSize="40"
+        fontWeight="600"
+        fill="#FFFFFF"
+      >
+        HomeTrace
+      </text>
+    </svg>
   );
 }

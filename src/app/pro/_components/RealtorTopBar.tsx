@@ -37,5 +37,5 @@ export default function RealtorTopBar() {
     { href: "/pro/realtor/profile", label: "Account" },
   ];
 
-  return <TopBar links={links} srBrand="MyHomeDox Realtor" logoAlt="MyHomeDox" />;
+  return <TopBar links={links} srBrand="HomeTrace Realtor" logoAlt="HomeTrace" />;
 }
