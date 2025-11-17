@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui";
 import { textMeta } from "@/lib/glass";
+import { useToast } from "@/components/ui/Toast";
 
 type InviteProModalProps = {
   open: boolean;
@@ -22,40 +23,62 @@ export function InviteProModal({
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const { push: toast } = useToast();
 
   if (!open) return null;
 
   async function handleInvite() {
-    if (!email || !email.includes("@")) return;
+  const trimmedEmail = email.trim();
+  if (!trimmedEmail || !trimmedEmail.includes("@")) return;
 
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/home/${homeId}/invitations/pro`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "email",
-          email,
-          message: message || "",
-        }),
-      });
+  setLoading(true);
+  try {
+    const res = await fetch("/api/invitations/home-to-pro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        homeId,
+        email: trimmedEmail,
+        message: message.trim() || undefined,
+      }),
+    });
 
-      if (!res.ok) {
-        const err = await res.json().catch(() => null);
-        throw new Error(err?.error || "Failed to send invitation");
+    const payload = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      const msg = (payload && payload.error) || "Failed to send invitation";
+
+      console.log("ERROR OCCURRED:", msg); // 🔍 DEBUG
+      console.log("Toast function:", toast); // 🔍 DEBUG
+
+      // Known validation / duplicate cases
+      if (res.status === 400 || res.status === 409) {
+        toast(msg);
+        console.log("Toast called after 400/409"); // 🔍 DEBUG
+        return;
       }
 
-      alert("Invitation sent!");
-      onCloseAction();
-    } catch (err) {
-      console.error("Error sending invitation:", err);
-      alert(
-        err instanceof Error ? err.message : "Failed to send invitation"
-      );
-    } finally {
-      setLoading(false);
+      // Unknown server error
+      console.error("Invite API error:", payload);
+      toast(msg);
+      console.log("Toast called for unknown error"); // 🔍 DEBUG
+      return;
     }
+
+    // Success
+    console.log("SUCCESS - calling toast"); // 🔍 DEBUG
+    toast("Invitation sent successfully!");
+    onCloseAction();
+    setEmail("");
+    setMessage("");
+  } catch (error) {
+    console.error("Error sending invitation:", error);
+    console.log("CATCH block - calling toast"); // 🔍 DEBUG
+    toast("Something went wrong sending the invitation. Please try again.");
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <Modal open={open} onCloseAction={onCloseAction}>
@@ -86,7 +109,7 @@ export function InviteProModal({
               onChange={(e) => setMessage(e.target.value)}
               className="w-full rounded-md border border-white/15 bg-white/10 px-4 py-2 text-white outline-none backdrop-blur placeholder:text-white/40"
               rows={3}
-              placeholder="Add a short note so they know why you’re inviting them…"
+              placeholder="Add a short note so they know why you're inviting them…"
             />
           </div>
 
@@ -94,7 +117,8 @@ export function InviteProModal({
             <button
               type="button"
               onClick={onCloseAction}
-              className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+              disabled={loading}
+              className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10 disabled:opacity-50"
             >
               Cancel
             </button>

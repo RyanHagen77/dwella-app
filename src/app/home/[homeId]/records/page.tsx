@@ -1,3 +1,4 @@
+// app/home/[homeId]/records/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -7,8 +8,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import HomeTopBar from "@/app/home/_components/HomeTopBar";
-import { RecordsPageClient } from "@/app/home/[homeId]/records/[recordId]/_components/RecordsPageClient";
+import { RecordsPageClient } from "@/app/home/[homeId]/records/[recordId]/RecordsPageClient";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
 export default async function RecordsPage({
@@ -78,7 +78,7 @@ export default async function RecordsPage({
   if (sort === "title") orderBy = { title: "asc" };
 
   // Get all records
-  const records = await prisma.record.findMany({
+  const recordsRaw = await prisma.record.findMany({
     where,
     orderBy,
     select: {
@@ -100,6 +100,17 @@ export default async function RecordsPage({
       },
     },
   });
+
+  // ✅ Serialize Decimal, Date, and bigint
+  const records = recordsRaw.map(record => ({
+    ...record,
+    date: record.date ? record.date.toISOString() : null,
+    cost: record.cost ? Number(record.cost) : null,
+    attachments: record.attachments.map(att => ({
+      ...att,
+      size: Number(att.size),
+    })),
+  }));
 
   // Get category counts for filters
   const categoryCounts = await prisma.record.groupBy({
@@ -129,7 +140,6 @@ export default async function RecordsPage({
       </div>
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <HomeTopBar />
 
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">

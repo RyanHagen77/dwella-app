@@ -6,8 +6,9 @@ import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { requireHomeAccess } from "@/lib/authz";
+import PendingWorkClient from "./PendingWorkClient";
 
-export default async function PendingWorkDebugPage({
+export default async function PendingWorkPage({
   params,
 }: {
   params: Promise<{ homeId: string }>;
@@ -19,55 +20,24 @@ export default async function PendingWorkDebugPage({
     redirect("/login");
   }
 
-  // Check access to this home
-  try {
-    await requireHomeAccess(homeId, session.user.id);
-  } catch (error) {
-    return (
-      <div className="p-6">
-        <h1 className="text-2xl font-bold text-red-600">Access Denied</h1>
-        <p>You don't have access to this home.</p>
-        <pre className="mt-4 p-4 bg-gray-100 rounded">
-          {JSON.stringify({ homeId, userId: session.user.id }, null, 2)}
-        </pre>
-      </div>
-    );
-  }
+  await requireHomeAccess(homeId, session.user.id);
 
-  // Get home details
   const home = await prisma.home.findUnique({
     where: { id: homeId },
-    include: {
-      owner: {
-        select: {
-          id: true,
-          email: true,
-          name: true,
-        },
-      },
+    select: {
+      address: true,
+      city: true,
+      state: true,
     },
   });
 
-  // Get ALL work records for this home (no filters)
-  const allWorkRecords = await prisma.workRecord.findMany({
-    where: {
-      homeId,
-    },
-    include: {
-      contractor: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  if (!home) {
+    redirect("/dashboard");
+  }
 
-  // Get pending work (with filters)
+  const homeAddress = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}`;
+
+  // Get pending work records with attachments
   const pendingWorkRecords = await prisma.workRecord.findMany({
     where: {
       homeId,
@@ -83,52 +53,66 @@ export default async function PendingWorkDebugPage({
           id: true,
           name: true,
           email: true,
+          image: true,
+          proProfile: {
+            select: {
+              businessName: true,
+              company: true,
+              phone: true,
+              rating: true,
+              completedJobs: true,
+              verified: true,
+            },
+          },
+        },
+      },
+      invitation: {
+        select: {
+          id: true,
+          message: true,
+        },
+      },
+      attachments: {  // ✅ Add attachments
+        select: {
+          id: true,
+          filename: true,
+          url: true,
+          mimeType: true,
+          size: true,
         },
       },
     },
+    orderBy: {
+      createdAt: "desc",
+    },
   });
 
+  // Serialize the data for the client
+  const pendingWork = pendingWorkRecords.map((work) => ({
+    id: work.id,
+    workType: work.workType,
+    workDate: work.workDate,
+    description: work.description,
+    cost: work.cost ? Number(work.cost) : null,
+    photos: work.photos as string[], // Legacy photos array
+    attachments: work.attachments.map(att => ({  // ✅ Serialize attachments
+      ...att,
+      size: Number(att.size), // Convert bigint to number
+    })),
+    invoiceUrl: work.invoiceUrl,
+    warrantyIncluded: work.warrantyIncluded,
+    warrantyLength: work.warrantyLength,
+    warrantyDetails: work.warrantyDetails,
+    status: work.status,
+    contractor: work.contractor,
+    invitation: work.invitation,
+  }));
+
   return (
-    <div className="p-6 space-y-6">
-      <h1 className="text-3xl font-bold">Pending Work Debug</h1>
-
-      <div className="border rounded p-4 bg-white">
-        <h2 className="text-xl font-bold mb-2">Home Info</h2>
-        <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto">
-          {JSON.stringify(home, null, 2)}
-        </pre>
-      </div>
-
-      <div className="border rounded p-4 bg-white">
-        <h2 className="text-xl font-bold mb-2">
-          All Work Records ({allWorkRecords.length})
-        </h2>
-        <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-96">
-          {JSON.stringify(allWorkRecords, null, 2)}
-        </pre>
-      </div>
-
-      <div className="border rounded p-4 bg-white">
-        <h2 className="text-xl font-bold mb-2">
-          Filtered Pending Work ({pendingWorkRecords.length})
-        </h2>
-        <p className="text-sm mb-2">
-          Query: isVerified=false, status IN [DOCUMENTED_UNVERIFIED, DOCUMENTED, DISPUTED], archivedAt=null
-        </p>
-        <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-96">
-          {JSON.stringify(pendingWorkRecords, null, 2)}
-        </pre>
-      </div>
-
-      <div className="border rounded p-4 bg-yellow-100">
-        <h2 className="text-xl font-bold mb-2">Expected Values</h2>
-        <ul className="text-sm space-y-1">
-          <li>✅ status: "DOCUMENTED_UNVERIFIED"</li>
-          <li>✅ isVerified: false</li>
-          <li>✅ archivedAt: null</li>
-          <li>✅ homeId: {homeId}</li>
-        </ul>
-      </div>
-    </div>
+    <PendingWorkClient
+      homeId={homeId}
+      homeAddress={homeAddress}
+      pendingWork={pendingWork}
+    />
   );
 }

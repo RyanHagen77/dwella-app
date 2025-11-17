@@ -119,6 +119,12 @@ export default async function HomePage({
     lastUpdated: attrs.lastUpdated ?? undefined,
   };
 
+  // ✅ Serialize records to convert Decimal to number
+  const serializedRecords = home.records.map(record => ({
+    ...record,
+    cost: record.cost ? Number(record.cost) : null,
+  }));
+
   // Separate overdue and upcoming reminders
   const now = new Date();
   const overdueReminders = home.reminders.filter(r => new Date(r.dueAt) < now);
@@ -246,14 +252,14 @@ export default async function HomePage({
               homeId={home.id}
               addType="record"
             >
-              {home.records.length === 0 ? (
+              {serializedRecords.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
                   <p className="mb-3">No records yet</p>
                   <p className="text-sm text-white/60 mb-4">Start tracking your home&apos;s maintenance history</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {home.records.map((r) => (
+                  {serializedRecords.map((r) => (
                     <RecordItem key={r.id} record={r} homeId={home.id} />
                   ))}
                 </div>

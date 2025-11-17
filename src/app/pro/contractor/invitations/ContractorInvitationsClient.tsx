@@ -5,9 +5,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import AddressVerification from "@/components/AddressVerification";
-import { glass, heading, textMeta, ctaGhost, ctaPrimary } from "@/lib/glass";
+import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import { Modal } from "@/components/ui/Modal";
-import { Input } from "@/components/ui";
+import { ContractorInvitationModal } from "./ContractorInvitationModal";
+import { useToast } from "@/components/ui/Toast";
 
 type Invitation = {
   id: string;
@@ -16,8 +17,8 @@ type Invitation = {
   role: string;
   message: string | null;
   status: string;
-  createdAt: Date;
-  expiresAt: Date;
+  createdAt: Date | string;
+  expiresAt: Date | string;
   inviter?: {
     id: string;
     name: string | null;
@@ -30,7 +31,7 @@ type Invitation = {
       rating: number | null;
       verified: boolean;
     } | null;
-  };
+  } | null;
   home?: {
     id: string;
     address: string;
@@ -50,10 +51,13 @@ export default function ContractorInvitationsClient({
   sentInvitations: Invitation[];
 }) {
   const router = useRouter();
+  const { push: toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("received");
   const [processing, setProcessing] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
-  const [selectedInvitation, setSelectedInvitation] = useState<string | null>(null);
+  const [selectedInvitation, setSelectedInvitation] = useState<string | null>(
+    null
+  );
   const [showInviteModal, setShowInviteModal] = useState(false);
 
   function handleAcceptClick(invitationId: string) {
@@ -73,7 +77,7 @@ export default function ContractorInvitationsClient({
     setProcessing(selectedInvitation);
     try {
       const response = await fetch(
-        `/api/pro/contractor/invitations/${selectedInvitation}/accept`,
+        `/api/invitations/${selectedInvitation}/accept`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -89,17 +93,19 @@ export default function ContractorInvitationsClient({
       );
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to accept invitation");
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || "Failed to accept invitation");
       }
 
-      alert("Invitation accepted! Connection established.");
+      toast("Invitation accepted! Connection established.");
       setShowAddressModal(false);
       setSelectedInvitation(null);
       router.refresh();
     } catch (error) {
       console.error("Error accepting invitation:", error);
-      alert(error instanceof Error ? error.message : "Failed to accept invitation");
+      toast(
+        error instanceof Error ? error.message : "Failed to accept invitation"
+      );
     } finally {
       setProcessing(null);
     }
@@ -111,21 +117,22 @@ export default function ContractorInvitationsClient({
     setProcessing(invitationId);
     try {
       const response = await fetch(
-        `/api/pro/contractor/invitations/${invitationId}/decline`,
+        `/api/invitations/${invitationId}/decline`,
         {
           method: "POST",
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to decline invitation");
+        const err = await response.json().catch(() => null);
+        throw new Error(err?.error || "Failed to decline invitation");
       }
 
-      alert("Invitation declined.");
+      toast("Invitation declined.");
       router.refresh();
     } catch (error) {
       console.error("Error declining invitation:", error);
-      alert("Failed to decline invitation. Please try again.");
+      toast("Failed to decline invitation. Please try again.");
     } finally {
       setProcessing(null);
     }
@@ -137,46 +144,55 @@ export default function ContractorInvitationsClient({
     setProcessing(invitationId);
     try {
       const response = await fetch(
-        `/api/pro/contractor/invitations/${invitationId}/cancel`,
+        `/api/invitations/${invitationId}/cancel`,
         {
           method: "POST",
         }
       );
 
       if (!response.ok) {
-        throw new Error("Failed to cancel invitation");
+        const err = await response.json().catch(() => null);
+        throw new Error(err?.error || "Failed to cancel invitation");
       }
 
-      alert("Invitation cancelled.");
+      toast("Invitation cancelled.");
       router.refresh();
     } catch (error) {
       console.error("Error cancelling invitation:", error);
-      alert("Failed to cancel invitation. Please try again.");
+      toast("Failed to cancel invitation. Please try again.");
     } finally {
       setProcessing(null);
     }
   }
 
+  function handleInviteModalClose() {
+    setShowInviteModal(false);
+    router.refresh(); // Refresh to show newly sent invitation
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header - Match Work Records exactly */}
+      {/* Header */}
       <div className={glass}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className={`text-2xl font-semibold ${heading}`}>Invitations</h1>
             <p className={`mt-1 ${textMeta}`}>
-              Manage invitations you&apos;ve sent and received
+              Manage invitations you&apos;ve sent and received.
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setShowInviteModal(true)} className={ctaPrimary}>
+            <button
+              onClick={() => setShowInviteModal(true)}
+              className={ctaPrimary}
+            >
               Invite Homeowner
             </button>
           </div>
         </div>
       </div>
 
-      {/* Tabs/Filters Section - Match Work Records filters */}
+      {/* Tabs */}
       <section className={glass}>
         <div className="flex gap-2">
           <button
@@ -188,8 +204,12 @@ export default function ContractorInvitationsClient({
             }`}
           >
             Received{" "}
-            {receivedInvitations.filter((i) => i.status === "PENDING").length > 0 &&
-              `(${receivedInvitations.filter((i) => i.status === "PENDING").length})`}
+            {receivedInvitations.filter((i) => i.status === "PENDING").length >
+              0 &&
+              `(${
+                receivedInvitations.filter((i) => i.status === "PENDING")
+                  .length
+              })`}
           </button>
           <button
             onClick={() => setActiveTab("sent")}
@@ -224,7 +244,7 @@ export default function ContractorInvitationsClient({
         )}
       </section>
 
-      {/* Address Verification Modal - now using shared Modal styling */}
+      {/* Address Verification Modal for ACCEPT */}
       {showAddressModal && (
         <Modal
           open={true}
@@ -259,15 +279,17 @@ export default function ContractorInvitationsClient({
         </Modal>
       )}
 
-      {/* Invite Homeowner Modal - matches Work Records version */}
-      {showInviteModal && (
-        <InviteHomeownerModal onCloseAction={() => setShowInviteModal(false)} />
-      )}
+      {/* Contractor Invite Homeowner Modal */}
+      <ContractorInvitationModal
+        open={showInviteModal}
+        onCloseAction={handleInviteModalClose}
+      />
     </div>
   );
 }
 
 /* ========== Received Invitations Tab ========== */
+
 function ReceivedInvitationsTab({
   invitations,
   processing,
@@ -279,8 +301,12 @@ function ReceivedInvitationsTab({
   onAccept: (id: string) => void;
   onDecline: (id: string) => void;
 }) {
-  const pendingInvitations = invitations.filter((inv) => inv.status === "PENDING");
-  const processedInvitations = invitations.filter((inv) => inv.status !== "PENDING");
+  const pendingInvitations = invitations.filter(
+    (inv) => inv.status === "PENDING"
+  );
+  const processedInvitations = invitations.filter(
+    (inv) => inv.status !== "PENDING"
+  );
 
   if (invitations.length === 0) {
     return (
@@ -293,7 +319,6 @@ function ReceivedInvitationsTab({
 
   return (
     <div className="space-y-6">
-      {/* Pending */}
       {pendingInvitations.length > 0 && (
         <div>
           <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
@@ -326,8 +351,14 @@ function ReceivedInvitationsTab({
                     </div>
                   </div>
                   <div className="text-right text-sm text-white/60">
-                    <p>Sent {new Date(invitation.createdAt).toLocaleDateString()}</p>
-                    <p>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
+                    <p>
+                      Sent{" "}
+                      {new Date(invitation.createdAt).toLocaleDateString()}
+                    </p>
+                    <p>
+                      Expires{" "}
+                      {new Date(invitation.expiresAt).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
 
@@ -346,7 +377,9 @@ function ReceivedInvitationsTab({
                     disabled={processing === invitation.id}
                     className="rounded-lg bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 font-medium text-white transition-all hover:from-orange-600 hover:to-red-600 disabled:opacity-50"
                   >
-                    {processing === invitation.id ? "Processing..." : "✓ Accept"}
+                    {processing === invitation.id
+                      ? "Processing..."
+                      : "✓ Accept"}
                   </button>
                   <button
                     onClick={() => onDecline(invitation.id)}
@@ -362,7 +395,6 @@ function ReceivedInvitationsTab({
         </div>
       )}
 
-      {/* Processed */}
       {processedInvitations.length > 0 && (
         <div>
           <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
@@ -395,6 +427,7 @@ function ReceivedInvitationsTab({
 }
 
 /* ========== Sent Invitations Tab ========== */
+
 function SentInvitationsTab({
   invitations,
   processing,
@@ -404,12 +437,15 @@ function SentInvitationsTab({
   processing: string | null;
   onCancel: (id: string) => void;
 }) {
-  const pendingInvitations = invitations.filter((inv) => inv.status === "PENDING");
-  const processedInvitations = invitations.filter((inv) => inv.status !== "PENDING");
+  const pendingInvitations = invitations.filter(
+    (inv) => inv.status === "PENDING"
+  );
+  const processedInvitations = invitations.filter(
+    (inv) => inv.status !== "PENDING"
+  );
 
   return (
     <>
-      {/* Pending */}
       {pendingInvitations.length > 0 && (
         <div className="mb-8">
           <h2 className="mb-4 text-lg font-semibold text-white">
@@ -433,20 +469,29 @@ function SentInvitationsTab({
                     )}
                     {invitation.home && (
                       <p className="mt-2 text-sm text-white/70">
-                        📍 {invitation.home.address}, {invitation.home.city},{" "}
-                        {invitation.home.state} {invitation.home.zip}
+                        📍 {invitation.home.address},{" "}
+                        {invitation.home.city}, {invitation.home.state}{" "}
+                        {invitation.home.zip}
                       </p>
                     )}
                   </div>
                   <div className="ml-4 shrink-0 text-right text-sm text-white/60">
-                    <p>Sent {new Date(invitation.createdAt).toLocaleDateString()}</p>
-                    <p>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
+                    <p>
+                      Sent{" "}
+                      {new Date(invitation.createdAt).toLocaleDateString()}
+                    </p>
+                    <p>
+                      Expires{" "}
+                      {new Date(invitation.expiresAt).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
 
                 {invitation.message && (
                   <div className="mb-4 rounded-lg border border-white/20 bg-white/10 p-4">
-                    <p className="mb-1 text-sm font-medium text-white/90">Message:</p>
+                    <p className="mb-1 text-sm font-medium text-white/90">
+                      Message:
+                    </p>
                     <p className="text-white/80">{invitation.message}</p>
                   </div>
                 )}
@@ -468,7 +513,6 @@ function SentInvitationsTab({
         </div>
       )}
 
-      {/* Processed */}
       {processedInvitations.length > 0 && (
         <div>
           <h2 className="mb-4 text-lg font-semibold text-white">
@@ -505,7 +549,7 @@ function SentInvitationsTab({
         <div className="rounded-xl border border-white/10 bg-white/5 p-12 text-center backdrop-blur-xl">
           <p className="text-lg text-white/70">No invitations sent yet.</p>
           <p className="mt-2 text-sm text-white/50">
-            Invite homeowners from the Work Records page
+            Invite homeowners from the invitations screen.
           </p>
         </div>
       )}
@@ -514,6 +558,7 @@ function SentInvitationsTab({
 }
 
 /* ========== Status Badge ========== */
+
 function StatusBadge({ status }: { status: string }) {
   const styles =
     {
@@ -527,213 +572,5 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`rounded-lg border px-3 py-1 text-sm font-medium ${styles}`}>
       {status}
     </span>
-  );
-}
-
-/* ========== Invite Homeowner Modal ========== */
-function InviteHomeownerModal({
-  onCloseAction,
-}: {
-  onCloseAction: () => void;
-}) {
-  const [step, setStep] = useState<"email" | "address" | "message">("email");
-  const [email, setEmail] = useState("");
-  const [verifiedAddress, setVerifiedAddress] = useState<{
-    street: string;
-    unit?: string;
-    city: string;
-    state: string;
-    zip: string;
-  } | null>(null);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit() {
-    if (!verifiedAddress) return;
-
-    setLoading(true);
-
-    try {
-      const fullAddress = `${verifiedAddress.street}${
-        verifiedAddress.unit ? ` ${verifiedAddress.unit}` : ""
-      }, ${verifiedAddress.city}, ${verifiedAddress.state} ${
-        verifiedAddress.zip
-      }`;
-
-      const response = await fetch("/api/pro/contractor/invitations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          invitedEmail: email,
-          homeAddress: fullAddress,
-          message,
-          role: "HOMEOWNER",
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to send invitation");
-      }
-
-      alert("Invitation sent successfully!");
-      onCloseAction();
-      window.location.reload();
-    } catch (error) {
-      console.error("Error sending invitation:", error);
-      alert(error instanceof Error ? error.message : "Failed to send invitation");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <Modal open={true} onCloseAction={onCloseAction}>
-      <div className="p-6">
-        <h2 className="mb-4 text-xl font-bold text-white">Invite Homeowner</h2>
-
-        {/* Step Indicator */}
-        <div className="mb-6 flex items-center justify-center gap-2">
-          <StepDot active={step === "email"} completed={step !== "email"} label="1" />
-          <div className="h-0.5 w-8 bg-white/20" />
-          <StepDot
-            active={step === "address"}
-            completed={step === "message"}
-            label="2"
-          />
-          <div className="h-0.5 w-8 bg-white/20" />
-          <StepDot active={step === "message"} label="3" />
-        </div>
-
-        {/* Step 1: Email */}
-        {step === "email" && (
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-white">
-                Homeowner Email
-              </label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="homeowner@example.com"
-                autoFocus
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={onCloseAction}
-                className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white hover:bg-white/10"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => setStep("address")}
-                disabled={!email || !email.includes("@")}
-                className="rounded-lg bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 font-medium text-white hover:from-orange-600 hover:to-red-600 disabled:opacity-50"
-              >
-                Next: Verify Address
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Address Verification */}
-        {step === "address" && (
-          <div className="space-y-4">
-            <AddressVerification
-              onVerified={(address) => {
-                setVerifiedAddress(address);
-                setStep("message");
-              }}
-            />
-            <button
-              onClick={() => setStep("email")}
-              className="text-sm text-white/70 hover:text-white"
-            >
-              ← Back
-            </button>
-          </div>
-        )}
-
-        {/* Step 3: Message */}
-        {step === "message" && (
-          <div className="space-y-4">
-            <div className="rounded-lg border border-white/20 bg-white/5 p-3">
-              <p className="mb-1 text-xs text-white/60">Verified Address:</p>
-              <p className="text-sm font-medium text-white">
-                {verifiedAddress?.street}
-                {verifiedAddress?.unit && ` ${verifiedAddress.unit}`}
-              </p>
-              <p className="text-sm text-white">
-                {verifiedAddress?.city}, {verifiedAddress?.state}{" "}
-                {verifiedAddress?.zip}
-              </p>
-              <button
-                onClick={() => setStep("address")}
-                className="mt-2 text-xs text-white/70 hover:text-white"
-              >
-                Change address
-              </button>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-white">
-                Message (Optional)
-              </label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add a personal message to the homeowner..."
-                className="w-full rounded-md border border-white/15 bg-white/10 px-4 py-2 text-white outline-none backdrop-blur placeholder:text-white/40"
-                rows={3}
-              />
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setStep("address")}
-                disabled={loading}
-                className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white hover:bg-white/10"
-              >
-                Back
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={loading}
-                className="rounded-lg bg-gradient-to-r from-orange-500 to-red-500 px-4 py-2 font-medium text-white hover:from-orange-600 hover:to-red-600 disabled:opacity-50"
-              >
-                {loading ? "Sending..." : "Send Invitation"}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
-function StepDot({
-  active,
-  completed,
-  label,
-}: {
-  active?: boolean;
-  completed?: boolean;
-  label: string;
-}) {
-  return (
-    <div
-      className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-bold ${
-        completed
-          ? "bg-green-400/20 text-green-300"
-          : active
-          ? "bg-orange-400/20 text-orange-300"
-          : "bg-white/10 text-white/40"
-      }`}
-    >
-      {completed ? "✓" : label}
-    </div>
   );
 }

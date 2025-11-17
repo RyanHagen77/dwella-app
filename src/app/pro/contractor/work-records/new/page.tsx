@@ -25,7 +25,7 @@ export default async function DocumentWorkPage() {
     redirect("/dashboard");
   }
 
-  // Get all ACTIVE connections for this contractor
+  // Get all ACTIVE work for this contractor
   const connections = await prisma.connection.findMany({
     where: {
       contractorId: session.user.id,

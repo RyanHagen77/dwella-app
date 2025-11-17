@@ -1,4 +1,4 @@
-// src/app/api/user/homes/count/route.ts
+// src/app/api/user/homes/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -12,8 +12,8 @@ export async function GET() {
   }
 
   try {
-    // Count homes where user is owner or has access
-    const count = await prisma.home.count({
+    // Get all homes where user is owner or has access
+    const homes = await prisma.home.findMany({
       where: {
         OR: [
           { ownerId: session.user.id },
@@ -26,11 +26,30 @@ export async function GET() {
           },
         ],
       },
+      select: {
+        id: true,
+        address: true,
+        city: true,
+        state: true,
+        zip: true,
+        createdAt: true,
+        // Get counts for dashboard
+        _count: {
+          select: {
+            workRecords: true,
+            reminders: true,
+            warranties: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
     });
 
-    return NextResponse.json({ count });
+    return NextResponse.json({ homes });
   } catch (error) {
-    console.error("Failed to get home count:", error);
+    console.error("Failed to get homes:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

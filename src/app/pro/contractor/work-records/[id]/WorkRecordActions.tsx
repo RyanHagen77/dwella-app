@@ -1,35 +1,25 @@
-// app/home/[homeId]/records/[recordId]/_components/RecordActions.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ctaGhost } from "@/lib/glass";
-import { EditRecordModal } from "./EditRecordModal";
+import { EditWorkRecordModal } from "./EditWorkRecordModal";
 
-type RecordData = {
+type WorkRecordData = {
   id: string;
-  title: string;
-  date: Date | null;
-  kind: string | null;
-  vendor: string | null;
+  workType: string;
+  workDate: string;
+  description: string;
   cost: number | null;
-  note: string | null;
-  attachments?: Array<{
-    id: string;
-    filename: string;
-    url: string;
-    mimeType: string;
-    size: number;
-  }>;
+  status: string;
 };
 
 type Props = {
-  recordId: string;
-  homeId: string;
-  record: RecordData;
+  workRecordId: string;
+  workRecord: WorkRecordData;
 };
 
-export function RecordActions({ recordId, homeId, record }: Props) {
+export function WorkRecordActions({ workRecordId, workRecord }: Props) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -38,20 +28,19 @@ export function RecordActions({ recordId, homeId, record }: Props) {
   async function handleDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/home/${homeId}/records/${recordId}`, {
+      const res = await fetch(`/api/pro/contractor/work-records/${workRecordId}`, {
         method: "DELETE",
       });
 
       if (!res.ok) {
-        throw new Error("Failed to delete record");
+        throw new Error("Failed to delete work record");
       }
 
-      // Redirect back to records list
-      router.push(`/home/${homeId}/records`);
+      router.push("/pro/contractor/work-records");
       router.refresh();
     } catch (error) {
       console.error("Delete failed:", error);
-      alert("Failed to delete record. Please try again.");
+      alert("Failed to delete work record. Please try again.");
       setDeleting(false);
     }
   }
@@ -60,19 +49,18 @@ export function RecordActions({ recordId, homeId, record }: Props) {
     <>
       <div className="flex items-center gap-2">
         <button
-          className={ctaGhost}
           onClick={() => setEditOpen(true)}
+          className={ctaGhost}
         >
           Edit
         </button>
 
         <button
-          onClick={() => {
+          onClick={async () => {
             if (showConfirm) {
-              handleDelete();
+              await handleDelete(); // ✅ Add await
             } else {
               setShowConfirm(true);
-              // Reset after 3 seconds if not clicked
               setTimeout(() => setShowConfirm(false), 3000);
             }
           }}
@@ -87,11 +75,11 @@ export function RecordActions({ recordId, homeId, record }: Props) {
         </button>
       </div>
 
-      <EditRecordModal
+      <EditWorkRecordModal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        record={record}
-        homeId={homeId}
+        workRecord={workRecord}
+        workRecordId={workRecordId}
       />
     </>
   );

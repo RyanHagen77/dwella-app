@@ -8,18 +8,21 @@ import { z } from "zod";
 export const runtime = "nodejs";
 
 const createWorkRecordSchema = z.object({
-  homeId: z.string().min(1, "Home ID is required"),
+  homeId: z.string().min(1, "Home ID is required"), // ✅ Accept homeId for connected homes
   workType: z.string().min(1, "Work type is required"),
   workDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid date format",
   }),
   description: z.string().optional(),
-  cost: z.number().positive().optional().nullable(),
+  cost: z.number().nullable().optional(),
+  warrantyIncluded: z.boolean().default(false),
+  warrantyLength: z.string().optional(),
+  warrantyDetails: z.string().optional(),
 });
 
 /**
  * POST /api/pro/contractor/work-records
- * Create work record at a connected property
+ * Allows contractors to document work for connected homes
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -45,7 +48,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = createWorkRecordSchema.parse(body);
 
-    // Verify contractor has ACTIVE connection to this home
+    // Verify contractor has access to this home
     const connection = await prisma.connection.findFirst({
       where: {
         contractorId: session.user.id,
@@ -61,45 +64,35 @@ export async function POST(req: Request) {
       );
     }
 
+    // Get home details
+    const home = await prisma.home.findUnique({
+      where: { id: data.homeId },
+    });
+
+    if (!home) {
+      return NextResponse.json(
+        { error: "Home not found" },
+        { status: 404 }
+      );
+    }
+
     // Create work record
     const workRecord = await prisma.workRecord.create({
       data: {
         homeId: data.homeId,
         contractorId: session.user.id,
-        invitationId: null, // Independent documentation
+        invitationId: null,
         workType: data.workType,
         workDate: new Date(data.workDate),
         description: data.description ?? null,
         cost: data.cost ?? null,
-        status: "DOCUMENTED_UNVERIFIED", // Awaiting homeowner verification
+        warrantyIncluded: data.warrantyIncluded,
+        warrantyLength: data.warrantyLength ?? null,
+        warrantyDetails: data.warrantyDetails ?? null,
+        status: "DOCUMENTED_UNVERIFIED",
         isVerified: false,
-        warrantyIncluded: false,
         photos: [],
         invoiceUrl: null,
-      },
-      include: {
-        contractor: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            proProfile: {
-              select: {
-                businessName: true,
-                company: true,
-              },
-            },
-          },
-        },
-        home: {
-          select: {
-            id: true,
-            address: true,
-            city: true,
-            state: true,
-            zip: true,
-          },
-        },
       },
     });
 
@@ -108,9 +101,7 @@ export async function POST(req: Request) {
         success: true,
         workRecord: {
           id: workRecord.id,
-          homeId: workRecord.homeId,
-          workType: workRecord.workType,
-          workDate: workRecord.workDate,
+          homeId: home.id,
           status: workRecord.status,
         },
       },
@@ -161,16 +152,11 @@ export async function GET(req: Request) {
           city: true,
           state: true,
           zip: true,
-        },
-      },
-      contractor: {
-        select: {
-          id: true,
-          name: true,
-          proProfile: {
+          owner: {
             select: {
-              businessName: true,
-              company: true,
+              id: true,
+              name: true,
+              email: true,
             },
           },
         },

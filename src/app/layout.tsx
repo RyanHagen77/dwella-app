@@ -1,5 +1,6 @@
 import "./globals.css";
 import SessionProviderWrapper from "@/components/SessionProviderWrapper";
+import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata = {
   title: "MyHomeDox",
@@ -11,7 +12,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <SessionProviderWrapper>
-          {children}
+          <ToastProvider>
+            {children}
+          </ToastProvider>
         </SessionProviderWrapper>
       </body>
     </html>

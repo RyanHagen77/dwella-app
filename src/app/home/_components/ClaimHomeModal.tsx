@@ -75,8 +75,12 @@ export function ClaimHomeModal({
         return;
       }
 
-      push("Home claimed!");
-      window.location.href = `/home/${j.id}`;
+    // In ClaimHomeModal.tsx - update the success handler:
+
+    push("Home claimed!");
+    onCloseAction(); // Close modal first
+    // Then let the parent component handle navigation, or:
+    window.location.href = `/home/${j.id}`;
     } catch (err) {
       const error = err as Error;
       setError(error.message || "Error claiming home");

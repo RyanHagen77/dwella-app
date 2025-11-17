@@ -49,14 +49,14 @@ export function DocumentWorkClient({ connectedHomes }: DocumentWorkClientProps) 
 
   async function uploadFileWithRecordId(file: File, homeId: string, recordId: string): Promise<string> {
     // Step 1: Get presigned URL with recordId (contractor endpoint)
-    const presignResponse = await fetch("/api/pro/contractor/uploads/presign", {
+    const presignResponse = await fetch("/api/uploads/presign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         homeId,
         recordId,
         filename: file.name,
-        mimeType: file.type,
+        contentType: file.type, // ✅ Changed from mimeType to contentType
         size: file.size,
       }),
     });

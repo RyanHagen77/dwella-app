@@ -1,10 +1,10 @@
+// app/home/_components/ClientActions.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ctaPrimary, ctaGhost, textMeta, glass } from "@/lib/glass";
-import { Modal } from "@/components/ui/Modal";
+import { ctaPrimary, ctaGhost } from "@/lib/glass";
 
 /** Client modals */
 import {
@@ -16,6 +16,7 @@ import {
   FindVendorsModal,
   type VendorDirectoryItem,
 } from "@/app/home/_components/FindVendorModal";
+import { ConnectionsModal } from "@/app/home/_components/ConnectionsModal";
 
 /* ---------- Types ---------- */
 type PresignResponse = { key: string; url: string; publicUrl: string | null };
@@ -27,6 +28,11 @@ type PersistAttachment = {
   url: string | null;
   visibility: "OWNER" | "HOME" | "PUBLIC";
   notes?: string;
+};
+
+type InvitationResponse = {
+  sentInvitations?: { status: string }[];
+  receivedInvitations?: { status: string }[];
 };
 
 /* ---------- Component ---------- */
@@ -47,29 +53,48 @@ export default function ClientActions({ homeId }: { homeId: string }) {
   useEffect(() => {
     async function fetchPendingWork() {
       try {
-        const res = await fetch(`/api/home/${homeId}/records/pending-work`);
-        if (res.ok) {
-          const data = await res.json();
-          setPendingWorkCount(data.totalPending || 0);
+        const res = await fetch(`/api/home/${homeId}/work/pending`);
+        if (!res.ok) {
+          console.error(
+            "Failed to fetch pending work:",
+            res.status,
+            await res.text()
+          );
+          setPendingWorkCount(0);
+          return;
         }
+
+        const data = await res.json();
+        const count =
+          typeof data.totalPending === "number"
+            ? data.totalPending
+            : Array.isArray(data.pendingWork)
+            ? data.pendingWork.length
+            : 0;
+
+        console.log("Pending work count (ClientActions):", count);
+        setPendingWorkCount(count);
       } catch (error) {
         console.error("Error fetching pending work:", error);
+        setPendingWorkCount(0);
       } finally {
         setLoadingPending(false);
       }
     }
 
-    fetchPendingWork();
+    void fetchPendingWork();
   }, [homeId]);
 
   /* ---------- Fetch pending invitations count ---------- */
   useEffect(() => {
     async function fetchPendingInvitations() {
       try {
-        const res = await fetch(`/api/user/invitations?status=PENDING`);
+        const res = await fetch(`/api/home/${homeId}/invitations?status=PENDING`);
         if (res.ok) {
-          const data = await res.json();
-          setPendingInvitationsCount(data.invitations?.length || 0);
+          const data = (await res.json()) as InvitationResponse; // ✅ Fixed: typed as InvitationResponse
+          const sentCount = data.sentInvitations?.filter((inv) => inv.status === 'PENDING').length || 0;
+          const receivedCount = data.receivedInvitations?.filter((inv) => inv.status === 'PENDING').length || 0;
+          setPendingInvitationsCount(sentCount + receivedCount);
         }
       } catch (error) {
         console.error("Error fetching pending invitations:", error);
@@ -78,8 +103,8 @@ export default function ClientActions({ homeId }: { homeId: string }) {
       }
     }
 
-    fetchPendingInvitations();
-  }, []);
+    void fetchPendingInvitations(); // ✅ Fixed: explicitly ignore promise
+  }, [homeId]);
 
   /* ---------- API Helpers ---------- */
   async function createRecord(payload: {
@@ -348,120 +373,5 @@ export default function ClientActions({ homeId }: { homeId: string }) {
         }}
       />
     </>
-  );
-}
-
-/* ---------- Connections Modal ---------- */
-
-type ConnectionsModalProps = {
-  open: boolean;
-  onCloseAction: () => void;
-  homeId: string;
-  pendingWorkCount: number;
-  loadingWork: boolean;
-  pendingInvitationsCount: number;
-  loadingInvites: boolean;
-  onOpenShare: () => void;
-  onOpenVendors: () => void;
-};
-
-function ConnectionsModal({
-  open,
-  onCloseAction,
-  homeId,
-  pendingWorkCount,
-  loadingWork,
-  pendingInvitationsCount,
-  loadingInvites,
-  onOpenShare,
-  onOpenVendors,
-}: ConnectionsModalProps) {
-  if (!open) return null;
-
-  return (
-    <Modal open={open} onCloseAction={onCloseAction}>
-      <div className="p-6">
-        <h2 className="mb-2 text-xl font-bold text-white">Connections</h2>
-        <p className={`mb-4 text-sm ${textMeta}`}>
-          Manage pros, invitations, and work tied to this home.
-        </p>
-
-        <div className="space-y-3">
-          {/* Invitations */}
-          <Link
-            href={`/home/${homeId}/invitations`}
-            className={`${glass} flex items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-3 hover:bg-white/10`}
-          >
-            <div>
-              <p className="text-sm font-medium text-white">Invitations</p>
-              <p className={`text-xs ${textMeta}`}>
-                Invitations you&apos;ve sent and contractor invites you&apos;ve
-                received.
-              </p>
-            </div>
-            <span className="ml-3 rounded-full bg-blue-500/20 px-3 py-1 text-xs font-semibold text-blue-200">
-              {loadingInvites
-                ? "—"
-                : `${pendingInvitationsCount} pending`}
-            </span>
-          </Link>
-
-          {/* Pending Work */}
-          <Link
-            href={`/home/${homeId}/pending-work`}
-            className={`${glass} flex items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-3 hover:bg-white/10`}
-          >
-            <div>
-              <p className="text-sm font-medium text-white">Pending Work</p>
-              <p className={`text-xs ${textMeta}`}>
-                Work your pros have documented and are waiting for you to
-                review.
-              </p>
-            </div>
-            <span className="ml-3 rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-200">
-              {loadingWork ? "—" : `${pendingWorkCount} items`}
-            </span>
-          </Link>
-
-          {/* Share access */}
-          <button
-            type="button"
-            onClick={onOpenShare}
-            className={`${glass} flex w-full items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-left hover:bg-white/10`}
-          >
-            <div>
-              <p className="text-sm font-medium text-white">Share Access</p>
-              <p className={`text-xs ${textMeta}`}>
-                Give a partner, co-owner, or assistant access to this home.
-              </p>
-            </div>
-          </button>
-
-          {/* Find vendors */}
-          <button
-            type="button"
-            onClick={onOpenVendors}
-            className={`${glass} flex w-full items-center justify-between rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-left hover:bg-white/10`}
-          >
-            <div>
-              <p className="text-sm font-medium text-white">Find Pros</p>
-              <p className={`text-xs ${textMeta}`}>
-                Browse recommended vendors for future work.
-              </p>
-            </div>
-          </button>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <button
-            type="button"
-            onClick={onCloseAction}
-            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </Modal>
   );
 }

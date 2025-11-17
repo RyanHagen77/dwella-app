@@ -3,15 +3,16 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { glass, glassTight, textMeta, ctaGhost } from "@/lib/glass";
+import { glass, ctaGhost } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
 
+// In RecordsPageClient.tsx
 type RecordItem = {
   id: string;
   title: string;
   note: string | null;
   kind: string | null;
-  date: Date | null;
+  date: string | null; // ✅ Change from Date | null to string | null
   vendor: string | null;
   cost: number | null;
   attachments: Array<{
@@ -22,7 +23,6 @@ type RecordItem = {
     size: number;
   }>;
 };
-
 type Props = {
   records: RecordItem[];
   homeId: string;

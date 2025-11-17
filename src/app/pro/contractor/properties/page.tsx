@@ -16,7 +16,7 @@ export default async function PropertiesPage() {
 
   const userId = session.user.id as string;
 
-  // Get all connections for this contractor
+  // Get all work for this contractor
   const connections = await prisma.connection.findMany({
     where: {
       contractorId: userId,

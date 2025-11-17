@@ -27,12 +27,23 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check home access
-    try {
-      await requireHomeAccess(homeId, session.user.id);
-    } catch (error) {
-      console.error("[Attachment] Access denied to home:", homeId, error);
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    // Check if user is a contractor with active connection
+    const isContractor = await prisma.connection.findFirst({
+      where: {
+        contractorId: session.user.id,
+        homeId,
+        status: "ACTIVE",
+      },
+    });
+
+    // Check home access (for homeowners) OR contractor access
+    if (!isContractor) {
+      try {
+        await requireHomeAccess(homeId, session.user.id);
+      } catch (error) {
+        console.error("[Attachment] Access denied to home:", homeId, error);
+        return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      }
     }
 
     // Get the attachment

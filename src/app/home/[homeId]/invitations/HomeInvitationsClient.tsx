@@ -7,6 +7,7 @@ import Link from "next/link";
 import AddressVerification from "@/components/AddressVerification";
 import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import { InviteProModal } from "./InviteProModal";
+import { useToast } from "@/components/ui/Toast";
 
 /* ---------- Types ---------- */
 
@@ -234,7 +235,15 @@ function ReceivedTab({
 
 /* ---------- Sent Tab ---------- */
 
-function SentTab({ invitations }: { invitations: SentInvitation[] }) {
+function SentTab({
+  invitations,
+  processing,
+  onCancel,
+}: {
+  invitations: SentInvitation[];
+  processing: string | null;
+  onCancel: (id: string) => void;
+}) {
   const pending = invitations.filter((inv) => inv.status === "PENDING");
   const history = invitations.filter((inv) => inv.status !== "PENDING");
 
@@ -298,6 +307,18 @@ function SentTab({ invitations }: { invitations: SentInvitation[] }) {
                     </p>
                   </div>
                 )}
+
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => onCancel(invitation.id)}
+                    disabled={processing === invitation.id}
+                    className="rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/30 disabled:opacity-50"
+                  >
+                    {processing === invitation.id
+                      ? "Cancelling..."
+                      : "Cancel Invitation"}
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -354,6 +375,7 @@ export default function HomeInvitationsClient({
   sentInvitations: SentInvitation[];
 }) {
   const router = useRouter();
+  const { push: toast } = useToast();
   const [activeTab, setActiveTab] = useState<Tab>("received");
   const [processing, setProcessing] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
@@ -373,6 +395,8 @@ export default function HomeInvitationsClient({
     setShowAddressModal(true);
   }
 
+  // Find the handleAddressVerified function and replace it with this:
+
   async function handleAddressVerified(verifiedAddress: {
     street: string;
     unit?: string;
@@ -385,7 +409,7 @@ export default function HomeInvitationsClient({
     setProcessing(selectedInvitation);
     try {
       const response = await fetch(
-        `/api/pro/contractor/invitations/${selectedInvitation}/accept`,
+        `/api/invitations/${selectedInvitation}/accept`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -402,18 +426,18 @@ export default function HomeInvitationsClient({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "Failed to accept invitation");
+        toast(error.error || "Failed to accept invitation");
+        setProcessing(null);
+        return; // ✅ Just return, don't throw
       }
 
-      alert("Invitation accepted! Connection established.");
+      toast("Invitation accepted! Connection established.");
       setShowAddressModal(false);
       setSelectedInvitation(null);
       router.refresh();
     } catch (error) {
       console.error("Error accepting invitation:", error);
-      alert(
-        error instanceof Error ? error.message : "Failed to accept invitation"
-      );
+      toast("Network error. Please try again.");
     } finally {
       setProcessing(null);
     }
@@ -425,7 +449,7 @@ export default function HomeInvitationsClient({
     setProcessing(invitationId);
     try {
       const response = await fetch(
-        `/api/pro/contractor/invitations/${invitationId}/decline`,
+        `/api/invitations/${invitationId}/decline`,
         {
           method: "POST",
         }
@@ -435,11 +459,37 @@ export default function HomeInvitationsClient({
         throw new Error("Failed to decline invitation");
       }
 
-      alert("Invitation declined.");
+      toast("Invitation declined.");
       router.refresh();
     } catch (error) {
       console.error("Error declining invitation:", error);
-      alert("Failed to decline invitation. Please try again.");
+      toast("Failed to decline invitation. Please try again.");
+    } finally {
+      setProcessing(null);
+    }
+  }
+
+  async function handleCancel(invitationId: string) {
+    if (!confirm("Are you sure you want to cancel this invitation?")) return;
+
+    setProcessing(invitationId);
+    try {
+      const response = await fetch(`/api/invitations/${invitationId}/cancel`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || "Failed to cancel invitation");
+      }
+
+      toast("Invitation cancelled.");
+      router.refresh();
+    } catch (error) {
+      console.error("Error cancelling invitation:", error);
+      toast(
+        error instanceof Error ? error.message : "Failed to cancel invitation"
+      );
     } finally {
       setProcessing(null);
     }
@@ -519,7 +569,11 @@ export default function HomeInvitationsClient({
             onDecline={handleDecline}
           />
         ) : (
-          <SentTab invitations={sentInvitations} />
+          <SentTab
+            invitations={sentInvitations}
+            processing={processing}
+            onCancel={handleCancel}
+          />
         )}
       </section>
 

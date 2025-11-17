@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { glass, heading, textMeta } from "@/lib/glass";
+import { WorkRecordActions } from "./WorkRecordActions";
 
 export default async function WorkRecordDetailPage({
   params,
@@ -15,8 +16,8 @@ export default async function WorkRecordDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const session = await getServerSession(authConfig);
 
+  const session = await getServerSession(authConfig);
   if (!session?.user?.id) {
     redirect("/login");
   }
@@ -38,6 +39,15 @@ export default async function WorkRecordDetailPage({
           },
         },
       },
+      attachments: {
+        select: {
+          id: true,
+          filename: true,
+          url: true,
+          mimeType: true,
+          size: true,
+        },
+      },
     },
   });
 
@@ -45,9 +55,20 @@ export default async function WorkRecordDetailPage({
     redirect("/pro/contractor/work-records");
   }
 
+  const serializedWorkRecord = {
+    id: workRecord.id,
+    homeId: workRecord.homeId,
+    workType: workRecord.workType,
+    workDate: workRecord.workDate.toISOString(),
+    description: workRecord.description ?? "",
+    cost: workRecord.cost ? Number(workRecord.cost) : null,
+    status: workRecord.status,
+  };
+
   return (
     <main className="relative min-h-screen text-white">
       <Bg />
+
       <div className="mx-auto max-w-4xl p-6 space-y-6">
         <div>
           <Link
@@ -59,8 +80,8 @@ export default async function WorkRecordDetailPage({
         </div>
 
         <section className={glass}>
-          <div className="flex items-start justify-between mb-4">
-            <div>
+          <div className="mb-4 flex items-start justify-between">
+            <div className="flex-1">
               <h1 className={`text-2xl font-semibold ${heading}`}>
                 {workRecord.workType}
               </h1>
@@ -68,86 +89,175 @@ export default async function WorkRecordDetailPage({
                 {new Date(workRecord.workDate).toLocaleDateString()}
               </p>
             </div>
-            <StatusBadge status={workRecord.status} />
+            <div className="flex items-center gap-2">
+              <StatusBadge status={workRecord.status} />
+              <WorkRecordActions
+                workRecordId={id}
+                workRecord={serializedWorkRecord}
+              />
+            </div>
           </div>
 
           <div className="space-y-4">
+            {/* Property info */}
             <div>
               <h3 className="text-sm font-medium text-white/70">Property</h3>
               <p className="text-white">{workRecord.home.address}</p>
               <p className={textMeta}>
-                {workRecord.home.city}, {workRecord.home.state} {workRecord.home.zip}
+                {workRecord.home.city}, {workRecord.home.state}{" "}
+                {workRecord.home.zip}
               </p>
               {workRecord.home.owner && (
                 <p className={`mt-1 ${textMeta}`}>
-                  Owner: {workRecord.home.owner.name || workRecord.home.owner.email}
+                  Owner:{" "}
+                  {workRecord.home.owner.name || workRecord.home.owner.email}
                 </p>
               )}
             </div>
 
+            {/* Description */}
             {workRecord.description && (
               <div>
-                <h3 className="text-sm font-medium text-white/70">Description</h3>
+                <h3 className="text-sm font-medium text-white/70">
+                  Description
+                </h3>
                 <p className="text-white">{workRecord.description}</p>
               </div>
             )}
 
+            {/* Cost */}
             {workRecord.cost && (
               <div>
                 <h3 className="text-sm font-medium text-white/70">Cost</h3>
-                <p className="text-white text-xl font-semibold">
-                  ${workRecord.cost.toFixed(2)}
+                <p className="text-xl font-semibold text-white">
+                  ${Number(workRecord.cost).toFixed(2)}
                 </p>
               </div>
             )}
 
-            {workRecord.photos && workRecord.photos.length > 0 && (
+            {/* Attachments from DB */}
+            {workRecord.attachments.length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-white/70 mb-2">Photos</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {(workRecord.photos as string[]).map((photo, index) => (
-                    <a
-                      key={index}
-                      href={photo}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block relative aspect-square rounded-lg overflow-hidden hover:opacity-90 transition"
-                    >
-                      <Image
-                        src={photo}
-                        alt={`Work photo ${index + 1}`}
-                        fill
-                        className="object-cover"
-                      />
-                    </a>
-                  ))}
-                </div>
+                <h3 className="mb-2 text-sm font-medium text-white/70">
+                  Attachments ({workRecord.attachments.length})
+                </h3>
+
+                {/* Photo Gallery - Images only */}
+                {workRecord.attachments.some((a) =>
+                  a.mimeType?.startsWith("image/")
+                ) && (
+                  <div className="mb-6">
+                    <h4 className={`mb-3 text-sm font-medium ${textMeta}`}>
+                      Photos
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                      {workRecord.attachments
+                        .filter((a) => a.mimeType?.startsWith("image/"))
+                        .map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            href={`/api/home/${workRecord.homeId}/attachments/${attachment.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-white/5 transition hover:opacity-90"
+                          >
+                            <img
+                              src={`/api/home/${workRecord.homeId}/attachments/${attachment.id}`}
+                              alt={attachment.filename}
+                              className="h-full w-full object-cover"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                                stroke="currentColor"
+                                className="h-8 w-8 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"
+                                />
+                              </svg>
+                            </div>
+                          </a>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Other Documents - Non-images */}
+                {workRecord.attachments.some(
+                  (a) => !a.mimeType?.startsWith("image/")
+                ) && (
+                  <div>
+                    <h4 className={`mb-3 text-sm font-medium ${textMeta}`}>
+                      Documents
+                    </h4>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {workRecord.attachments
+                        .filter((a) => !a.mimeType?.startsWith("image/"))
+                        .map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            href={`/api/home/${workRecord.homeId}/attachments/${attachment.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:bg-white/10"
+                          >
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-white/10">
+                              {attachment.mimeType?.includes("pdf") ? (
+                                <span className="text-xl">📄</span>
+                              ) : (
+                                <span className="text-xl">📎</span>
+                              )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate font-medium text-white">
+                                {attachment.filename}
+                              </p>
+                              <p className="text-xs text-white/60">
+                                {(Number(attachment.size) / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              strokeWidth={1.5}
+                              stroke="currentColor"
+                              className="h-5 w-5 text-white/50"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+                              />
+                            </svg>
+                          </a>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {workRecord.invoiceUrl && (
-              <div>
-                <h3 className="text-sm font-medium text-white/70">Invoice</h3>
-                <a
-                  href={workRecord.invoiceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-400 hover:text-blue-300 text-sm"
-                >
-                  View Invoice PDF →
-                </a>
-              </div>
-            )}
-
+            {/* Warranty details */}
             {workRecord.warrantyIncluded && (
               <div>
                 <h3 className="text-sm font-medium text-white/70">Warranty</h3>
                 <div className="text-white">
                   {workRecord.warrantyLength && (
-                    <p className="text-sm">Length: {workRecord.warrantyLength}</p>
+                    <p className="text-sm">
+                      Length: {workRecord.warrantyLength}
+                    </p>
                   )}
                   {workRecord.warrantyDetails && (
-                    <p className="text-sm mt-1">{workRecord.warrantyDetails}</p>
+                    <p className="mt-1 text-sm">
+                      {workRecord.warrantyDetails}
+                    </p>
                   )}
                 </div>
               </div>
@@ -155,14 +265,16 @@ export default async function WorkRecordDetailPage({
           </div>
         </section>
 
+        {/* Status section */}
         <section className={glass}>
-          <h3 className="text-lg font-semibold text-white mb-2">Status</h3>
+          <h3 className="mb-2 text-lg font-semibold text-white">Status</h3>
           {workRecord.isVerified ? (
             <div className="text-green-400">
               ✓ Verified by homeowner
               {workRecord.verifiedAt && (
-                <span className="text-sm text-white/60 ml-2">
-                  on {new Date(workRecord.verifiedAt).toLocaleDateString()}
+                <span className="ml-2 text-sm text-white/60">
+                  on{" "}
+                  {new Date(workRecord.verifiedAt).toLocaleDateString()}
                 </span>
               )}
             </div>

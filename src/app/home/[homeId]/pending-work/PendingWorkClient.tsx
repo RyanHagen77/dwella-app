@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
+// At the top of PendingWorkClient.tsx, update the type:
 type PendingWorkItem = {
   id: string;
   workType: string;
@@ -12,6 +13,13 @@ type PendingWorkItem = {
   description: string | null;
   cost: number | null;
   photos: string[];
+  attachments: Array<{  // ✅ Add this
+    id: string;
+    filename: string;
+    url: string;
+    mimeType: string;
+    size: number;
+  }>;
   invoiceUrl: string | null;
   warrantyIncluded: boolean;
   warrantyLength: string | null;
@@ -255,16 +263,17 @@ export default function PendingWorkClient({
               </div>
             )}
 
-            {/* Photos */}
-            {work.photos.length > 0 && (
+            {/* Photos - show both legacy and new attachments */}
+            {(work.photos.length > 0 || work.attachments.length > 0) && (
               <div className="mb-4">
                 <h3 className="font-medium text-sm text-gray-700 mb-2">
-                  Photos ({work.photos.length})
+                  Photos ({work.photos.length + work.attachments.filter(a => a.mimeType?.startsWith('image/')).length})
                 </h3>
                 <div className="grid grid-cols-3 gap-2">
+                  {/* Legacy photos */}
                   {work.photos.map((photo, idx) => (
                     <Image
-                      key={idx}
+                      key={`photo-${idx}`}
                       src={photo}
                       alt={`Work photo ${idx + 1}`}
                       width={200}
@@ -272,6 +281,19 @@ export default function PendingWorkClient({
                       className="rounded object-cover w-full h-32"
                     />
                   ))}
+                  {/* New attachments (images only) */}
+                  {work.attachments
+                    .filter(a => a.mimeType?.startsWith('image/'))
+                    .map((attachment) => (
+                      <Image
+                        key={attachment.id}
+                        src={attachment.url}
+                        alt={attachment.filename}
+                        width={200}
+                        height={200}
+                        className="rounded object-cover w-full h-32"
+                      />
+                    ))}
                 </div>
               </div>
             )}

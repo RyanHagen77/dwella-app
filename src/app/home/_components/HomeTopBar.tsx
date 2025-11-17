@@ -1,10 +1,12 @@
 "use client";
 
+import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { ClaimHomeModal } from "./ClaimHomeModal";
 
 type Home = {
   id: string;
@@ -22,6 +24,7 @@ export default function HomeTopBar() {
   const [currentHomeId, setCurrentHomeId] = useState<string | null>(null);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [claimModalOpen, setClaimModalOpen] = useState(false);
 
   // Extract homeId from URL
   useEffect(() => {
@@ -57,8 +60,24 @@ export default function HomeTopBar() {
     return `${home.address}${home.city ? `, ${home.city}` : ''}${home.state ? `, ${home.state}` : ''}`;
   }
 
-  function switchHome(homeId: string) {
+  async function switchHome(homeId: string) {
     setSwitcherOpen(false);
+
+    // Update backend
+    try {
+      await fetch('/api/user/last-home', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ homeId }),
+      });
+    } catch (error) {
+      console.error('Failed to update last home:', error);
+    }
+
+    // Update localStorage
+    localStorage.setItem('lastHomeId', homeId);
+
+    // Navigate
     router.push(`/home/${homeId}`);
   }
 
@@ -178,6 +197,26 @@ export default function HomeTopBar() {
                           Account Settings
                         </button>
 
+                        <button
+                          onClick={() => {
+                            setClaimModalOpen(true);
+                            setAccountMenuOpen(false);
+                          }}
+                          className="w-full px-4 py-2 text-left text-sm text-white/90 hover:bg-white/10 transition-colors flex items-center gap-2"
+                        >
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                            className="w-4 h-4"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                          Add Another Home
+                        </button>
+
                         {hasMultipleHomes && (
                           <button
                             onClick={() => {
@@ -226,11 +265,26 @@ export default function HomeTopBar() {
           onClose={() => setSwitcherOpen(false)}
         />
       )}
+
+      {/* Claim Home Modal */}
+      <ClaimHomeModal
+        open={claimModalOpen}
+        onCloseAction={() => {
+          setClaimModalOpen(false);
+          // Refresh homes after claiming
+          if (session?.user?.id) {
+            fetch('/api/user/homes')
+              .then(res => res.json())
+              .then(data => setHomes(data.homes || []))
+              .catch(console.error);
+          }
+        }}
+      />
     </>
   );
 }
 
-// Home Switcher Modal
+// Home Switcher Modal Component
 function HomeSwitcherModal({
   homes,
   currentHomeId,
@@ -242,6 +296,8 @@ function HomeSwitcherModal({
   onSwitch: (homeId: string) => void;
   onClose: () => void;
 }) {
+  const [showClaimModal, setShowClaimModal] = React.useState(false);
+
   function formatAddress(home: Home) {
     return `${home.address}${home.city ? `, ${home.city}` : ''}${home.state ? `, ${home.state}` : ''}`;
   }
@@ -312,8 +368,39 @@ function HomeSwitcherModal({
               ))}
             </div>
           </div>
+
+          {/* Add Home Button */}
+          <div className="p-4 border-t border-white/10">
+            <button
+              onClick={() => {
+                setShowClaimModal(true);
+                onClose();
+              }}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border border-white/30 bg-white/10 px-4 py-3 text-sm font-medium text-white hover:bg-white/15 transition-colors"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={1.5}
+                stroke="currentColor"
+                className="w-5 h-5"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Add Another Home
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Claim Home Modal from switcher */}
+      {showClaimModal && (
+        <ClaimHomeModal
+          open={showClaimModal}
+          onCloseAction={() => setShowClaimModal(false)}
+        />
+      )}
     </>
   );
 }

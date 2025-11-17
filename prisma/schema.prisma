@@ -69,8 +69,9 @@ enum InvitationType {
 enum InvitationStatus {
   PENDING
   ACCEPTED
-  EXPIRED
+  DECLINED
   CANCELLED
+  EXPIRED
 }
 
 enum ThreadStatus {
@@ -324,10 +325,11 @@ model Attachment {
   homeId String
 
   // exactly one parent (optional):
-  recordId   String?
-  reminderId String?
-  warrantyId String?
-  messageId  String?
+  recordId     String?
+  reminderId   String?
+  warrantyId   String?
+  messageId    String?
+  workRecordId String?
 
   key        String
   url        String
@@ -354,17 +356,19 @@ model Attachment {
   deletedAt  DateTime?
 
   // relations
-  home     Home      @relation(fields: [homeId], references: [id], onDelete: Cascade)
-  record   Record?   @relation(fields: [recordId], references: [id], onDelete: SetNull)
-  reminder Reminder? @relation(fields: [reminderId], references: [id], onDelete: SetNull)
-  warranty Warranty? @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
-  message  Message?  @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  uploader User?     @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
+  home       Home        @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  record     Record?     @relation(fields: [recordId], references: [id], onDelete: SetNull)
+  reminder   Reminder?   @relation(fields: [reminderId], references: [id], onDelete: SetNull)
+  warranty   Warranty?   @relation(fields: [warrantyId], references: [id], onDelete: SetNull)
+  message    Message?    @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  workRecord WorkRecord? @relation("WorkRecordAttachments", fields: [workRecordId], references: [id], onDelete: SetNull) // ✅ ADD THIS LINE
+  uploader   User?       @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
 
   @@index([homeId])
   @@index([recordId])
   @@index([reminderId])
   @@index([warrantyId])
+  @@index([workRecordId])
   @@index([messageId])
   @@index([uploadedBy])
   @@index([checksum])
@@ -690,6 +694,7 @@ model WorkRecord {
   cost        Decimal? @db.Decimal(12, 2)
 
   // Attachments
+  attachments Attachment[] @relation("WorkRecordAttachments")
   invoiceUrl String?
   photos     String[] @default([])
 

@@ -1,4 +1,4 @@
-// app/api/pro/contractor/uploads/presign/route.ts
+// app/api/uploads/presign/route.ts
 import { NextResponse } from "next/server";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -6,13 +6,14 @@ import { s3, S3_BUCKET, buildRecordKey, PUBLIC_S3_URL_PREFIX } from "@/lib/s3";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireHomeAccess } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
 /**
- * POST /api/pro/contractor/uploads/presign
- * Generate presigned URL for contractor uploads (work records)
- * Validates contractor has ACTIVE connection to the home
+ * POST /api/uploads/presign
+ * Generate presigned URL for uploads
+ * Works for both homeowners (records/reminders/warranties) and contractors (work records)
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -21,77 +22,88 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify user is a contractor
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    include: { proProfile: true },
-  });
-
-  if (user?.role !== "PRO" || user.proProfile?.type !== "CONTRACTOR") {
-    return NextResponse.json(
-      { error: "Only contractors can access this endpoint" },
-      { status: 403 }
-    );
-  }
-
   try {
     const body = await req.json();
-    const { homeId, recordId, filename, mimeType, size } = body;
+    const { homeId, recordId, warrantyId, reminderId, filename, contentType, size } = body;
 
-    if (!homeId || !recordId || !filename || typeof size !== "number") {
+    if (!homeId || !filename || typeof size !== "number") {
       return NextResponse.json(
-        { error: "Missing required fields: homeId, recordId, filename, size" },
+        { error: "Missing required fields: homeId, filename, size" },
         { status: 400 }
       );
     }
 
-    if (!mimeType) {
+    if (!contentType) {
       return NextResponse.json(
-        { error: "Missing mimeType" },
+        { error: "Missing contentType" },
         { status: 400 }
       );
     }
 
-    // Verify contractor has ACTIVE connection to this home
-    const connection = await prisma.connection.findFirst({
-      where: {
-        contractorId: session.user.id,
-        homeId,
-        status: "ACTIVE",
-      },
+    // Check if user is a contractor with active connection
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      include: { proProfile: true },
     });
 
-    if (!connection) {
-      return NextResponse.json(
-        { error: "You don't have access to this property" },
-        { status: 403 }
-      );
+    const isContractor = user?.role === "PRO" && user.proProfile?.type === "CONTRACTOR";
+
+    if (isContractor) {
+      // Contractor flow - verify active connection
+      const connection = await prisma.connection.findFirst({
+        where: {
+          contractorId: session.user.id,
+          homeId,
+          status: "ACTIVE",
+        },
+      });
+
+      if (!connection) {
+        return NextResponse.json(
+          { error: "You don't have access to this property" },
+          { status: 403 }
+        );
+      }
+
+      // Verify work record if provided
+      if (recordId) {
+        const workRecord = await prisma.workRecord.findFirst({
+          where: {
+            id: recordId,
+            homeId,
+            contractorId: session.user.id,
+          },
+        });
+
+        if (!workRecord) {
+          return NextResponse.json(
+            { error: "Work record not found or access denied" },
+            { status: 403 }
+          );
+        }
+      }
+    } else {
+      // Homeowner flow - verify home access
+      await requireHomeAccess(homeId, session.user.id);
     }
 
-    // Verify the work record belongs to this contractor and home
-    const workRecord = await prisma.workRecord.findFirst({
-      where: {
-        id: recordId,
-        homeId,
-        contractorId: session.user.id,
-      },
-    });
-
-    if (!workRecord) {
+    // Determine the entity ID
+    const entityId = recordId || warrantyId || reminderId;
+    if (!entityId) {
       return NextResponse.json(
-        { error: "Work record not found or access denied" },
-        { status: 403 }
+        { error: "Missing entity ID (recordId, warrantyId, or reminderId)" },
+        { status: 400 }
       );
     }
 
     // Build the S3 key
-    const key = buildRecordKey(homeId, recordId, filename);
+    const key = buildRecordKey(homeId, entityId, filename);
 
     // Create presigned URL
     const cmd = new PutObjectCommand({
       Bucket: S3_BUCKET,
       Key: key,
-      ContentType: mimeType,
+      ContentType: contentType,
     });
 
     const url = await getSignedUrl(s3, cmd, { expiresIn: 300 }); // 5 minutes
