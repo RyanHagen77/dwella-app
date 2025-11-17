@@ -9,7 +9,7 @@ type Application = {
   id: string;
   name: string | null;
   email: string;
-  createdAt: string; // ISO string
+  createdAt: string;
   proProfile: {
     businessName: string | null;
     type: ProType | null;
@@ -40,7 +40,6 @@ export default function ProApplicationsList({ applications }: { applications: Ap
   const [, startTransition] = useTransition();
 
   const handleApprove = async (userId: string) => {
-    // eslint-disable-next-line no-alert
     if (!confirm("Approve this professional application?")) return;
 
     setProcessing(userId);
@@ -55,11 +54,9 @@ export default function ProApplicationsList({ applications }: { applications: Ap
         startTransition(() => router.refresh());
       } else {
         const msg = await res.text();
-        // eslint-disable-next-line no-alert
         alert(msg || "Failed to approve");
       }
     } catch {
-      // eslint-disable-next-line no-alert
       alert("Error approving application");
     } finally {
       setProcessing(null);
@@ -67,7 +64,6 @@ export default function ProApplicationsList({ applications }: { applications: Ap
   };
 
   const handleReject = async (userId: string) => {
-    // eslint-disable-next-line no-alert
     if (!confirm("Reject this professional application?")) return;
 
     setProcessing(userId);
@@ -82,11 +78,9 @@ export default function ProApplicationsList({ applications }: { applications: Ap
         startTransition(() => router.refresh());
       } else {
         const msg = await res.text();
-        // eslint-disable-next-line no-alert
         alert(msg || "Failed to reject");
       }
     } catch {
-      // eslint-disable-next-line no-alert
       alert("Error rejecting application");
     } finally {
       setProcessing(null);
@@ -95,117 +89,61 @@ export default function ProApplicationsList({ applications }: { applications: Ap
 
   if (applications.length === 0) {
     return (
-      <div
-        style={{
-          padding: "32px",
-          textAlign: "center",
-          backgroundColor: "#f9fafb",
-          borderRadius: "8px",
-        }}
-      >
-        <p style={{ color: "#6b7280" }}>No pending applications</p>
+      <div className="rounded-lg bg-gray-50 p-8 text-center">
+        <p className="text-gray-500">No pending applications</p>
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <div className="flex flex-col gap-4">
       {applications.map((app) => (
         <div
           key={app.id}
-          style={{
-            backgroundColor: "white",
-            padding: "24px",
-            borderRadius: "8px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-          }}
+          className="rounded-lg bg-white p-6 shadow-sm"
         >
-          <div
-            style={{
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "start",
-              justifyContent: "space-between",
-            }}
-          >
+          <div className="mb-4 flex items-start justify-between">
             <div>
-              <h3
-                style={{
-                  fontSize: "20px",
-                  fontWeight: 600,
-                  color: "#111827",
-                  marginBottom: "4px",
-                }}
-              >
+              <h3 className="mb-1 text-xl font-semibold text-gray-900">
                 {app.name || "No name"}
               </h3>
-              <p style={{ color: "#6b7280", marginBottom: "4px" }}>{app.email}</p>
-              <p style={{ fontSize: "14px", color: "#9ca3af" }}>
+              <p className="mb-1 text-gray-600">{app.email}</p>
+              <p className="text-sm text-gray-400">
                 Applied: {new Date(app.createdAt).toLocaleDateString()}
               </p>
             </div>
-            <span
-              style={{
-                backgroundColor: "#fef3c7",
-                color: "#92400e",
-                padding: "4px 12px",
-                borderRadius: "9999px",
-                fontSize: "14px",
-                fontWeight: 500,
-              }}
-            >
+            <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-800">
               Pending
             </span>
           </div>
 
-          <div
-            style={{
-              marginBottom: "16px",
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "16px",
-            }}
-          >
+          <div className="mb-4 grid grid-cols-2 gap-4">
             <div>
-              <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
-                Business Name
-              </p>
-              <p style={{ fontWeight: 500 }}>{app.proProfile?.businessName || "—"}</p>
+              <p className="mb-1 text-sm text-gray-600">Business Name</p>
+              <p className="font-medium">{app.proProfile?.businessName || "—"}</p>
             </div>
             <div>
-              <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
-                Type
-              </p>
-              <p style={{ fontWeight: 500 }}>{prettyType(app.proProfile?.type)}</p>
+              <p className="mb-1 text-sm text-gray-600">Type</p>
+              <p className="font-medium">{prettyType(app.proProfile?.type)}</p>
             </div>
             <div>
-              <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
-                Phone
-              </p>
-              <p style={{ fontWeight: 500 }}>{app.proProfile?.phone || "—"}</p>
+              <p className="mb-1 text-sm text-gray-600">Phone</p>
+              <p className="font-medium">{app.proProfile?.phone || "—"}</p>
             </div>
             <div>
-              <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
-                License
-              </p>
-              <p style={{ fontWeight: 500 }}>{app.proProfile?.licenseNo || "—"}</p>
+              <p className="mb-1 text-sm text-gray-600">License</p>
+              <p className="font-medium">{app.proProfile?.licenseNo || "—"}</p>
             </div>
           </div>
 
           {app.proProfile?.website && (
-            <div style={{ marginBottom: "16px" }}>
-              <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
-                Website
-              </p>
+            <div className="mb-4">
+              <p className="mb-1 text-sm text-gray-600">Website</p>
               <a
                 href={withProtocol(app.proProfile.website)}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{
-                  color: "#2563eb",
-                  textDecoration: "underline",
-                  wordBreak: "break-all",
-                }}
+                className="break-all text-blue-600 underline hover:text-blue-700"
               >
                 {app.proProfile.website}
               </a>
@@ -213,54 +151,24 @@ export default function ProApplicationsList({ applications }: { applications: Ap
           )}
 
           {app.proProfile?.bio && (
-            <div style={{ marginBottom: "16px" }}>
-              <p style={{ fontSize: "14px", color: "#6b7280", marginBottom: "4px" }}>
-                Bio
-              </p>
-              <p style={{ color: "#374151" }}>{app.proProfile.bio}</p>
+            <div className="mb-4">
+              <p className="mb-1 text-sm text-gray-600">Bio</p>
+              <p className="text-gray-700">{app.proProfile.bio}</p>
             </div>
           )}
 
-          <div
-            style={{
-              display: "flex",
-              gap: "12px",
-              borderTop: "1px solid #d1d5db",
-              paddingTop: "16px",
-              marginTop: "16px",
-            }}
-          >
+          <div className="mt-4 flex gap-3 border-t border-gray-300 pt-4">
             <button
               onClick={() => handleApprove(app.id)}
               disabled={processing === app.id}
-              style={{
-                flex: 1,
-                padding: "12px 16px",
-                backgroundColor: processing === app.id ? "#9ca3af" : "#16a34a",
-                color: "white",
-                borderRadius: "8px",
-                fontWeight: 500,
-                border: "none",
-                cursor: processing === app.id ? "not-allowed" : "pointer",
-                fontSize: "14px",
-              }}
+              className="flex-1 rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-gray-400"
             >
               {processing === app.id ? "Processing..." : "Approve"}
             </button>
             <button
               onClick={() => handleReject(app.id)}
               disabled={processing === app.id}
-              style={{
-                flex: 1,
-                padding: "12px 16px",
-                backgroundColor: processing === app.id ? "#9ca3af" : "#dc2626",
-                color: "white",
-                borderRadius: "8px",
-                fontWeight: 500,
-                border: "none",
-                cursor: processing === app.id ? "not-allowed" : "pointer",
-                fontSize: "14px",
-              }}
+              className="flex-1 rounded-lg bg-red-600 px-4 py-3 text-sm font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-400"
             >
               Reject
             </button>

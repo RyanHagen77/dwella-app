@@ -1,3 +1,5 @@
+
+import React from "react";
 import "./globals.css";
 import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 import { ToastProvider } from "@/components/ui/Toast";

@@ -27,36 +27,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {mounted && (
         <div
           aria-live="polite"
-          style={{
-            position: 'fixed',
-            bottom: '80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 2147483647,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            pointerEvents: 'none'
-          }}
+          className="pointer-events-none fixed bottom-20 left-1/2 z-[2147483647] flex -translate-x-1/2 flex-col gap-2"
         >
           {toasts.map((t) => (
             <div
               key={t.id}
-              style={{
-                backgroundColor: 'rgba(31, 41, 55, 0.95)',
-                color: '#ef4444',
-                padding: '12px 16px',
-                borderRadius: '8px',
-                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-                minWidth: '300px',
-                maxWidth: '500px',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                pointerEvents: 'auto',
-                fontSize: '14px',
-                lineHeight: '1.5',
-                textAlign: 'center',
-                backdropFilter: 'blur(8px)'
-              }}
+              className="pointer-events-auto min-w-[300px] max-w-[500px] rounded-lg border border-red-400/30 bg-gray-800/95 px-4 py-3 text-center text-sm leading-relaxed text-red-400 shadow-xl backdrop-blur-lg"
             >
               {t.message}
             </div>
@@ -67,4 +43,6 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useToast(){ return React.useContext(Ctx); }
+export function useToast() {
+  return React.useContext(Ctx);
+}
