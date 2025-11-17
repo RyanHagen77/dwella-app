@@ -7,7 +7,6 @@ import type { JWT } from "next-auth/jwt";
 import EmailProvider from "next-auth/providers/email";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
-import NextAuth from "next-auth";
 
 /* ---------- Extended Token type ---------- */
 interface AppToken extends JWT {
@@ -77,16 +76,6 @@ export const authConfig: NextAuthOptions = {
   },
 
   callbacks: {
-    /* ---------- Redirect ---------- */
-    async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      // Allows callback URLs on the same origin
-      if (new URL(url).origin === baseUrl) return url;
-      // Default redirect after sign in (goes to root landing page)
-      return baseUrl;
-    },
-
     /* ---------- JWT ---------- */
     async jwt({ token, user }) {
       const t = token as AppToken;
@@ -124,17 +113,10 @@ export const authConfig: NextAuthOptions = {
   },
 
   events: {
+    // Keep hook available for future use — disable lint locally
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async createUser(_event) {
       /* optionally seed defaults */
     },
   },
 };
-
-// Create NextAuth instance
-const nextAuth = NextAuth(authConfig);
-
-// Export handlers and auth separately
-export const handlers = nextAuth.handlers;
-export const auth = nextAuth.auth;
-export const signIn = nextAuth.signIn;
-export const signOut = nextAuth.signOut;

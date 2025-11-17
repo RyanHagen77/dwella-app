@@ -1,7 +1,10 @@
 // app/api/auth/[...nextauth]/route.ts
-import { handlers } from "@/lib/auth";
+import NextAuth from "next-auth";
+import { authConfig } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export const { GET, POST } = handlers;
+const handler = NextAuth(authConfig);
+
+export { handler as GET, handler as POST };
