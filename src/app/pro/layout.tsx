@@ -1,8 +1,8 @@
-// src/app/pro/contractor/layout.tsx
+// src/app/pro/layout.tsx
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { GlobalHeader, type TopBarLink } from "@/components/GlobalHeader";
+import GlobalProHeader from "@/app/pro/_components/GlobalProHeader";
 import { ContractorContextBar } from "@/app/pro/_components/ContractorContextBar";
 
 export default async function ProLayout({
@@ -14,25 +14,20 @@ export default async function ProLayout({
 
   // Redirect if not a pro
   if (!session?.user || session.user.role !== "PRO") {
-    redirect("/login?role=pro");
+    redirect("/login");
   }
 
   const isPending = session.user.proStatus === "PENDING";
 
-  const links: TopBarLink[] = [
-    // keep empty for now or add pro-global links later
-    // { href: "/pro/contractor/dashboard", label: "Overview" },
-  ];
-
   return (
     <div className="min-h-screen text-white">
-      {/* Shared global header (same as homeowners, uses PNG logo, etc.) */}
-      <GlobalHeader links={links} />
+      {/* Global pro header (no home adding) */}
+      <GlobalProHeader />
 
-      {/* Pro context bar with pills */}
+      {/* Pro-specific nav pills */}
       <ContractorContextBar />
 
-      {/* Pending Warning Banner - glassy amber */}
+      {/* Pending Warning Banner */}
       {isPending && (
         <div className="border-b border-yellow-400/30 bg-yellow-400/10 backdrop-blur-sm px-4 py-3">
           <div className="mx-auto max-w-7xl">
@@ -51,8 +46,8 @@ export default async function ProLayout({
                   />
                 </svg>
                 <p className="text-sm font-medium text-yellow-100">
-                  Your professional profile is pending approval. We&apos;ll email
-                  you when it&apos;s ready (typically 1–2 business days).
+                  Your professional profile is pending approval. We will email
+                  you when it is ready.
                 </p>
               </div>
             </div>

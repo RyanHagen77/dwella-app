@@ -12,8 +12,8 @@ import {
   heading,
   textMeta,
   ctaPrimary,
-  ctaGhost,
-} from "@/lib/glass";
+  } from "@/lib/glass";
+import { InviteHomeownerButton } from "../../_components/InviteHomeownerButton";
 
 export default async function ProDashboardPage() {
   const session = await getServerSession(authConfig);
@@ -28,7 +28,7 @@ export default async function ProDashboardPage() {
 
   const userId = session.user.id;
 
-  // If pending-work-records, redirect to pending-work-records page
+  // If pending, redirect to pending page
   if (session.user.proStatus === "PENDING") {
     redirect("/pro/contractor/pending");
   }
@@ -53,6 +53,43 @@ export default async function ProDashboardPage() {
     },
     take: 5,
     orderBy: { createdAt: "desc" },
+  });
+
+  // Get work records for stats and recent work
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const workRecordsThisMonth = await prisma.workRecord.count({
+    where: {
+      contractorId: userId,
+      createdAt: {
+        gte: startOfMonth,
+      },
+    },
+  });
+
+  const recentWork = await prisma.workRecord.findMany({
+    where: {
+      contractorId: userId,
+    },
+    include: {
+      home: {
+        select: {
+          address: true,
+          city: true,
+          state: true,
+        },
+      },
+    },
+    take: 5,
+    orderBy: { workDate: "desc" },
+  });
+
+  const totalVerified = await prisma.workRecord.count({
+    where: {
+      contractorId: userId,
+      isVerified: true,
+    },
   });
 
   return (
@@ -86,9 +123,7 @@ export default async function ProDashboardPage() {
               <Link href="/pro/contractor/work-records/new" className={ctaPrimary}>
                 + Document Work
               </Link>
-              <Link href="/pro/contractor/invitations" className={ctaGhost}>
-                Invite Homeowner
-              </Link>
+              <InviteHomeownerButton />
             </div>
           </div>
         </section>
@@ -96,79 +131,51 @@ export default async function ProDashboardPage() {
         {/* Stats */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className={glass}>
-            <p className={`text-sm font-medium ${textMeta}`}>Active Clients</p>
+            <p className={`text-sm font-medium ${textMeta}`}>Avg Rating</p>
             <p className={`mt-2 text-3xl font-bold ${heading}`}>
-              {connections.length}
+              {proProfile?.rating ? proProfile.rating.toFixed(1) : "5.0"}{" "}
+              <span className="text-base align-middle">★</span>
             </p>
             <p className="mt-1 text-xs text-white/60">
-              Connections with homeowners on MyHomeDox
-            </p>
-          </div>
-
-          <div className={glass}>
-            <p className={`text-sm font-medium ${textMeta}`}>Active Jobs</p>
-            <p className={`mt-2 text-3xl font-bold ${heading}`}>—</p>
-            <p className="mt-1 text-xs text-white/60">
-              Job tracking coming soon
+              {proProfile?.rating ? "Based on homeowner reviews" : "Starting rating"}
             </p>
           </div>
 
           <div className={glass}>
             <p className={`text-sm font-medium ${textMeta}`}>This Month</p>
-            <p className={`mt-2 text-3xl font-bold ${heading}`}>—</p>
+            <p className={`mt-2 text-3xl font-bold ${heading}`}>
+              {workRecordsThisMonth}
+            </p>
             <p className="mt-1 text-xs text-white/60">
-              Revenue analytics coming soon
+              Work records documented
             </p>
           </div>
 
           <div className={glass}>
-            <p className={`text-sm font-medium ${textMeta}`}>Avg Rating</p>
+            <p className={`text-sm font-medium ${textMeta}`}>Verified Work</p>
             <p className={`mt-2 text-3xl font-bold ${heading}`}>
-              {proProfile?.rating?.toFixed(1) || "—"}{" "}
-              <span className="text-base align-middle">★</span>
+              {totalVerified}
             </p>
             <p className="mt-1 text-xs text-white/60">
-              Based on homeowner reviews (coming soon)
+              Approved by homeowners
+            </p>
+          </div>
+
+          <div className={glass}>
+            <p className={`text-sm font-medium ${textMeta}`}>Properties</p>
+            <p className={`mt-2 text-3xl font-bold ${heading}`}>
+              {connections.length}
+            </p>
+            <p className="mt-1 text-xs text-white/60">
+              Active connections
             </p>
           </div>
         </div>
 
         {/* Main content grid */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left column */}
+          {/* Left column - Recent Work */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Active Jobs */}
-            <section className={glass}>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className={`text-xl font-semibold ${heading}`}>Active Jobs</h2>
-                <span className={`text-xs ${textMeta}`}>Job board coming soon</span>
-              </div>
-
-              <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-6 text-center">
-                <p className="text-white/80 mb-2">
-                  Job tracking and scheduling aren&apos;t live yet.
-                </p>
-                <p className={`mb-4 text-sm ${textMeta}`}>
-                  For now, document your work and invite homeowners to verify it.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  <Link
-                    href="/pro/contractor/work-records/new"
-                    className={`${ctaPrimary} px-4 py-2 text-sm`}
-                  >
-                    + Document Work
-                  </Link>
-                  <Link
-                    href="/pro/contractor/invitations"
-                    className={`${ctaGhost} px-4 py-2 text-sm`}
-                  >
-                    Invite Homeowner
-                  </Link>
-                </div>
-              </div>
-            </section>
-
-            {/* Recent Work */}
             <section className={glass}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-xl font-semibold ${heading}`}>Recent Work</h2>
@@ -176,34 +183,75 @@ export default async function ProDashboardPage() {
                   href="/pro/contractor/work-records"
                   className="text-sm text-white/70 hover:text-white"
                 >
-                  View Work Records
+                  View All
                 </Link>
               </div>
 
-              <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-6 text-center">
-                <p className="text-white/80 mb-2">
-                  Your documented work will appear here.
-                </p>
-                <p className={`mb-4 text-sm ${textMeta}`}>
-                  Capture installs, repairs, and inspections so homeowners can keep a
-                  verified history of your work.
-                </p>
-                <Link
-                  href="/pro/contractor/work-records/new"
-                  className={`${ctaPrimary} px-4 py-2 text-sm`}
-                >
-                  Document Your First Job
-                </Link>
-              </div>
+              {recentWork.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-8 text-center">
+                  <p className="text-white/80 mb-2">
+                    Your documented work will appear here.
+                  </p>
+                  <p className={`mb-4 text-sm ${textMeta}`}>
+                    Capture installs, repairs, and inspections so homeowners can keep a
+                    verified history of your work.
+                  </p>
+                  <Link
+                    href="/pro/contractor/work-records/new"
+                    className={`${ctaPrimary} inline-block px-4 py-2 text-sm`}
+                  >
+                    + Document Your First Job
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {recentWork.map((work) => (
+                    <Link
+                      key={work.id}
+                      href={`/pro/contractor/work-records/${work.id}`}
+                      className={`${glassTight} block hover:bg-white/10 transition-colors`}
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-white truncate">
+                            {work.workType}
+                          </p>
+                          <p className={`text-sm ${textMeta} truncate`}>
+                            {work.home?.address}
+                            {work.home?.city ? `, ${work.home.city}` : ""}
+                          </p>
+                          <p className={`text-xs ${textMeta}`}>
+                            {new Date(work.workDate).toLocaleDateString()}
+                            {work.cost && (
+                              <span className="ml-2">
+                                • ${Number(work.cost).toLocaleString()}
+                              </span>
+                            )}
+                          </p>
+                        </div>
+                        <StatusBadge status={work.status} />
+                      </div>
+                    </Link>
+                  ))}
+                  <div className="pt-2">
+                    <Link
+                      href="/pro/contractor/work-records/new"
+                      className={`${ctaPrimary} block w-full text-center px-4 py-3 text-sm`}
+                    >
+                      + Document More Work
+                    </Link>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
 
           {/* Right column */}
           <div className="space-y-6">
-            {/* Clients */}
+            {/* Properties */}
             <section className={glass}>
               <div className="mb-4 flex items-center justify-between">
-                <h2 className={`text-xl font-semibold ${heading}`}>Clients</h2>
+                <h2 className={`text-xl font-semibold ${heading}`}>Properties</h2>
                 <Link
                   href="/pro/contractor/clients"
                   className="px-3 py-1.5 text-sm text-white/75 hover:text-white"
@@ -214,16 +262,11 @@ export default async function ProDashboardPage() {
 
               {connections.length === 0 ? (
                 <div className="py-8 text-center">
-                  <p className={`mb-2 ${textMeta}`}>No clients yet</p>
+                  <p className={`mb-2 ${textMeta}`}>No properties yet</p>
                   <p className={`mb-4 text-sm ${textMeta}`}>
-                    Invite homeowners you&apos;ve worked with to connect their home.
+                    Invite homeowners you&posve worked with to connect their home.
                   </p>
-                  <Link
-                    href="/pro/contractor/invitations"
-                    className={`${ctaPrimary} inline-block px-4 py-2 text-sm`}
-                  >
-                    Invite Your First Client
-                  </Link>
+                  <InviteHomeownerButton className={`${ctaPrimary} w-full px-4 py-2 text-sm`} />
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -232,48 +275,68 @@ export default async function ProDashboardPage() {
                       <p className="font-medium text-white">
                         {conn.homeowner?.name || conn.homeowner?.email || "Homeowner"}
                       </p>
-                      <p className={textMeta}>
+                      <p className={`text-sm ${textMeta} truncate`}>
                         {conn.home?.address}
                         {conn.home?.city ? `, ${conn.home.city}` : ""}
                         {conn.home?.state ? `, ${conn.home.state}` : ""}
                       </p>
                     </div>
                   ))}
-                  <div className="pt-2 text-right">
-                    <Link
-                      href="/pro/contractor/invitations"
+                  <div className="pt-2 text-center">
+                    <InviteHomeownerButton
+                      variant="link"
                       className="text-xs text-white/70 hover:text-white"
-                    >
-                      Send another invite →
-                    </Link>
+                    />
                   </div>
                 </div>
               )}
             </section>
 
-            {/* Reviews (placeholder) */}
+            {/* Reviews */}
             <section className={glass}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-xl font-semibold ${heading}`}>Recent Reviews</h2>
               </div>
               <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-5 text-center">
                 <p className="mb-2 text-white/80">No reviews yet</p>
-                <p className={`mb-4 text-sm ${textMeta}`}>
+                <p className={`text-sm ${textMeta}`}>
                   As homeowners verify your work and leave feedback, their reviews
                   will show up here.
                 </p>
-                <Link
-                  href="/pro/profile"
-                  className="text-sm text-white/80 underline-offset-2 hover:underline"
-                >
-                  Check your public profile
-                </Link>
               </div>
             </section>
           </div>
         </div>
       </div>
     </main>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const config: Record<string, { label: string; color: string }> = {
+    DOCUMENTED_UNVERIFIED: {
+      label: "Pending",
+      color: "bg-yellow-400/10 text-yellow-300 border-yellow-400/30",
+    },
+    VERIFIED: {
+      label: "Verified",
+      color: "bg-green-400/10 text-green-300 border-green-400/30",
+    },
+    DISPUTED: {
+      label: "Disputed",
+      color: "bg-red-400/10 text-red-300 border-red-400/30",
+    },
+  };
+
+  const { label, color } = config[status] || {
+    label: status,
+    color: "bg-gray-400/10 text-gray-300 border-gray-400/30",
+  };
+
+  return (
+    <span className={`flex-shrink-0 rounded-full border px-2 py-0.5 text-xs ${color}`}>
+      {label}
+    </span>
   );
 }
 

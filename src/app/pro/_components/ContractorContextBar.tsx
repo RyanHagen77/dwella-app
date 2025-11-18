@@ -7,7 +7,6 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { glass, heading, textMeta } from "@/lib/glass";
 
-
 export function ContractorContextBar() {
   const pathname = usePathname();
   const [connectsOpen, setConnectsOpen] = useState(false);
@@ -21,16 +20,21 @@ export function ContractorContextBar() {
 
   return (
     <>
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 pt-3 pb-2">
-        <nav className="flex flex-wrap items-center gap-2">
+      <div className="mx-auto max-w-7xl px-6 pt-3 pb-2">
+        {/* pill rail */}
+        <nav className="inline-flex flex-wrap items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-1.5 py-1.5 backdrop-blur-sm">
           {links.map((link) => {
+            const base =
+              "rounded-full px-3 py-1.5 text-xs sm:text-sm transition-colors";
+
             if (link.modal) {
+              // Connects pill – treat like an inactive tab
               return (
                 <button
                   key="connects"
                   type="button"
                   onClick={() => setConnectsOpen(true)}
-                  className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs sm:text-sm text-white/85 hover:bg-white/20 backdrop-blur-sm"
+                  className={`${base} bg-white/5 text-white/85 hover:bg-white/15`}
                 >
                   Connects
                 </button>
@@ -44,11 +48,11 @@ export function ContractorContextBar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`rounded-full px-3 py-1.5 text-xs sm:text-sm transition-colors border backdrop-blur-sm ${
+                className={
                   isActive
-                    ? "bg-white text-slate-900 border-white/80"
-                    : "bg-black/35 border-white/30 text-white/85 hover:bg-black/55"
-                }`}
+                    ? `${base} bg-white text-slate-900 font-medium shadow-sm`
+                    : `${base} bg-white/5 text-white/85 hover:bg-white/15`
+                }
               >
                 {link.label}
               </Link>
@@ -87,7 +91,6 @@ function ConnectsModal({
         </p>
 
         <div className="grid gap-6 md:grid-cols-[220px,1fr]">
-          {/* Sidebar */}
           <div className="space-y-2">
             <NavItem
               href="/pro/contractor/work-records"
@@ -110,12 +113,11 @@ function ConnectsModal({
             <NavItem
               href="/pro/contractor/properties"
               title="Properties"
-              description="Homes you're connected to."
+              description="Homes you&apos;re connected to."
               onClick={onCloseAction}
             />
           </div>
 
-          {/* Right pane */}
           <div className="hidden md:block">
             <div
               className={`${glass} h-full rounded-2xl border border-white/10 bg-white/5 p-4`}
