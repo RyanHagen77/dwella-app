@@ -9,6 +9,7 @@ import Link from "next/link";
 import { glass, glassTight, textMeta, ctaPrimary, heading } from "@/lib/glass";
 import ClientActions from "@/app/home/_components/ClientActions";
 import { ClientCard } from "@/app/home/_components/ClientCard";
+import { HomePicker } from "@/app/home/_components/HomePicker";
 
 type HomeMeta = {
   attrs?: {
@@ -104,7 +105,9 @@ export default async function HomePage({
 
   if (!home) notFound();
 
-  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
+  const addrLine = `${home.address}${
+    home.city ? `, ${home.city}` : ""
+  }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
   const meta = home.meta as HomeMeta | null;
   const attrs = meta?.attrs ?? {};
@@ -119,26 +122,31 @@ export default async function HomePage({
     lastUpdated: attrs.lastUpdated ?? undefined,
   };
 
-  // ✅ Serialize records to convert Decimal to number
-  const serializedRecords = home.records.map(record => ({
+  const serializedRecords = home.records.map((record) => ({
     ...record,
     cost: record.cost ? Number(record.cost) : null,
   }));
 
-  // Separate overdue and upcoming reminders
   const now = new Date();
-  const overdueReminders = home.reminders.filter(r => new Date(r.dueAt) < now);
-  const upcomingReminders = home.reminders.filter(r => new Date(r.dueAt) >= now);
+  const overdueReminders = home.reminders.filter(
+    (r) => new Date(r.dueAt) < now
+  );
+  const upcomingReminders = home.reminders.filter(
+    (r) => new Date(r.dueAt) >= now
+  );
 
-  // Separate expiring soon (within 90 days) and active warranties
   const ninetyDaysFromNow = new Date();
   ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
-  const expiringSoonWarranties = home.warranties.filter(w =>
-    w.expiresAt && new Date(w.expiresAt) <= ninetyDaysFromNow && new Date(w.expiresAt) >= now
+  const expiringSoonWarranties = home.warranties.filter(
+    (w) =>
+      w.expiresAt &&
+      new Date(w.expiresAt) <= ninetyDaysFromNow &&
+      new Date(w.expiresAt) >= now
   );
 
   return (
     <main className="relative min-h-screen text-white">
+      {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image
           src="/myhomedox_home3.webp"
@@ -153,13 +161,17 @@ export default async function HomePage({
       </div>
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-
-        <section aria-labelledby="home-hero" className={glass}>
+        {/* Hero card */}
+        <section
+            aria-labelledby="home-hero"
+            className={`${glass} overflow-visible relative z-[20]`}
+          >
           <h2 id="home-hero" className="sr-only">
             Home overview
           </h2>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+              {/* Photo */}
               <div className="lg:col-span-2">
                 <Image
                   src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
@@ -170,48 +182,95 @@ export default async function HomePage({
                 />
               </div>
 
-              <div className="space-y-3">
-                <h3 className={`text-lg font-medium ${heading}`}>{addrLine}</h3>
-                <p className={`text-sm ${textMeta}`}>
-                  Last updated{" "}
-                  {stats.lastUpdated
-                    ? new Date(stats.lastUpdated).toLocaleDateString()
-                    : "—"}
-                </p>
+              {/* Right side: picker + address + meta */}
+              <div className="flex flex-col justify-between space-y-3">
+                <div className="space-y-3">
+                  <HomePicker
+                    currentHomeId={home.id}
+                    initialAddress={addrLine}
+                  />
+
+                  <h3 className={`text-lg font-medium ${heading}`}>
+                    {addrLine}
+                  </h3>
+                  <p className={`text-sm ${textMeta}`}>
+                    Last updated{" "}
+                    {stats.lastUpdated
+                      ? new Date(stats.lastUpdated).toLocaleDateString()
+                      : "—"}
+                  </p>
+                </div>
               </div>
             </div>
 
+            {/* Actions row */}
             <ClientActions homeId={home.id} />
           </div>
         </section>
 
-        <section aria-labelledby="stats" className="grid grid-cols-1 gap-4 md:grid-cols-5">
-          <Stat label="Health Score" value={stats.healthScore != null ? `${stats.healthScore}/100` : "—"} hint="A 0–100 score based on recent maintenance." />
-          <Stat label="Est. Value" value={stats.estValue != null ? `$${Number(stats.estValue).toLocaleString()}` : "—"} />
-          <Stat label="Beds / Baths" value={`${stats.beds ?? "—"} / ${stats.baths ?? "—"}`} />
-          <Stat label="Sq Ft" value={stats.sqft != null ? Number(stats.sqft).toLocaleString() : "—"} />
+        {/* Stats */}
+        <section
+          aria-labelledby="stats"
+          className="grid grid-cols-1 gap-4 md:grid-cols-5"
+        >
+          <Stat
+            label="Health Score"
+            value={
+              stats.healthScore != null
+                ? `${stats.healthScore}/100`
+                : "—"
+            }
+            hint="A 0–100 score based on recent maintenance."
+          />
+          <Stat
+            label="Est. Value"
+            value={
+              stats.estValue != null
+                ? `$${Number(stats.estValue).toLocaleString()}`
+                : "—"
+            }
+          />
+          <Stat
+            label="Beds / Baths"
+            value={`${stats.beds ?? "—"} / ${stats.baths ?? "—"}`}
+          />
+          <Stat
+            label="Sq Ft"
+            value={
+              stats.sqft != null
+                ? Number(stats.sqft).toLocaleString()
+                : "—"
+            }
+          />
           <Stat label="Year Built" value={stats.yearBuilt ?? "—"} />
         </section>
 
-        {/* Alert section for overdue items */}
-        {(overdueReminders.length > 0 || expiringSoonWarranties.length > 0) && (
+        {/* Alerts */}
+        {(overdueReminders.length > 0 ||
+          expiringSoonWarranties.length > 0) && (
           <section className="space-y-3">
             {overdueReminders.length > 0 && (
               <div className={`${glass} border-l-4 border-red-400`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className={`text-lg font-medium text-red-400 ${heading}`}>
+                    <h3
+                      className={`text-lg font-medium text-red-400 ${heading}`}
+                    >
                       ⚠️ Overdue Reminders ({overdueReminders.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
                       {overdueReminders.map((r) => (
                         <li key={r.id} className="text-sm text-white/90">
-                          • {r.title} (due {new Date(r.dueAt).toLocaleDateString()})
+                          • {r.title} (due{" "}
+                          {new Date(r.dueAt).toLocaleDateString()})
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <Link href={`/home/${home.id}/reminders`} className={`${ctaPrimary} text-sm`}>
+                  <Link
+                    href={`/home/${home.id}/reminders`}
+                    className={`${ctaPrimary} text-sm`}
+                  >
                     View All
                   </Link>
                 </div>
@@ -222,18 +281,25 @@ export default async function HomePage({
               <div className={`${glass} border-l-4 border-yellow-400`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className={`text-lg font-medium text-yellow-400 ${heading}`}>
-                      ⏰ Warranties Expiring Soon ({expiringSoonWarranties.length})
+                    <h3
+                      className={`text-lg font-medium text-yellow-400 ${heading}`}
+                    >
+                      ⏰ Warranties Expiring Soon (
+                      {expiringSoonWarranties.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
                       {expiringSoonWarranties.map((w) => (
                         <li key={w.id} className="text-sm text-white/90">
-                          • {w.item} expires {new Date(w.expiresAt!).toLocaleDateString()}
+                          • {w.item} expires{" "}
+                          {new Date(w.expiresAt!).toLocaleDateString()}
                         </li>
                       ))}
                     </ul>
                   </div>
-                  <Link href={`/home/${home.id}/warranties`} className={`${ctaPrimary} text-sm`}>
+                  <Link
+                    href={`/home/${home.id}/warranties`}
+                    className={`${ctaPrimary} text-sm`}
+                  >
                     View All
                   </Link>
                 </div>
@@ -242,10 +308,10 @@ export default async function HomePage({
           </section>
         )}
 
-        {/* Main content grid */}
+        {/* Main grid */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left column - Recent History */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Left column */}
+          <div className="space-y-6 lg:col-span-2">
             <ClientCard
               title="Recent Maintenance & Repairs"
               viewAllLink={`/home/${home.id}/records`}
@@ -255,7 +321,9 @@ export default async function HomePage({
               {serializedRecords.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
                   <p className="mb-3">No records yet</p>
-                  <p className="text-sm text-white/60 mb-4">Start tracking your home&apos;s maintenance history</p>
+                  <p className="mb-4 text-sm text-white/60">
+                    Start tracking your home&apos;s maintenance history
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -267,7 +335,7 @@ export default async function HomePage({
             </ClientCard>
           </div>
 
-          {/* Right column - Reminders & Warranties */}
+          {/* Right column */}
           <div className="space-y-6">
             <ClientCard
               title="Upcoming Reminders"
@@ -282,7 +350,11 @@ export default async function HomePage({
               ) : (
                 <ul className="space-y-3">
                   {upcomingReminders.map((m) => (
-                    <ReminderItem key={m.id} reminder={m} homeId={home.id} />
+                    <ReminderItem
+                      key={m.id}
+                      reminder={m}
+                      homeId={home.id}
+                    />
                   ))}
                 </ul>
               )}
@@ -301,7 +373,11 @@ export default async function HomePage({
               ) : (
                 <ul className="space-y-3">
                   {home.warranties.map((w) => (
-                    <WarrantyItem key={w.id} warranty={w} homeId={home.id} />
+                    <WarrantyItem
+                      key={w.id}
+                      warranty={w}
+                      homeId={home.id}
+                    />
                   ))}
                 </ul>
               )}
@@ -315,16 +391,34 @@ export default async function HomePage({
   );
 }
 
-/* ------- Component Helpers ------- */
+/* ------- Helpers ------- */
 
-function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
+function Stat({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint?: string;
+}) {
   return (
     <div className={glassTight} role="group" aria-label={label}>
       <div className="flex items-center gap-1 text-sm text-white/70">
         <span>{label}</span>
-        {hint && <span aria-label={hint} title={hint} className="cursor-help">ⓘ</span>}
+        {hint && (
+          <span
+            aria-label={hint}
+            title={hint}
+            className="cursor-help"
+          >
+            ⓘ
+          </span>
+        )}
       </div>
-      <div className="mt-1 text-xl font-semibold text-white">{value}</div>
+      <div className="mt-1 text-xl font-semibold text-white">
+        {value}
+      </div>
     </div>
   );
 }
@@ -333,26 +427,24 @@ function RecordItem({ record, homeId }: { record: Record; homeId: string }) {
   return (
     <Link
       href={`/home/${homeId}/records/${record.id}`}
-      className="block p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+      className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-medium text-white">{record.title}</h3>
             {record.kind && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-400/20 text-blue-300">
+              <span className="inline-flex items-center rounded text-xs font-medium bg-blue-400/20 px-2 py-0.5 text-blue-300">
                 {record.kind}
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-3 mt-1 text-sm text-white/70">
+          <div className="mt-1 flex items-center gap-3 text-sm text-white/70">
             {record.date && (
               <span>📅 {new Date(record.date).toLocaleDateString()}</span>
             )}
-            {record.vendor && (
-              <span>🔧 {record.vendor}</span>
-            )}
+            {record.vendor && <span>🔧 {record.vendor}</span>}
             {record.cost != null && (
               <span className="font-medium text-green-300">
                 ${Number(record.cost).toLocaleString()}
@@ -361,7 +453,9 @@ function RecordItem({ record, homeId }: { record: Record; homeId: string }) {
           </div>
 
           {record.note && (
-            <p className="mt-2 text-sm text-white/80 line-clamp-2">{record.note}</p>
+            <p className="mt-2 line-clamp-2 text-sm text-white/80">
+              {record.note}
+            </p>
           )}
         </div>
       </div>
@@ -369,27 +463,41 @@ function RecordItem({ record, homeId }: { record: Record; homeId: string }) {
   );
 }
 
-function ReminderItem({ reminder, homeId }: { reminder: Reminder; homeId: string }) {
+function ReminderItem({
+  reminder,
+  homeId,
+}: {
+  reminder: Reminder;
+  homeId: string;
+}) {
   const dueDate = new Date(reminder.dueAt);
   const isOverdue = dueDate < new Date();
-  const daysUntilDue = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilDue = Math.ceil(
+    (dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+  );
 
   return (
     <Link
       href={`/home/${homeId}/reminders/${reminder.id}`}
-      className="block p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+      className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-white truncate">{reminder.title}</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-medium text-white">
+            {reminder.title}
+          </h3>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className={`text-xs font-medium ${isOverdue ? 'text-red-400' : 'text-white/70'}`}>
+          <span
+            className={`text-xs font-medium ${
+              isOverdue ? "text-red-400" : "text-white/70"
+            }`}
+          >
             {dueDate.toLocaleDateString()}
           </span>
           {!isOverdue && daysUntilDue <= 7 && (
             <span className="text-xs text-yellow-400">
-              {daysUntilDue} day{daysUntilDue !== 1 ? 's' : ''}
+              {daysUntilDue} day{daysUntilDue !== 1 ? "s" : ""}
             </span>
           )}
         </div>
@@ -398,26 +506,44 @@ function ReminderItem({ reminder, homeId }: { reminder: Reminder; homeId: string
   );
 }
 
-function WarrantyItem({ warranty, homeId }: { warranty: Warranty; homeId: string }) {
-  const expiresAt = warranty.expiresAt ? new Date(warranty.expiresAt) : null;
-  const isExpiringSoon = expiresAt && expiresAt <= new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+function WarrantyItem({
+  warranty,
+  homeId,
+}: {
+  warranty: Warranty;
+  homeId: string;
+}) {
+  const expiresAt = warranty.expiresAt
+    ? new Date(warranty.expiresAt)
+    : null;
+  const isExpiringSoon =
+    expiresAt &&
+    expiresAt <= new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
 
   return (
     <Link
       href={`/home/${homeId}/warranties/${warranty.id}`}
-      className="block p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+      className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
     >
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-white truncate">{warranty.item}</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate font-medium text-white">
+            {warranty.item}
+          </h3>
           {warranty.provider && (
-            <p className="text-sm text-white/70">{warranty.provider}</p>
+            <p className="text-sm text-white/70">
+              {warranty.provider}
+            </p>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
           {expiresAt ? (
             <>
-              <span className={`text-xs font-medium ${isExpiringSoon ? 'text-yellow-400' : 'text-white/70'}`}>
+              <span
+                className={`text-xs font-medium ${
+                  isExpiringSoon ? "text-yellow-400" : "text-white/70"
+                }`}
+              >
                 {expiresAt.toLocaleDateString()}
               </span>
               <span className="text-xs text-white/60">Expires</span>

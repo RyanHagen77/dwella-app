@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useState } from "react";
@@ -27,9 +28,16 @@ export default function ContractorTopBar() {
           <Link
             href="/pro/contractor/dashboard"
             className="inline-flex items-center gap-3 shrink-0 group"
-            aria-label="HomeTrace Pro dashboard"
+            aria-label="MyHomeDox Pro dashboard"
           >
-            <HomeTraceLogo className="h-7 w-auto sm:h-9 transition-opacity group-hover:opacity-90" />
+            <Image
+              src="/myhomedox_logo.png"
+              alt="MyHomeDox"
+              className="h-7 w-auto sm:h-9 transition-opacity group-hover:opacity-90"
+              width={200}
+              height={50}
+              priority
+            />
           </Link>
 
           {/* Navigation Links LEFT-ALIGNED */}
@@ -200,51 +208,5 @@ function NavItem({
       </div>
       <p className={`mt-1 text-xs ${textMeta}`}>{description}</p>
     </Link>
-  );
-}
-
-/* --------------------------------------------------------------- */
-/*                          HOME TRACE LOGO                        */
-/* --------------------------------------------------------------- */
-
-function HomeTraceLogo({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 340 72"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      role="img"
-      aria-label="HomeTrace"
-    >
-      {/* House Outline */}
-      <path
-        d="M18 52C16.343 52 15 50.657 15 49V27.414C15 26.52 15.36 25.661 16 25.02L35.586 5.434C36.367 4.653 37.633 4.653 38.414 5.434L58 25.02C58.64 25.661 59 26.52 59 27.414V49C59 50.657 57.657 52 56 52H42C40.343 52 39 50.657 39 49V39H25V49C25 50.657 23.657 52 22 52H18Z"
-        stroke="#FFFFFF"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      {/* Checkmark */}
-      <path
-        d="M32.5 34L40 41.5L54 27.5"
-        stroke="#33C17D"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-      {/* HomeTrace Text as single node so kerning is correct */}
-      <text
-        x="80"
-        y="48"
-        fontFamily="Inter, Arial, sans-serif"
-        fontSize="40"
-        fontWeight="600"
-        fill="#FFFFFF"
-      >
-        HomeTrace
-      </text>
-    </svg>
   );
 }

@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import HomeTopBar from "@/app/home/_components/HomeTopBar";
+import HomeTopBar from "@/app/home/_components/HomeContextBar";
 import { ReminderActions } from "./_components/ReminderActions";
 
 export default async function ReminderDetailPage({

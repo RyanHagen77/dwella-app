@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TopBar, TopBarLink } from "@/components/TopBar";
+import { GlobalHeader, TopBarLink } from "@/components/GlobalHeader";
 
 type RealtorData = {
   listings: Array<{ id: string }>;
@@ -37,5 +37,5 @@ export default function RealtorTopBar() {
     { href: "/pro/realtor/profile", label: "Account" },
   ];
 
-  return <TopBar links={links} srBrand="HomeTrace Realtor" logoAlt="HomeTrace" />;
+  return <GlobalHeader links={links} srBrand="MyHomeDox Realtor" logoAlt="MyHomeDox" />;
 }

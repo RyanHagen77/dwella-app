@@ -8,7 +8,7 @@ import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_component
 import { ShareAccessModal } from "@/app/home/_components/ShareAccessModal";
 import { ClientCard } from "@/app/home/_components/ClientCard";
 import { glass, glassTight, textMeta, ctaPrimary, ctaGhost, heading } from "@/lib/glass";
-import HomeTopBar from "../_components/HomeTopBar";
+import HomeTopBar from "./HomeContextBar";
 
 /* ---------- Types ---------- */
 type RecordItem = {

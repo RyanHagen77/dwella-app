@@ -1,5 +1,11 @@
 // src/app/home/_components/index.ts
-export { default as HomeTopBar } from "./HomeTopBar";
+
+// Home context / picker
+export { default as HomeContextBar } from "./HomeContextBar";
+export * from "./HomeContextBar";      // re-export named versions if you ever use them
+export { HomePicker } from "./HomePicker";
+
+// Modals
 export { ClaimHomeModal } from "./ClaimHomeModal";
 export { AddRecordModal } from "./AddRecordModal";
 export { ShareAccessModal } from "./ShareAccessModal";

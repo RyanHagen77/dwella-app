@@ -89,11 +89,18 @@ export default function MainLanding() {
           <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/home")}
               className="cursor-pointer"
-              aria-label="HomeTrace home"
+              aria-label="MyHomeDox home"
             >
-              <HomeTraceLogo className="h-7 w-auto sm:h-9" />
+              <Image
+                src="/myhomedox_logo.png"
+                alt="MyHomeDox"
+                className="h-7 w-auto sm:h-9"
+                width={200}
+                height={50}
+                priority
+              />
             </button>
           </div>
 
@@ -335,50 +342,5 @@ export default function MainLanding() {
 
       <div className="h-16" />
     </main>
-  );
-}
-
-/** Inline HomeTrace logo based on your SVG */
-function HomeTraceLogo({ className }: { className?: string }) {
-  return (
-  <svg
-    viewBox="0 0 340 72"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    role="img"
-    aria-label="HomeTrace"
-  >
-    {/* House Outline */}
-    <path
-      d="M18 52C16.343 52 15 50.657 15 49V27.414C15 26.52 15.36 25.661 16 25.02L35.586 5.434C36.367 4.653 37.633 4.653 38.414 5.434L58 25.02C58.64 25.661 59 26.52 59 27.414V49C59 50.657 57.657 52 56 52H42C40.343 52 39 50.657 39 49V39H25V49C25 50.657 23.657 52 22 52H18Z"
-      stroke="#FFFFFF"
-      strokeWidth="6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="none"
-    />
-
-    {/* Checkmark */}
-    <path
-      d="M32.5 34L40 41.5L54 27.5"
-      stroke="#33C17D"
-      strokeWidth="6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="none"
-    />
-
-    {/* HomeTrace Text – single node so it kerns correctly */}
-    <text
-      x="80"
-      y="48"
-      fontFamily="Inter, Arial, sans-serif"
-      fontSize="40"
-      fontWeight="600"
-      fill="#FFFFFF"
-    >
-      HomeTrace
-    </text>
-  </svg>
   );
 }

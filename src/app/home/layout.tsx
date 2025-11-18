@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { TopBar, type TopBarLink } from "@/components/TopBar";
+import { GlobalHeader, type TopBarLink } from "@/components/GlobalHeader";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,15 +23,13 @@ export default async function HomeLayout({
     select: { role: true },
   });
 
-  // Admins should never see the homeowner pre-claim page
   if (user?.role === "ADMIN") redirect("/admin");
 
-  // Global header links (keep empty for now, or add Help, Support, etc.)
-  const links: TopBarLink[] = [];
+  const links: TopBarLink[] = []; // keep empty for now
 
   return (
     <>
-      <TopBar links={links} />
+      <GlobalHeader links={links} />
       {children}
     </>
   );

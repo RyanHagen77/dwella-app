@@ -5,7 +5,6 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { glass, ctaGhost, ctaPrimary, heading } from "@/lib/glass";
 import Image from "next/image";
-import HomeTopBar from "@/app/home/_components/HomeTopBar";
 
 export default function AccountPage() {
   const { data: session } = useSession();
@@ -65,8 +64,6 @@ export default function AccountPage() {
         <div className="absolute inset-0 bg-black/45" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
-
-      <HomeTopBar />
 
       <div className="mx-auto max-w-3xl p-6 space-y-6">
         {/* Page Header */}
