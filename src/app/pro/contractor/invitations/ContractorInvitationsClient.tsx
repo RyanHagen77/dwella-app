@@ -5,10 +5,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import AddressVerification from "@/components/AddressVerification";
-import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
+import { glass, heading, textMeta } from "@/lib/glass";
 import { Modal } from "@/components/ui/Modal";
-import { ContractorInvitationModal } from "./ContractorInvitationModal";
 import { useToast } from "@/components/ui/Toast";
+import {InviteHomeownerButton} from "@/app/pro/_components/InviteHomeownerButton";
 
 type Invitation = {
   id: string;
@@ -58,7 +58,6 @@ export default function ContractorInvitationsClient({
   const [selectedInvitation, setSelectedInvitation] = useState<string | null>(
     null
   );
-  const [showInviteModal, setShowInviteModal] = useState(false);
 
   function handleAcceptClick(invitationId: string) {
     setSelectedInvitation(invitationId);
@@ -165,11 +164,6 @@ export default function ContractorInvitationsClient({
     }
   }
 
-  function handleInviteModalClose() {
-    setShowInviteModal(false);
-    router.refresh(); // Refresh to show newly sent invitation
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -182,12 +176,7 @@ export default function ContractorInvitationsClient({
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className={ctaPrimary}
-            >
-              Invite Homeowner
-            </button>
+            <InviteHomeownerButton />
           </div>
         </div>
       </div>
@@ -280,10 +269,7 @@ export default function ContractorInvitationsClient({
       )}
 
       {/* Contractor Invite Homeowner Modal */}
-      <ContractorInvitationModal
-        open={showInviteModal}
-        onCloseAction={handleInviteModalClose}
-      />
+      <InviteHomeownerButton />
     </div>
   );
 }

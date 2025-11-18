@@ -6,6 +6,7 @@ import { glass, heading, textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
 import { Input } from "@/components/ui";
 import { Modal } from "@/components/ui/Modal";
 import AddressVerification from "@/components/AddressVerification";
+import {InviteHomeownerButton} from "@/app/pro/_components/InviteHomeownerButton";
 
 type WorkRecord = {
   id: string;
@@ -94,12 +95,7 @@ export default function ContractorWorkRecordsClient({
             <Link href="/pro/contractor/work-records/new" className={ctaPrimary}>
               + Document Work
             </Link>
-            <button
-              className={ctaGhost}
-              onClick={() => setInviteOpen(true)}
-            >
-              Invite Homeowner
-            </button>
+            <InviteHomeownerButton />
           </div>
         </div>
       </div>
