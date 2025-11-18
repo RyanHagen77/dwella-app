@@ -1,18 +1,17 @@
+// src/app/pro/_components/ContractorContextBar.tsx
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { signOut } from "next-auth/react";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { glass, heading, textMeta } from "@/lib/glass";
 
-export default function ContractorTopBar() {
+
+export function ContractorContextBar() {
   const pathname = usePathname();
   const [connectsOpen, setConnectsOpen] = useState(false);
 
-  // Insert Connects after Dashboard
   const links = [
     { href: "/pro/contractor/dashboard", label: "Dashboard" },
     { href: "#connects", label: "Connects", modal: true },
@@ -21,84 +20,52 @@ export default function ContractorTopBar() {
   ];
 
   return (
-    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/60 backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-6 py-4">
-        <div className="flex items-center justify-between gap-4">
-          {/* Logo */}
-          <Link
-            href="/pro/contractor/dashboard"
-            className="inline-flex items-center gap-3 shrink-0 group"
-            aria-label="MyHomeDox Pro dashboard"
-          >
-            <Image
-              src="/myhomedox_logo.png"
-              alt="MyHomeDox"
-              className="h-7 w-auto sm:h-9 transition-opacity group-hover:opacity-90"
-              width={200}
-              height={50}
-              priority
-            />
-          </Link>
-
-          {/* Navigation Links LEFT-ALIGNED */}
-          <nav className="hidden md:flex items-center gap-1">
-            {links.map((link) => {
-              if (link.modal) {
-                return (
-                  <button
-                    key="connects"
-                    onClick={() => setConnectsOpen(true)}
-                    className="rounded-lg px-3 py-1.5 text-sm text-white/80 hover:bg-white/10 hover:text-white transition-colors"
-                  >
-                    Connects
-                  </button>
-                );
-              }
-
-              const isActive =
-                pathname === link.href || pathname?.startsWith(link.href + "/");
-
+    <>
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 pt-3 pb-2">
+        <nav className="flex flex-wrap items-center gap-2">
+          {links.map((link) => {
+            if (link.modal) {
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                    isActive
-                      ? "bg-white/15 text-white font-medium"
-                      : "text-white/80 hover:bg-white/10 hover:text-white"
-                  }`}
+                <button
+                  key="connects"
+                  type="button"
+                  onClick={() => setConnectsOpen(true)}
+                  className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs sm:text-sm text-white/85 hover:bg-white/20 backdrop-blur-sm"
                 >
-                  {link.label}
-                </Link>
+                  Connects
+                </button>
               );
-            })}
-          </nav>
+            }
 
-          {/* Right side - Sign Out */}
-          <div className="flex items-center gap-3 ml-auto">
-            <button
-              type="button"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/15 transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
+            const isActive =
+              pathname === link.href || pathname?.startsWith(link.href + "/");
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`rounded-full px-3 py-1.5 text-xs sm:text-sm transition-colors border backdrop-blur-sm ${
+                  isActive
+                    ? "bg-white text-slate-900 border-white/80"
+                    : "bg-black/35 border-white/30 text-white/85 hover:bg-black/55"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
-      {/* Connects Modal */}
       <ConnectsModal
         open={connectsOpen}
         onCloseAction={() => setConnectsOpen(false)}
       />
-    </header>
+    </>
   );
 }
 
-/* --------------------------------------------------------------- */
-/*                          CONNECTS MODAL                         */
-/* --------------------------------------------------------------- */
+/* ----------------- CONNECTS MODAL ----------------- */
 
 function ConnectsModal({
   open,
@@ -148,7 +115,7 @@ function ConnectsModal({
             />
           </div>
 
-          {/* Right Pane */}
+          {/* Right pane */}
           <div className="hidden md:block">
             <div
               className={`${glass} h-full rounded-2xl border border-white/10 bg-white/5 p-4`}
@@ -184,7 +151,6 @@ function ConnectsModal({
   );
 }
 
-/* Shared nav item for the modal */
 function NavItem({
   href,
   title,

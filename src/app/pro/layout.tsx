@@ -1,7 +1,9 @@
+// src/app/pro/contractor/layout.tsx
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import ContractorTopBar from "@/app/pro/_components/ContractorTopBar";
+import { GlobalHeader, type TopBarLink } from "@/components/GlobalHeader";
+import { ContractorContextBar } from "@/app/pro/_components/ContractorContextBar";
 
 export default async function ProLayout({
   children,
@@ -12,17 +14,25 @@ export default async function ProLayout({
 
   // Redirect if not a pro
   if (!session?.user || session.user.role !== "PRO") {
-    redirect("/login");
+    redirect("/login?role=pro");
   }
 
   const isPending = session.user.proStatus === "PENDING";
 
-  return (
-    <div className="min-h-screen">
-      {/* Pro Navigation */}
-      <ContractorTopBar />
+  const links: TopBarLink[] = [
+    // keep empty for now or add pro-global links later
+    // { href: "/pro/contractor/dashboard", label: "Overview" },
+  ];
 
-      {/* Pending Warning Banner - Glassy amber vibe */}
+  return (
+    <div className="min-h-screen text-white">
+      {/* Shared global header (same as homeowners, uses PNG logo, etc.) */}
+      <GlobalHeader links={links} />
+
+      {/* Pro context bar with pills */}
+      <ContractorContextBar />
+
+      {/* Pending Warning Banner - glassy amber */}
       {isPending && (
         <div className="border-b border-yellow-400/30 bg-yellow-400/10 backdrop-blur-sm px-4 py-3">
           <div className="mx-auto max-w-7xl">
@@ -41,7 +51,8 @@ export default async function ProLayout({
                   />
                 </svg>
                 <p className="text-sm font-medium text-yellow-100">
-                  {"Your professional profile is pending-work-records approval. We'll email you when it's ready (typically 1–2 business days)."}
+                  Your professional profile is pending approval. We&apos;ll email
+                  you when it&apos;s ready (typically 1–2 business days).
                 </p>
               </div>
             </div>
@@ -49,7 +60,6 @@ export default async function ProLayout({
         </div>
       )}
 
-      {/* Main Content */}
       <main>{children}</main>
     </div>
   );

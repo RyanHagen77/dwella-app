@@ -19,8 +19,8 @@ export type TopBarLink = {
 
 export function GlobalHeader({
   links,
-  srBrand = "MyHomeDox",
-  logoAlt = "MyHomeDox",
+  srBrand = "HomeTrace",
+  logoAlt = "HomeTrace",
 }: {
   links: TopBarLink[];
   srBrand?: string;
@@ -38,9 +38,7 @@ export function GlobalHeader({
   useEffect(() => setOpen(false), [pathname]);
 
   useEffect(() => {
-    const onScroll = () => {
-      setScrolled(window.scrollY > 24);
-    };
+    const onScroll = () => setScrolled(window.scrollY > 24);
     onScroll();
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
@@ -58,34 +56,31 @@ export function GlobalHeader({
   );
 
   const userInitial =
-    session?.user?.name?.[0] ||
-    session?.user?.email?.[0] ||
-    undefined;
+    session?.user?.name?.[0] ?? session?.user?.email?.[0] ?? "U";
 
   return (
     <>
       <div
         className={`sticky top-0 z-40 transition-colors ${
-          scrolled ? "bg-black/40 backdrop-blur-md" : "bg-transparent"
+          scrolled ? "bg-black/45 backdrop-blur-md" : "bg-transparent"
         }`}
       >
         {/* header row */}
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:py-5 text-white">
-          {/* logo */}
+          {/* Logo (PNG) */}
           <Link
-            href="/home"
+            href="/"
             className="inline-flex items-center gap-3 shrink-0"
+            aria-label={srBrand}
           >
-            <span aria-hidden="true" className="block">
-              <Image
-                src="/myhomedox_logo.png"
-                alt={logoAlt}
-                className="h-7 w-auto sm:h-9"
-                width={200}
-                height={50}
-                priority
-              />
-            </span>
+            <Image
+              src="/myhomedox_logo.png"
+              alt={logoAlt}
+              className="h-6 w-auto sm:h-8"
+              width={180}
+              height={40}
+              priority
+            />
             <span className="sr-only">{srBrand ?? logoAlt}</span>
           </Link>
 
@@ -111,7 +106,7 @@ export function GlobalHeader({
                   className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20"
                 >
                   <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-semibold">
-                    {userInitial ?? "U"}
+                    {userInitial}
                   </div>
                   <span className="hidden sm:inline max-w-[160px] truncate text-white/85">
                     {session.user.email}
@@ -173,7 +168,6 @@ export function GlobalHeader({
                           Account settings
                         </button>
 
-                        {/* Add home from global header */}
                         <button
                           type="button"
                           onClick={() => {
@@ -228,7 +222,7 @@ export function GlobalHeader({
             ) : (
               <Link
                 href="/login"
-                className="hidden md:inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 backdrop-blur-sm"
+                className="inline-flex items-center justify-center rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 backdrop-blur-sm"
               >
                 Login
               </Link>
