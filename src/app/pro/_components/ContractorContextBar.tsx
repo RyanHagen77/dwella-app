@@ -7,6 +7,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { glass, heading, textMeta } from "@/lib/glass";
 import { UnreadMessageBadge } from "@/components/ui/UnreadMessageBadge";
+import { UnreadInvitationsBadge } from "@/components/ui/UnreadInvitationsBadge";
 
 export function ContractorContextBar() {
   const pathname = usePathname();
@@ -14,7 +15,7 @@ export function ContractorContextBar() {
 
   const links = [
     { href: "/pro/contractor/dashboard", label: "Dashboard" },
-    { href: "#connects", label: "Connects", modal: true },
+    { href: "#connects", label: "Connects", modal: true, showInvitationsBadge: true },
     { href: "/pro/messages", label: "Messages", showBadge: true },
     { href: "/pro/contractor/analytics", label: "Analytics" },
     { href: "/pro/contractor/profile", label: "Profile" },
@@ -38,7 +39,10 @@ export function ContractorContextBar() {
                   onClick={() => setConnectsOpen(true)}
                   className={`${base} bg-white/5 text-white/85 hover:bg-white/15`}
                 >
-                  Connects
+                  <span className="inline-flex items-center gap-1.5">
+                    Connects
+                    {link.showInvitationsBadge && <UnreadInvitationsBadge />}
+                  </span>
                 </button>
               );
             }

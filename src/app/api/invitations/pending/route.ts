@@ -3,13 +3,15 @@
  *
  * Endpoint: /api/invitations/pending
  *
- * GET - Returns pending invitation count for the current user across all homes
+ * GET - Returns pending invitation count for the current user
  *
- * Works for homeowners - counts invitations across all homes they own
+ * Works for:
+ * - Homeowners: Counts invitations across all homes they own
+ * - Contractors: Counts invitations sent TO them
  *
  * Returns:
  * {
- *   total: 5,  // Total pending invitations across all homes
+ *   total: 5,  // Total pending invitations
  * }
  *
  * Location: app/api/invitations/pending/route.ts
@@ -29,8 +31,32 @@ export async function GET(): Promise<NextResponse> {
     }
 
     const userId = session.user.id;
+    const userRole = session.user.role;
 
-    // Get all homes owned by this user
+    // CONTRACTORS: Count invitations sent TO their email
+    if (userRole === "PRO") {
+      // Get contractor's email
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true },
+      });
+
+      if (!user?.email) {
+        return NextResponse.json({ total: 0 });
+      }
+
+      const totalPending = await prisma.invitation.count({
+        where: {
+          invitedEmail: user.email,
+          role: "PRO",
+          status: "PENDING",
+        },
+      });
+
+      return NextResponse.json({ total: totalPending });
+    }
+
+    // HOMEOWNERS: Count invitations across all their homes
     const homes = await prisma.home.findMany({
       where: { ownerId: userId },
       select: { id: true },
@@ -38,12 +64,10 @@ export async function GET(): Promise<NextResponse> {
 
     const homeIds = homes.map((h) => h.id);
 
-    // No homes = no invitations
     if (homeIds.length === 0) {
       return NextResponse.json({ total: 0 });
     }
 
-    // Count pending invitations across all homes
     const totalPending = await prisma.invitation.count({
       where: {
         homeId: { in: homeIds },
