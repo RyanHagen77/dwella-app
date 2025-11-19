@@ -4,6 +4,8 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ClaimHomeModal } from "./ClaimHomeModal";
 import { UnreadMessageBadgeHomeowner } from "./UnreadMessageBadgeHomeowner";
+import { UnreadInvitationsBadgeHomeowner } from "./UnreadInvitationsBadgeHomeowner";
+import { PendingWorkBadgeHomeowner } from "./PendingWorkBadgeHomeowner";
 
 type Home = {
   id: string;
@@ -17,6 +19,7 @@ type HomeStats = {
   homeId: string;
   unreadMessages: number;
   pendingInvitations: number;
+  pendingWork: number;
 };
 
 export function HomePicker({
@@ -55,13 +58,15 @@ export function HomePicker({
       try {
         // Fetch stats for each home
         const statsPromises = homes.map(async (home) => {
-          const [messagesRes, invitesRes] = await Promise.all([
+          const [messagesRes, invitesRes, workRes] = await Promise.all([
             fetch(`/api/home/${home.id}/messages/unread`),
             fetch(`/api/home/${home.id}/invitations?status=PENDING`),
+            fetch(`/api/home/${home.id}/work/pending`),
           ]);
 
           const messagesData = messagesRes.ok ? await messagesRes.json() : { total: 0 };
           const invitesData = invitesRes.ok ? await invitesRes.json() : {};
+          const workData = workRes.ok ? await workRes.json() : { totalPending: 0 };
 
           const pendingInvites =
             (invitesData.sentInvitations?.filter((inv: { status: string }) => inv.status === 'PENDING').length || 0) +
@@ -71,6 +76,7 @@ export function HomePicker({
             homeId: home.id,
             unreadMessages: messagesData.total || 0,
             pendingInvitations: pendingInvites,
+            pendingWork: workData.totalPending || 0,
           };
         });
 
@@ -121,7 +127,8 @@ export function HomePicker({
     return homeStats.find((s) => s.homeId === homeId) || {
       homeId,
       unreadMessages: 0,
-      pendingInvitations: 0
+      pendingInvitations: 0,
+      pendingWork: 0,
     };
   }
 
@@ -142,8 +149,10 @@ export function HomePicker({
             {displayAddress}
           </span>
 
-          {/* Total Unread Badge */}
+          {/* Badges */}
           <UnreadMessageBadgeHomeowner />
+          <UnreadInvitationsBadgeHomeowner />
+          <PendingWorkBadgeHomeowner />
 
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -170,7 +179,7 @@ export function HomePicker({
             {/* dropdown itself */}
             <div
               className="absolute left-0 top-full z-[50] mt-2
-                         w-[min(420px,calc(100vw-3rem))]
+                         w-[min(304px,calc(100vw-3rem))]
                          rounded-2xl border border-white/15 bg-black/90
                          backdrop-blur-xl shadow-2xl"
             >
@@ -180,11 +189,11 @@ export function HomePicker({
                 </p>
               </div>
 
-              <div className="max-h-72 space-y-1 overflow-y-auto px-2 py-2">
+              <div className="max-h-56 space-y-1 overflow-y-auto px-2 py-2">
                 {homes.map((home) => {
                   const isCurrent = home.id === currentHomeId;
                   const stats = getStatsForHome(home.id);
-                  const hasActivity = stats.unreadMessages > 0 || stats.pendingInvitations > 0;
+                  const hasActivity = stats.unreadMessages > 0 || stats.pendingInvitations > 0 || stats.pendingWork > 0;
 
                   return (
                     <button
@@ -220,6 +229,11 @@ export function HomePicker({
                             {stats.pendingInvitations > 0 && (
                               <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-blue-500 px-2 text-xs font-bold text-white">
                                 {stats.pendingInvitations}
+                              </span>
+                            )}
+                            {stats.pendingWork > 0 && (
+                              <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[#33C17D] px-2 text-xs font-bold text-white">
+                                {stats.pendingWork}
                               </span>
                             )}
                           </div>

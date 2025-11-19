@@ -58,6 +58,15 @@ export function GlobalHeader({
   const userInitial =
     session?.user?.name?.[0] ?? session?.user?.email?.[0] ?? "U";
 
+  // Extract current homeId from pathname if on a home page
+  const currentHomeId = useMemo(() => {
+    const match = pathname.match(/^\/home\/([^\/]+)/);
+    return match ? match[1] : null;
+  }, [pathname]);
+
+  // Logo link - go to current home if on home page, otherwise /home
+  const logoHref = currentHomeId ? `/home/${currentHomeId}` : "/home";
+
   return (
     <>
       <div
@@ -69,7 +78,7 @@ export function GlobalHeader({
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:py-5 text-white">
           {/* Logo (PNG) */}
           <Link
-            href="/"
+            href={logoHref}
             className="inline-flex items-center gap-3 shrink-0"
             aria-label={srBrand}
           >

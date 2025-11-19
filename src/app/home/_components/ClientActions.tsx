@@ -49,7 +49,6 @@ export default function ClientActions({ homeId }: { homeId: string }) {
   const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
   const [loadingInvitations, setLoadingInvitations] = useState(true);
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
-  const [loadingMessages, setLoadingMessages] = useState(true);
 
   /* ---------- Fetch pending work count ---------- */
   useEffect(() => {
@@ -57,11 +56,6 @@ export default function ClientActions({ homeId }: { homeId: string }) {
       try {
         const res = await fetch(`/api/home/${homeId}/work/pending`);
         if (!res.ok) {
-          console.error(
-            "Failed to fetch pending work:",
-            res.status,
-            await res.text()
-          );
           setPendingWorkCount(0);
           return;
         }
@@ -74,7 +68,6 @@ export default function ClientActions({ homeId }: { homeId: string }) {
             ? data.pendingWork.length
             : 0;
 
-        console.log("Pending work count (ClientActions):", count);
         setPendingWorkCount(count);
       } catch (error) {
         console.error("Error fetching pending work:", error);
@@ -108,29 +101,22 @@ export default function ClientActions({ homeId }: { homeId: string }) {
     void fetchPendingInvitations();
   }, [homeId]);
 
-  /* ---------- Fetch unread messages count ---------- */
+  /* ---------- Fetch unread messages count for THIS home ---------- */
   useEffect(() => {
     async function fetchUnreadMessages() {
-      console.log("[ClientActions] Fetching unread messages...");
       try {
-        const res = await fetch("/api/messages/unread");
-        console.log("[ClientActions] Unread API status:", res.status);
+        const res = await fetch(`/api/home/${homeId}/messages/unread`);
         if (res.ok) {
           const data = await res.json();
-          console.log("[ClientActions] Unread data:", data);
           setUnreadMessagesCount(data.total || 0);
-        } else {
-          console.error("[ClientActions] Unread API failed:", res.status);
         }
       } catch (error) {
         console.error("Error fetching unread messages:", error);
-      } finally {
-        setLoadingMessages(false);
       }
     }
 
     void fetchUnreadMessages();
-  }, []);
+  }, [homeId]);
 
   /* ---------- API Helpers ---------- */
   async function createRecord(payload: {
@@ -334,7 +320,7 @@ export default function ClientActions({ homeId }: { homeId: string }) {
           + Add Record
         </button>
 
-        {/* Messages Button with Badge */}
+        {/* Messages Button - shows count for THIS home only */}
         <Link
           href={`/home/${homeId}/messages`}
           className={`${ctaGhost} relative`}
@@ -345,22 +331,27 @@ export default function ClientActions({ homeId }: { homeId: string }) {
               {unreadMessagesCount}
             </span>
           )}
-          {/* Debug: Show count always */}
-          <span className="ml-2 text-xs text-white/50">({unreadMessagesCount})</span>
         </Link>
 
-        {/* Connections Button - only invitations + work */}
+        {/* Connections Button - invitations + work with separate badges */}
         <button
           type="button"
           onClick={() => setConnectionsOpen(true)}
           className={`${ctaGhost} relative`}
         >
           Connections
-          {(pendingInvitationsCount + pendingWorkCount) > 0 && (
-            <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">
-              {pendingInvitationsCount + pendingWorkCount}
-            </span>
-          )}
+          <div className="absolute -top-2 -right-2 flex flex-col gap-1">
+            {pendingInvitationsCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">
+                {pendingInvitationsCount}
+              </span>
+            )}
+            {pendingWorkCount > 0 && (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#33C17D] text-xs font-bold text-white">
+                {pendingWorkCount}
+              </span>
+            )}
+          </div>
         </button>
 
         <Link href={`/report?home=${homeId}`} className={ctaGhost}>
