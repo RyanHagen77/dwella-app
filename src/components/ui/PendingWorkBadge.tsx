@@ -1,21 +1,25 @@
 /**
- * PENDING WORK BADGE FOR HOMEOWNERS
+ * PENDING WORK BADGE
  *
- * Shows total pending work items across ALL homes owned by the user.
+ * Shows total pending work items for the current user.
+ * - Homeowners: Work items across ALL homes they own
+ * - Contractors: Work requests received
  * Polls API every 30 seconds.
  *
- * Usage in HomePicker or navigation:
- * <PendingWorkBadgeHomeowner />
+ * Usage in navigation/pickers:
+ * <PendingWorkBadge />
  *
- * Location: app/home/_components/PendingWorkBadgeHomeowner.tsx
+ * Location: src/components/ui/PendingWorkBadge.tsx
  */
 
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
-export function PendingWorkBadgeHomeowner() {
+export function PendingWorkBadge() {
   const [workCount, setWorkCount] = useState(0);
+  const { data: session } = useSession();
 
   useEffect(() => {
     const fetchWork = async () => {
@@ -30,14 +34,15 @@ export function PendingWorkBadgeHomeowner() {
       }
     };
 
-    // Fetch immediately
-    fetchWork();
+    // Only fetch if user is authenticated
+    if (session?.user) {
+      fetchWork();
 
-    // Poll every 30 seconds
-    const interval = setInterval(fetchWork, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+      // Poll every 30 seconds
+      const interval = setInterval(fetchWork, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
   if (workCount === 0) return null;
 

@@ -1,21 +1,25 @@
 /**
- * PENDING INVITATIONS BADGE FOR HOMEOWNERS
+ * PENDING INVITATIONS BADGE
  *
- * Shows total pending invitations across ALL homes owned by the user.
+ * Shows total pending invitations for the current user.
+ * - Homeowners: Invitations across ALL homes they own
+ * - Contractors: Invitations received
  * Polls API every 30 seconds.
  *
- * Usage in HomePicker or navigation:
- * <UnreadInvitationsBadgeHomeowner />
+ * Usage in navigation/pickers:
+ * <UnreadInvitationsBadge />
  *
- * Location: app/home/_components/UnreadInvitationsBadgeHomeowner.tsx
+ * Location: src/components/ui/UnreadInvitationsBadge.tsx
  */
 
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
-export function UnreadInvitationsBadgeHomeowner() {
+export function UnreadInvitationsBadge() {
   const [invitationsCount, setInvitationsCount] = useState(0);
+  const { data: session } = useSession();
 
   useEffect(() => {
     const fetchInvitations = async () => {
@@ -30,14 +34,15 @@ export function UnreadInvitationsBadgeHomeowner() {
       }
     };
 
-    // Fetch immediately
-    fetchInvitations();
+    // Only fetch if user is authenticated
+    if (session?.user) {
+      fetchInvitations();
 
-    // Poll every 30 seconds
-    const interval = setInterval(fetchInvitations, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+      // Poll every 30 seconds
+      const interval = setInterval(fetchInvitations, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
   if (invitationsCount === 0) return null;
 

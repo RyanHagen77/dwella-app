@@ -11,7 +11,7 @@
 "use client";
 
 import Image from "next/image";
-import { format } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 
 type Message = {
   id: string;
@@ -41,6 +41,19 @@ type Props = {
 };
 
 export function MessageBubble({ message, isOwn, otherUser }: Props) {
+  // Format timestamp with date
+  const formatTimestamp = (date: Date) => {
+    const messageDate = new Date(date);
+
+    if (isToday(messageDate)) {
+      return `Today ${format(messageDate, "h:mm a")}`;
+    } else if (isYesterday(messageDate)) {
+      return `Yesterday ${format(messageDate, "h:mm a")}`;
+    } else {
+      return format(messageDate, "MMM d, h:mm a");
+    }
+  };
+
   return (
     <div className={`flex gap-3 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
       {/* Avatar */}
@@ -98,7 +111,7 @@ export function MessageBubble({ message, isOwn, otherUser }: Props) {
 
         {/* Timestamp */}
         <p className="text-xs text-white/50 px-1">
-          {format(new Date(message.createdAt), "h:mm a")}
+          {formatTimestamp(message.createdAt)}
         </p>
       </div>
     </div>

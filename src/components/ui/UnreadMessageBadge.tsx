@@ -1,21 +1,25 @@
 /**
- * UNREAD MESSAGE BADGE FOR HOMEOWNERS
+ * UNREAD MESSAGE BADGE
  *
- * Shows total unread messages across ALL homes owned by the user.
+ * Shows total unread messages for the current user.
+ * - Homeowners: Across ALL homes they own
+ * - Contractors: Across ALL connections
  * Polls API every 30 seconds.
  *
- * Usage in HomePicker or navigation:
- * <UnreadMessageBadgeHomeowner />
+ * Usage in navigation/pickers:
+ * <UnreadMessageBadge />
  *
- * Location: app/_components/UnreadMessageBadgeHomeowner.tsx
+ * Location: src/components/ui/UnreadMessageBadge.tsx
  */
 
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
-export function UnreadMessageBadgeHomeowner() {
+export function UnreadMessageBadge() {
   const [unreadCount, setUnreadCount] = useState(0);
+  const { data: session } = useSession();
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -30,14 +34,15 @@ export function UnreadMessageBadgeHomeowner() {
       }
     };
 
-    // Fetch immediately
-    fetchUnread();
+    // Only fetch if user is authenticated
+    if (session?.user) {
+      fetchUnread();
 
-    // Poll every 30 seconds
-    const interval = setInterval(fetchUnread, 30000);
-
-    return () => clearInterval(interval);
-  }, []);
+      // Poll every 30 seconds
+      const interval = setInterval(fetchUnread, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
   if (unreadCount === 0) return null;
 

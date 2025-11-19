@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { glass, heading, textMeta } from "@/lib/glass";
-import { UnreadMessageBadge } from "./UnreadMessageBadge";
+import { UnreadMessageBadge } from "@/components/ui/UnreadMessageBadge";
 
 export function ContractorContextBar() {
   const pathname = usePathname();

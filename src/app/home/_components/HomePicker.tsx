@@ -3,9 +3,9 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ClaimHomeModal } from "./ClaimHomeModal";
-import { UnreadMessageBadgeHomeowner } from "./UnreadMessageBadgeHomeowner";
-import { UnreadInvitationsBadgeHomeowner } from "./UnreadInvitationsBadgeHomeowner";
-import { PendingWorkBadgeHomeowner } from "./PendingWorkBadgeHomeowner";
+import { UnreadMessageBadge } from "@/components/ui/UnreadMessageBadge";
+import { UnreadInvitationsBadge } from "@/components/ui//UnreadInvitationsBadge";
+import { PendingWorkBadge } from "@/components/ui/PendingWorkBadge";
 
 type Home = {
   id: string;
@@ -150,9 +150,9 @@ export function HomePicker({
           </span>
 
           {/* Badges */}
-          <UnreadMessageBadgeHomeowner />
-          <UnreadInvitationsBadgeHomeowner />
-          <PendingWorkBadgeHomeowner />
+          <UnreadMessageBadge />
+          <UnreadInvitationsBadge/>
+          <PendingWorkBadge />
 
           <svg
             xmlns="http://www.w3.org/2000/svg"
