@@ -3,187 +3,43 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Modal } from "@/components/ui/Modal";
-import { glass, heading, textMeta } from "@/lib/glass";
 import { UnreadMessageBadge } from "@/components/ui/UnreadMessageBadge";
-import { UnreadInvitationsBadge } from "@/components/ui/UnreadInvitationsBadge";
 
 export function ContractorContextBar() {
   const pathname = usePathname();
-  const [connectsOpen, setConnectsOpen] = useState(false);
 
   const links = [
     { href: "/pro/contractor/dashboard", label: "Dashboard" },
-    { href: "#connects", label: "Connects", modal: true, showInvitationsBadge: true },
     { href: "/pro/messages", label: "Messages", showBadge: true },
     { href: "/pro/contractor/analytics", label: "Analytics" },
-    { href: "/pro/contractor/profile", label: "Profile" },
   ];
 
   return (
-    <>
-      <div className="mx-auto max-w-7xl px-6 pt-3 pb-2">
-        {/* pill rail */}
-        <nav className="inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-1.5 py-1.5 backdrop-blur-sm w-full sm:w-auto">
-          {links.map((link) => {
-            const base =
-              "rounded-full px-3 py-1.5 text-xs sm:text-sm transition-colors whitespace-nowrap";
+    <div className="mx-auto max-w-7xl px-6 pt-3 pb-2">
+      {/* pill rail */}
+      <nav className="inline-flex flex-wrap items-center justify-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-1.5 py-1.5 backdrop-blur-sm w-full sm:w-auto">
+        {links.map((link) => {
+          const isActive =
+            pathname === link.href || pathname?.startsWith(link.href + "/");
 
-            if (link.modal) {
-              // Connects pill – treat like an inactive tab
-              return (
-                <button
-                  key="connects"
-                  type="button"
-                  onClick={() => setConnectsOpen(true)}
-                  className={`${base} bg-white/5 text-white/85 hover:bg-white/15 relative`}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    Connects
-                    {link.showInvitationsBadge && <UnreadInvitationsBadge />}
-                  </span>
-                </button>
-              );
-            }
-
-            const isActive =
-              pathname === link.href || pathname?.startsWith(link.href + "/");
-
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={
-                  isActive
-                    ? `${base} bg-white text-slate-900 font-medium shadow-sm`
-                    : `${base} bg-white/5 text-white/85 hover:bg-white/15`
-                }
-              >
-                <span className="inline-flex items-center gap-1.5">
-                  {link.label}
-                  {link.showBadge && <UnreadMessageBadge />}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      <ConnectsModal
-        open={connectsOpen}
-        onCloseAction={() => setConnectsOpen(false)}
-      />
-    </>
-  );
-}
-
-/* ----------------- CONNECTS MODAL ----------------- */
-
-function ConnectsModal({
-  open,
-  onCloseAction,
-}: {
-  open: boolean;
-  onCloseAction: () => void;
-}) {
-  if (!open) return null;
-
-  return (
-    <Modal open={open} onCloseAction={onCloseAction}>
-      <div className="p-6 md:p-7">
-        <h2 className={`mb-2 text-xl font-bold text-white ${heading}`}>
-          Connects
-        </h2>
-        <p className={`mb-6 text-sm ${textMeta}`}>
-          Manage your invitations, connected homes, and documented work.
-        </p>
-
-        <div className="grid gap-6 md:grid-cols-[220px,1fr]">
-          <div className="space-y-2">
-            <NavItem
-              href="/pro/contractor/work-records"
-              title="Work Records"
-              description="Documented work history."
-              onClick={onCloseAction}
-            />
-            <NavItem
-              href="/pro/contractor/work-requests"
-              title="Work Requests"
-              description="Requests from homeowners."
-              onClick={onCloseAction}
-            />
-            <NavItem
-              href="/pro/contractor/invitations"
-              title="Invitations"
-              description="Received & sent invites."
-              onClick={onCloseAction}
-            />
-            <NavItem
-              href="/pro/contractor/properties"
-              title="Properties"
-              description="Homes you&apos;re connected to."
-              onClick={onCloseAction}
-            />
-          </div>
-
-          <div className="hidden md:block">
-            <div
-              className={`${glass} h-full rounded-2xl border border-white/10 bg-white/5 p-4`}
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`rounded-full px-3 py-1.5 text-xs sm:text-sm transition-colors whitespace-nowrap ${
+                isActive
+                  ? "bg-white text-slate-900 font-medium shadow-sm"
+                  : "bg-white/5 text-white/85 hover:bg-white/15"
+              }`}
             >
-              <p className="mb-1 text-sm font-semibold text-white">
-                How Connects works
-              </p>
-              <p className={`text-sm ${textMeta}`}>
-                <strong>Work Requests</strong> are jobs submitted by homeowners.
-                <br />
-                <br />
-                <strong>Work Records</strong> keep shared history between you
-                and a property.
-                <br />
-                <br />
-                Use <strong>Invitations</strong> to form new connections, and
-                manage all your active homes under <strong>Properties</strong>.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={onCloseAction}
-            className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function NavItem({
-  href,
-  title,
-  description,
-  onClick,
-}: {
-  href: string;
-  title: string;
-  description: string;
-  onClick: () => void;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className="block rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-left text-sm text-white hover:bg-white/10"
-    >
-      <div className="flex items-center justify-between">
-        <span className="font-medium">{title}</span>
-        <span className="text-xs text-white/40">›</span>
-      </div>
-      <p className={`mt-1 text-xs ${textMeta}`}>{description}</p>
-    </Link>
+              <span className="inline-flex items-center gap-1.5">
+                {link.label}
+                {link.showBadge && <UnreadMessageBadge />}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

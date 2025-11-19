@@ -12,8 +12,10 @@ import {
   heading,
   textMeta,
   ctaPrimary,
-  } from "@/lib/glass";
+} from "@/lib/glass";
 import { InviteHomeownerButton } from "../../_components/InviteHomeownerButton";
+import { UnreadInvitationsBadge } from "@/components/ui/UnreadInvitationsBadge";
+import { PendingWorkBadge } from "@/components/ui/PendingWorkBadge";
 
 export default async function ProDashboardPage() {
   const session = await getServerSession(authConfig);
@@ -55,19 +57,7 @@ export default async function ProDashboardPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Get work records for stats and recent work
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const workRecordsThisMonth = await prisma.workRecord.count({
-    where: {
-      contractorId: userId,
-      createdAt: {
-        gte: startOfMonth,
-      },
-    },
-  });
-
+  // Get work records for recent work section
   const recentWork = await prisma.workRecord.findMany({
     where: {
       contractorId: userId,
@@ -97,79 +87,105 @@ export default async function ProDashboardPage() {
       <Bg />
 
       <div className="mx-auto max-w-7xl space-y-6 p-6">
-        {/* Header */}
+        {/* Header with Business Name & Rating */}
         <section className={glass}>
           <div className="flex items-center justify-between gap-4">
-            <div>
+            <div className="flex-1">
               <h1 className={`text-2xl font-semibold ${heading}`}>
                 {proProfile?.businessName || "Pro Dashboard"}
               </h1>
-              <p className={textMeta}>
-                {proProfile?.type === "CONTRACTOR"
-                  ? "Contractor"
-                  : proProfile?.type === "REALTOR"
-                  ? "Realtor"
-                  : proProfile?.type === "INSPECTOR"
-                  ? "Inspector"
-                  : "Professional"}
+              <div className="flex items-center gap-3 mt-1">
+                <p className={textMeta}>
+                  {proProfile?.type === "CONTRACTOR"
+                    ? "Contractor"
+                    : proProfile?.type === "REALTOR"
+                    ? "Realtor"
+                    : proProfile?.type === "INSPECTOR"
+                    ? "Inspector"
+                    : "Professional"}
+                </p>
                 {proProfile?.verified && (
-                  <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-100">
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-100">
                     ✓ Verified
                   </span>
                 )}
-              </p>
+              </div>
             </div>
-            <div className="hidden gap-2 sm:flex">
-              <Link href="/pro/contractor/work-records/new" className={ctaPrimary}>
-                + Document Work
-              </Link>
-              <InviteHomeownerButton />
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-baseline gap-1">
+                <span className="text-3xl font-bold text-white">
+                  {proProfile?.rating ? proProfile.rating.toFixed(1) : "5.0"}
+                </span>
+                <span className="text-xl text-yellow-400">★</span>
+              </div>
+              <p className="text-xs text-white/60">
+                {proProfile?.rating ? "Avg Rating" : "Starting Rating"}
+              </p>
             </div>
           </div>
         </section>
 
-{/* Stats - More compact on mobile */}
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-          <div className={`${glass} py-3 sm:py-4`}>
-            <p className={`text-xs sm:text-sm font-medium ${textMeta}`}>Avg Rating</p>
-            <p className={`mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold ${heading}`}>
-              {proProfile?.rating ? proProfile.rating.toFixed(1) : "5.0"}{" "}
-              <span className="text-sm sm:text-base align-middle">★</span>
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-xs text-white/60">
-              {proProfile?.rating ? "Based on reviews" : "Starting rating"}
-            </p>
-          </div>
+        {/* Action Cards - Work Requests & Invitations */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Work Requests Card */}
+          <Link
+            href="/pro/contractor/work-requests"
+            className={`${glass} hover:bg-white/10 transition-colors group`}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className={`text-lg font-semibold ${heading}`}>Work Requests</h2>
+                  <PendingWorkBadge />
+                </div>
+                <p className={`mt-1 text-sm ${textMeta}`}>
+                  Jobs submitted by homeowners
+                </p>
+              </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-white/40 group-hover:text-white/60 transition-colors"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </div>
+          </Link>
 
-          <div className={`${glass} py-3 sm:py-4`}>
-            <p className={`text-xs sm:text-sm font-medium ${textMeta}`}>This Month</p>
-            <p className={`mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold ${heading}`}>
-              {workRecordsThisMonth}
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-xs text-white/60">
-              Records
-            </p>
-          </div>
-
-          <div className={`${glass} py-3 sm:py-4`}>
-            <p className={`text-xs sm:text-sm font-medium ${textMeta}`}>Verified Work</p>
-            <p className={`mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold ${heading}`}>
-              {totalVerified}
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-xs text-white/60">
-              Approved
-            </p>
-          </div>
-
-          <div className={`${glass} py-3 sm:py-4`}>
-            <p className={`text-xs sm:text-sm font-medium ${textMeta}`}>Properties</p>
-            <p className={`mt-1 sm:mt-2 text-2xl sm:text-3xl font-bold ${heading}`}>
-              {connections.length}
-            </p>
-            <p className="mt-0.5 sm:mt-1 text-xs text-white/60">
-              Active
-            </p>
-          </div>
+          {/* Invitations Card */}
+          <Link
+            href="/pro/contractor/invitations"
+            className={`${glass} hover:bg-white/10 transition-colors group`}
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h2 className={`text-lg font-semibold ${heading}`}>Invitations</h2>
+                  <UnreadInvitationsBadge />
+                </div>
+                <p className={`mt-1 text-sm ${textMeta}`}>
+                  Received & sent invites
+                </p>
+              </div>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5 text-white/40 group-hover:text-white/60 transition-colors"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </div>
+          </Link>
         </div>
 
         {/* Main content grid */}
@@ -253,8 +269,8 @@ export default async function ProDashboardPage() {
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-xl font-semibold ${heading}`}>Properties</h2>
                 <Link
-                  href="/pro/contractor/clients"
-                  className="px-3 py-1.5 text-sm text-white/75 hover:text-white"
+                  href="/pro/contractor/properties"
+                  className="text-sm text-white/70 hover:text-white"
                 >
                   View All
                 </Link>
@@ -264,24 +280,32 @@ export default async function ProDashboardPage() {
                 <div className="py-8 text-center">
                   <p className={`mb-2 ${textMeta}`}>No properties yet</p>
                   <p className={`mb-4 text-sm ${textMeta}`}>
-                    Invite homeowners you&posve worked with to connect their home.
+                    Invite homeowners you've worked with to connect their home.
                   </p>
                   <InviteHomeownerButton className={`${ctaPrimary} w-full px-4 py-2 text-sm`} />
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {connections.map((conn) => (
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="text-2xl font-bold text-white">{connections.length}</p>
+                    <p className="text-xs text-white/60">Active connections</p>
+                  </div>
+                  {connections.slice(0, 3).map((conn) => (
                     <div key={conn.id} className={glassTight}>
-                      <p className="font-medium text-white">
+                      <p className="font-medium text-white text-sm">
                         {conn.homeowner?.name || conn.homeowner?.email || "Homeowner"}
                       </p>
-                      <p className={`text-sm ${textMeta} truncate`}>
+                      <p className={`text-xs ${textMeta} truncate`}>
                         {conn.home?.address}
                         {conn.home?.city ? `, ${conn.home.city}` : ""}
-                        {conn.home?.state ? `, ${conn.home.state}` : ""}
                       </p>
                     </div>
                   ))}
+                  {connections.length > 3 && (
+                    <p className="text-center text-xs text-white/60 pt-2">
+                      +{connections.length - 3} more
+                    </p>
+                  )}
                   <div className="pt-2 text-center">
                     <InviteHomeownerButton
                       variant="link"
@@ -292,17 +316,20 @@ export default async function ProDashboardPage() {
               )}
             </section>
 
-            {/* Reviews */}
+            {/* Work Records Summary */}
             <section className={glass}>
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className={`text-xl font-semibold ${heading}`}>Recent Reviews</h2>
+              <div className="mb-4">
+                <h2 className={`text-xl font-semibold ${heading}`}>Work Stats</h2>
               </div>
-              <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-5 text-center">
-                <p className="mb-2 text-white/80">No reviews yet</p>
-                <p className={`text-sm ${textMeta}`}>
-                  As homeowners verify your work and leave feedback, their reviews
-                  will show up here.
-                </p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className={`text-sm ${textMeta}`}>Total Documented</p>
+                  <p className="text-2xl font-bold text-white">{recentWork.length}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className={`text-sm ${textMeta}`}>Verified Work</p>
+                  <p className="text-2xl font-bold text-emerald-400">{totalVerified}</p>
+                </div>
               </div>
             </section>
           </div>
