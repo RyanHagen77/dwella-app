@@ -9,7 +9,7 @@ export default function ApplySelectPage() {
   const router = useRouter();
 
   return (
-    <main className="relative min-h-screen text-white">
+    <main className="relative flex min-h-screen items-center justify-center px-4 py-10 text-white">
       {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image
@@ -23,18 +23,10 @@ export default function ApplySelectPage() {
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      <div className="mx-auto max-w-4xl p-6">
-        {/* Top bar */}
-        <header className="mb-10 flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            aria-label="Dwella home"
-            className="inline-flex items-center gap-2"
-          >
-            <DwellaLogo className="h-7 w-auto" />
-          </button>
-
+      {/* Card */}
+      <div className="w-full max-w-2xl rounded-2xl border border-white/15 bg-black/70 p-7 sm:p-8 shadow-[0_22px_55px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+        {/* Header row inside card */}
+        <div className="mb-6 flex items-center justify-between">
           <Link
             href="/login"
             className="inline-flex items-center gap-1 text-xs sm:text-sm text-white/70 hover:text-white transition-colors"
@@ -42,7 +34,8 @@ export default function ApplySelectPage() {
             <span aria-hidden>←</span>
             <span>Back to login</span>
           </Link>
-        </header>
+          <DwellaLogo className="h-8 w-auto" />
+        </div>
 
         {/* Page title */}
         <div className="mb-8 text-center">
@@ -57,23 +50,24 @@ export default function ApplySelectPage() {
         {/* Contractor Card */}
         <div className="mx-auto max-w-md">
           <button
+            type="button"
             onClick={() => router.push("/apply/contractor")}
             className="group w-full rounded-2xl border border-white/15 bg-black/45 backdrop-blur-xl p-8 shadow-[0_18px_45px_rgba(0,0,0,0.55)] transition-colors hover:bg-black/55"
           >
             {/* Icon */}
             <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#33C17D]/18 mx-auto border border-[#33C17D]/35">
-<svg
-  xmlns="http://www.w3.org/2000/svg"
-  viewBox="0 0 24 24"
-  className="h-7 w-7 text-[#33C17D]"
-  fill="none"
-  stroke="currentColor"
-  strokeWidth={1.8}
-  strokeLinecap="round"
-  strokeLinejoin="round"
->
-  <path d="M22 7.5a5.5 5.5 0 0 1-7.7 5L7 19l-4 1 1-4 6.5-7.3A5.5 5.5 0 0 1 16.5 2L14 5l5 5 3-2.5Z"/>
-</svg>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                className="h-7 w-7 text-[#33C17D]"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M22 7.5a5.5 5.5 0 0 1-7.7 5L7 19l-4 1 1-4 6.5-7.3A5.5 5.5 0 0 1 16.5 2L14 5l5 5 3-2.5Z" />
+              </svg>
             </div>
 
             <h2 className="mb-2 text-2xl font-semibold text-white text-center">
@@ -111,7 +105,7 @@ export default function ApplySelectPage() {
             </ul>
 
             <div className="rounded-xl bg-[rgba(243,90,31,0.9)] px-6 py-3 text-center text-sm font-medium tracking-normal text-white border border-white/25 shadow-[0_12px_32px_rgba(243,90,31,0.35)] group-hover:bg-[rgba(243,90,31,0.96)] transition-colors">
-              Apply as Contractor →
+              Apply as contractor →
             </div>
           </button>
         </div>

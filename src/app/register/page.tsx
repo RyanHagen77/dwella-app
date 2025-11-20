@@ -3,6 +3,8 @@
 import { Suspense, useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
+import * as React from "react";
 
 type RegisterForm = {
   name: string;
@@ -60,9 +62,7 @@ function RegisterForm() {
 
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [invitationData, setInvitationData] = useState<InvitationData | null>(
-    null
-  );
+  const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
 
   // Fetch invitation details
   useEffect(() => {
@@ -102,11 +102,7 @@ function RegisterForm() {
     e.preventDefault();
     setMsg(null);
 
-    // Client-side password strength check
-    const strengthError = validatePasswordStrengthClient(
-      form.password,
-      form.email
-    );
+    const strengthError = validatePasswordStrengthClient(form.password, form.email);
     if (strengthError) {
       setMsg(strengthError);
       return;
@@ -139,7 +135,7 @@ function RegisterForm() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center px-4 py-10">
+    <main className="relative flex min-h-screen items-center justify-center px-4 py-10 text-white">
       {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image
@@ -148,61 +144,75 @@ function RegisterForm() {
           fill
           sizes="100vw"
           className="object-cover object-center"
+          priority
         />
-        <div className="absolute inset-0 bg-black/55 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-black/65" />
       </div>
 
       {/* Card */}
-      <div className="w-full max-w-md rounded-2xl border border-black/5 bg-white/95 p-8 shadow-2xl">
-        {/* Logo */}
-        <div className="mb-6 flex justify-center">
+      <div className="w-full max-w-md rounded-2xl border border-white/15 bg-black/70 p-7 sm:p-8 shadow-[0_22px_55px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+        {/* Header row */}
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm text-white/70 hover:text-white transition-colors"
+          >
+            <span aria-hidden>←</span>
+            <span>Back to login</span>
+          </Link>
           <DwellaLogo className="h-8 w-auto" />
         </div>
 
         {/* Invitation banner */}
         {invitationData && (
-          <div className="mb-6 rounded-xl border border-orange-300 bg-orange-50 p-4 shadow-sm">
-            <p className="text-sm text-orange-900">
+          <div className="mb-6 rounded-xl border border-[#33C17D]/45 bg-black/50 p-4 shadow-sm">
+            <p className="text-sm text-white/90">
               <strong>{invitationData.inviterName}</strong>
               {invitationData.inviterCompany &&
                 ` (${invitationData.inviterCompany})`}{" "}
               has invited you to join Dwella.
             </p>
             {invitationData.message && (
-              <p className="mt-2 text-sm italic text-orange-800">
+              <p className="mt-2 text-sm italic text-white/80">
                 “{invitationData.message}”
               </p>
             )}
           </div>
         )}
 
-        <h1 className="mb-4 text-xl font-semibold text-gray-900">
-          {invitationData ? "Accept invitation" : "Create your Dwella account"}
+        <h1 className="mb-1 text-xl sm:text-2xl font-semibold tracking-tight text-white">
+          {invitationData ? "Accept your invitation" : "Create your Dwella account"}
         </h1>
+        <p className="mb-5 text-sm text-white/75">
+          Manage your home, projects, and pro history in one secure place.
+        </p>
 
         {/* Form */}
         <form onSubmit={onSubmit} className="space-y-4">
           {/* Name */}
-          <div className="relative">
+          <div>
+            <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+              Full name <span className="text-red-400">*</span>
+            </label>
             <input
-              className="peer w-full rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-transparent focus:border-orange-400 focus:ring-2 focus:ring-orange-400"
-              placeholder="Name"
+              className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+              placeholder="Jane Homeowner"
               value={form.name}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, name: e.target.value }))
               }
               required
             />
-            <label className="absolute left-3 top-3 text-sm text-gray-500 transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-orange-600">
-              Full name
-            </label>
           </div>
 
           {/* Email */}
-          <div className="relative">
+          <div>
+            <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+              Email <span className="text-red-400">*</span>
+            </label>
             <input
-              className="peer w-full rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-transparent focus:border-orange-400 focus:ring-2 focus:ring-orange-400 disabled:bg-gray-100"
-              placeholder="Email"
+              className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70 disabled:bg-black/30 disabled:text-white/50"
+              placeholder="you@example.com"
               type="email"
               value={form.email}
               onChange={(e) =>
@@ -211,16 +221,16 @@ function RegisterForm() {
               required
               disabled={!!invitationData}
             />
-            <label className="absolute left-3 top-3 text-sm text-gray-500 transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-orange-600">
-              Email
-            </label>
           </div>
 
           {/* Password */}
-          <div className="relative">
+          <div>
+            <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+              Password <span className="text-red-400">*</span>
+            </label>
             <input
-              className="peer w-full rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-transparent focus:border-orange-400 focus:ring-2 focus:ring-orange-400"
-              placeholder="Password"
+              className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+              placeholder="Minimum 10 characters"
               type="password"
               value={form.password}
               onChange={(e) =>
@@ -229,15 +239,15 @@ function RegisterForm() {
               required
               minLength={10}
             />
-            <label className="absolute left-3 top-3 text-sm text-gray-500 transition-all peer-placeholder-shown:top-3.5 peer-placeholder-shown:text-base peer-focus:top-1.5 peer-focus:text-xs peer-focus:text-orange-600">
-              Password (min 10, include a number)
-            </label>
+            <p className="mt-1 text-xs text-white/55">
+              Use at least 10 characters, including a number.
+            </p>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-lg bg-[rgba(243,90,31,0.95)] py-3 text-sm font-medium text-white shadow-lg transition hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
+            className="mt-2 w-full rounded-xl bg-[rgba(243,90,31,0.95)] py-3 text-sm font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
           >
             {loading
               ? "Creating your account..."
@@ -247,13 +257,20 @@ function RegisterForm() {
           </button>
         </form>
 
-        {msg && <p className="mt-4 text-sm text-red-600">{msg}</p>}
+        {msg && (
+          <p className="mt-4 rounded-xl border border-red-500/40 bg-red-500/15 px-3 py-2 text-sm text-red-50">
+            {msg}
+          </p>
+        )}
 
-        <p className="mt-6 text-center text-sm text-gray-700">
+        <p className="mt-6 text-center text-sm text-white/70">
           Already have an account?{" "}
-          <a href="/login" className="text-orange-600 hover:underline">
+          <Link
+            href="/login"
+            className="text-[#33C17D] hover:text-[#33C17D]/80 transition-colors"
+          >
             Sign in
-          </a>
+          </Link>
         </p>
       </div>
     </main>
@@ -262,37 +279,55 @@ function RegisterForm() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+    <Suspense fallback={<div className="min-h-screen bg-black" />}>
       <RegisterForm />
     </Suspense>
   );
 }
 
-/** Mini Dwella logo */
+/** Dwella logo – house + check + wordmark */
 function DwellaLogo({ className }: { className?: string }) {
   return (
     <svg
-      viewBox="0 0 72 72"
+      viewBox="0 0 260 72"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
-      aria-hidden="true"
+      role="img"
+      aria-label="Dwella"
     >
+      {/* House outline */}
       <path
         d="M18 52C16.343 52 15 50.657 15 49V27.414C15 26.52 15.36 25.661 16 25.02L35.586 5.434C36.367 4.653 37.633 4.653 38.414 5.434L58 25.02C58.64 25.661 59 26.52 59 27.414V49C59 50.657 57.657 52 56 52H42C40.343 52 39 50.657 39 49V39H25V49C25 50.657 23.657 52 22 52H18Z"
-        stroke="#1F2937"
-        strokeWidth="5"
+        stroke="#FFFFFF"
+        strokeWidth={6}
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
+      {/* Checkmark */}
       <path
         d="M32.5 34L40 41.5L54 27.5"
         stroke="#33C17D"
-        strokeWidth="5"
+        strokeWidth={6}
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
+      {/* Wordmark */}
+      <text
+        x={80}
+        y={50}
+        fill="#FFFFFF"
+        fontSize={42}
+        fontWeight={600}
+        style={{
+          fontFamily:
+            '"Trebuchet MS","Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,sans-serif',
+          letterSpacing: 0.5,
+        }}
+      >
+        Dwella
+      </text>
     </svg>
   );
 }

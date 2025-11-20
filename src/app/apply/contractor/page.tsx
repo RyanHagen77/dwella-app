@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 type ContractorApplyForm = {
@@ -63,217 +64,357 @@ export default function ContractorApplyPage() {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        throw new Error((data as { error?: string })?.error || "Failed to submit application");
+        throw new Error(
+          (data as { error?: string })?.error || "Failed to submit application"
+        );
       }
 
       router.push("/pro/contractor/pending");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Something went wrong";
+      const message =
+        err instanceof Error ? err.message : "Something went wrong";
       setError(message);
       setLoading(false);
     }
   };
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
-      <div className="mb-8">
-        <Link href="/apply" className="mb-4 flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900">
-          ← Back to account types
-        </Link>
-
-        <h1 className="text-3xl font-bold text-gray-900">Apply as a Contractor</h1>
-        <p className="mt-2 text-gray-600">Join MyHomeDox and start documenting your work</p>
+    <main className="relative flex min-h-screen items-center justify-center px-4 py-10 text-white">
+      {/* Background */}
+      <div className="fixed inset-0 -z-50">
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-black/70" />
       </div>
 
-      <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4">
-        <h3 className="mb-2 font-semibold text-blue-900">Why join as a Contractor?</h3>
-        <ul className="space-y-1 text-sm text-blue-800">
-          <li>✓ Document your work on client properties</li>
-          <li>✓ Build verified work history portfolio</li>
-          <li>✓ Get discovered by homeowners viewing homes</li>
-          <li>✓ Build credibility with verified records</li>
-          <li>✓ Stay connected with past clients</li>
-        </ul>
-      </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-red-800">{error}</p>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6 rounded-lg bg-white p-6 shadow">
-        {/* Personal Information */}
-        <div>
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Personal Information</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="John Smith"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="john@example.com"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Password <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                required
-                minLength={8}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="Minimum 8 characters"
-                autoComplete="new-password"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Phone Number <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="(555) 123-4567"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Business Information */}
-        <div className="border-t border-gray-200 pt-6">
-          <h2 className="mb-4 text-xl font-semibold text-gray-900">Business Information</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Business Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={formData.businessName}
-                onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="Mike's HVAC Service"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                License Number <span className="text-gray-400">(optional but recommended)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.licenseNo}
-                onChange={(e) => setFormData({ ...formData, licenseNo: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="IL-HVAC-12345"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Providing a license number helps build trust with clients
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Website <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                type="url"
-                value={formData.website}
-                onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="https://www.example.com"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Specialties <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.specialties}
-                onChange={(e) => setFormData({ ...formData, specialties: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="HVAC, Plumbing, Electrical"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Separate multiple specialties with commas
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                Service Areas <span className="text-gray-400">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={formData.serviceAreas}
-                onChange={(e) => setFormData({ ...formData, serviceAreas: e.target.value })}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="60098, Woodstock, McHenry County"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Add zip codes, cities, or regions separated by commas
-              </p>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">
-                About Your Business <span className="text-gray-400">(optional)</span>
-              </label>
-              <textarea
-                value={formData.bio}
-                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                rows={4}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                placeholder="Tell us about your business, years of experience, and what makes you unique..."
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-200 pt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 font-medium text-white hover:from-blue-700 hover:to-purple-700 disabled:opacity-50"
+      {/* Card */}
+      <div className="w-full max-w-3xl rounded-2xl border border-white/15 bg-black/70 p-7 sm:p-8 shadow-[0_22px_55px_rgba(0,0,0,0.8)] backdrop-blur-xl">
+        {/* Header row inside card */}
+        <div className="mb-6 flex items-center justify-between">
+          <Link
+            href="/apply"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm text-white/70 hover:text-white transition-colors"
           >
-            {loading ? "Submitting..." : "Submit Application"}
-          </button>
-          <p className="mt-3 text-center text-xs text-gray-500">
-            We&apos;ll review your application within 1-2 business days
-          </p>
+            <span aria-hidden>←</span>
+            <span>Back to account types</span>
+          </Link>
+          <DwellaLogo className="h-8 w-auto" />
         </div>
-      </form>
+
+        {/* Title + intro */}
+        <h1 className="mb-1 text-xl sm:text-2xl font-semibold tracking-tight text-white">
+          Apply as a contractor
+        </h1>
+        <p className="mb-5 text-sm text-white/75">
+          Join Dwella and start building a verified record of the work you do on real homes.
+        </p>
+
+        {/* Why join box */}
+        <div className="mb-6 rounded-xl border border-white/15 bg-black/55 p-4 text-sm text-white/85">
+          <h2 className="mb-2 text-sm font-semibold text-white">
+            Why join as a contractor?
+          </h2>
+          <ul className="space-y-1.5">
+            <li className="flex items-start gap-2.5">
+              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+                ✓
+              </span>
+              <span>Document your work on client properties.</span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+                ✓
+              </span>
+              <span>Build a verified work history portfolio tied to real addresses.</span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+                ✓
+              </span>
+              <span>Stay connected with homeowners after the job is done.</span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+                ✓
+              </span>
+              <span>Get discovered when homes change hands.</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-500/40 bg-red-500/15 px-3 py-2 text-sm text-red-50">
+            {error}
+          </div>
+        )}
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Personal Information */}
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-white/90">
+              Personal information
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Full name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="John Smith"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Email <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) =>
+                    setFormData({ ...formData, email: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="john@example.com"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Password <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={8}
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="Minimum 8 characters"
+                  autoComplete="new-password"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Phone number <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, phone: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Business Information */}
+          <section className="border-t border-white/15 pt-5">
+            <h2 className="mb-3 text-sm font-semibold text-white/90">
+              Business information
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Business name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.businessName}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      businessName: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="Mike's HVAC Service"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  License number{" "}
+                  <span className="text-white/60">(optional but recommended)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.licenseNo}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      licenseNo: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="IL-HVAC-12345"
+                />
+                <p className="mt-1 text-xs text-white/55">
+                  Providing a license number helps build trust with homeowners.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Website <span className="text-white/60">(optional)</span>
+                </label>
+                <input
+                  type="url"
+                  value={formData.website}
+                  onChange={(e) =>
+                    setFormData({ ...formData, website: e.target.value })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="https://www.example.com"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Specialties <span className="text-white/60">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.specialties}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      specialties: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="HVAC, Plumbing, Electrical"
+                />
+                <p className="mt-1 text-xs text-white/55">
+                  Separate multiple specialties with commas.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  Service areas <span className="text-white/60">(optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.serviceAreas}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      serviceAreas: e.target.value,
+                    })
+                  }
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+                  placeholder="60098, Woodstock, McHenry County"
+                />
+                <p className="mt-1 text-xs text-white/55">
+                  Add zip codes, cities, or regions separated by commas.
+                </p>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                  About your business{" "}
+                  <span className="text-white/60">(optional)</span>
+                </label>
+                <textarea
+                  value={formData.bio}
+                  onChange={(e) =>
+                    setFormData({ ...formData, bio: e.target.value })
+                  }
+                  rows={4}
+                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70 resize-none"
+                  placeholder="Tell us about your experience, services, and what makes you stand out..."
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Submit */}
+          <section className="border-t border-white/15 pt-5">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-xl bg-[rgba(243,90,31,0.95)] px-6 py-3 text-sm sm:text-base font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
+            >
+              {loading ? "Submitting..." : "Submit application"}
+            </button>
+            <p className="mt-3 text-center text-xs text-white/65">
+              We&apos;ll review your application within 1–2 business days.
+            </p>
+          </section>
+        </form>
+      </div>
     </main>
+  );
+}
+
+/** Dwella logo – house + check + wordmark */
+function DwellaLogo({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 260 72"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      role="img"
+      aria-label="Dwella"
+    >
+      {/* House outline */}
+      <path
+        d="M18 52C16.343 52 15 50.657 15 49V27.414C15 26.52 15.36 25.661 16 25.02L35.586 5.434C36.367 4.653 37.633 4.653 38.414 5.434L58 25.02C58.64 25.661 59 26.52 59 27.414V49C59 50.657 57.657 52 56 52H42C40.343 52 39 50.657 39 49V39H25V49C25 50.657 23.657 52 22 52H18Z"
+        stroke="#FFFFFF"
+        strokeWidth={6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Checkmark */}
+      <path
+        d="M32.5 34L40 41.5L54 27.5"
+        stroke="#33C17D"
+        strokeWidth={6}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      {/* Wordmark */}
+      <text
+        x={80}
+        y={50}
+        fill="#FFFFFF"
+        fontSize={42}
+        fontWeight={600}
+        style={{
+          fontFamily:
+            '"Trebuchet MS","Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,sans-serif',
+          letterSpacing: 0.5,
+        }}
+      >
+        Dwella
+      </text>
+    </svg>
   );
 }
