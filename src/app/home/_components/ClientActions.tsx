@@ -334,7 +334,7 @@ useEffect(() => {
           onClick={() => setConnectionsOpen(true)}
           className={`${ctaGhost} relative whitespace-nowrap`}
         >
-          Connections
+          Connect
           {(pendingInvitationsCount > 0 || pendingWorkCount > 0) && (
             <span className="ml-1.5 inline-flex items-center gap-1">
               {pendingInvitationsCount > 0 && (
