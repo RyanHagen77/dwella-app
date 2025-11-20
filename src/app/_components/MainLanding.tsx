@@ -60,7 +60,7 @@ export default function MainLanding() {
     }
     return {
       headline: "Build your professional presence on the homes you serve.",
-      sub: "Document your document-completed-work-submissions records on client properties, maintain verified portfolios, and stay connected with homeowners and their trusted circle long after the job is done.",
+      sub: "Document your completed work on client properties, maintain verified portfolios, and stay connected with homeowners and their trusted circle long after the job is done.",
       primary: { label: "Apply as a Pro", href: "/apply" },
       secondary: { label: "View sample record", href: "/report" },
       showAddress: false,
@@ -110,7 +110,7 @@ export default function MainLanding() {
       <section className="px-4 pt-8 md:px-8">
         <div className="mx-auto max-w-6xl">
           {/* Audience pills */}
-          <div className="mb-4 inline-flex overflow-hidden rounded-full border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm">
+          <div className="mb-6 md:mb-8 inline-flex overflow-hidden rounded-full border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm">
             <button
               onClick={() => setAud("home")}
               className={`px-3 py-1 text-xs rounded-full transition ${
@@ -154,21 +154,21 @@ export default function MainLanding() {
                 ],
                 [
                   "Verified documentation",
-                  "Professionals document their completed work and add to your home's record.",
+                  "Professionals add verified proof of completed work directly to your home’s journal.",
                 ],
                 [
                   "Home health",
-                  "Use reminders and tools to keep your home healthy.",
+                  "Stay on track with maintenance reminders and simple home-health tools.",
                 ],
                 [
                   "Stay connected",
-                  "Maintain relationships with trusted contractors who know your home.",
+                  "Keep working with trusted contractors who already know your home.",
                 ],
               ]
             : [
                 [
-                  "Document your document-completed-work-submissions records",
-                  "Create verified records of the document-completed-work-submissions you do on client properties.",
+                  "Document your work",
+                  "Create verified records of the projects you complete on client properties.",
                 ],
                 [
                   "Build your portfolio",
@@ -180,14 +180,14 @@ export default function MainLanding() {
                 ],
                 [
                   "Get discovered",
-                  "When homes change hands, new owners see your quality document-completed-work-submissions.",
+                  "When homes change hands, new owners see your documented work.",
                 ],
               ]
           ).map(([t, d]) => (
             <div
               key={t as string}
-              className="space-y-2 rounded-2xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm
-                         shadow-[inset_0_1px_0_rgba(255,255,255,.25)] hover:bg-white/15 transition"
+              className="space-y-2 rounded-2xl border border-white/15 bg-white/5 p-5 text-white backdrop-blur-md
+                         shadow-[inset_0_1px_0_rgba(255,255,255,.25)] hover:bg-white/10 transition"
             >
               <div className="text-base font-medium">{t}</div>
               <p className="text-sm text-white/85">{d}</p>
@@ -202,28 +202,28 @@ export default function MainLanding() {
                 [
                   "1",
                   "Claim your home",
-                  "Find and verify your address, then claim you home.",
+                  "Find your address and verify ownership to start your home’s journal.",
                 ],
                 [
                   "2",
                   "Add documentation",
-                  "Create records of finished projects. Upload receipts and manuals. Set maintenance reminders, and add warranties.",
+                  "Record completed projects, upload receipts & manuals, add warranties, and set maintenance reminders.",
                 ],
                 [
                   "3",
                   "Connect with professionals",
-                  "Invite your trusted contractors. Request service, received verified documentation of completed projects.  Stay connected.",
+                  "Invite trusted contractors, request new work, and get verified documentation for completed projects — all in one place.",
                 ],
               ]
             : [
                 [
                   "1",
                   "Apply to join",
-                  "Get verified as a contractor, realtor, or inspector.",
+                  "Get verified and start inviting your clients.",
                 ],
                 [
                   "2",
-                  "Document your document-completed-work-submissions records",
+                  "Document your work",
                   "Add records to the homes you serve (with owner permission).",
                 ],
                 [
@@ -235,8 +235,8 @@ export default function MainLanding() {
           ).map(([s, t, d]) => (
             <div
               key={s}
-              className="space-y-2 rounded-2xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm
-                         shadow-[inset_0_1px_0_rgba(255,255,255,.25)] hover:bg-white/15 transition"
+              className="space-y-2 rounded-2xl border border-white/15 bg-white/5 p-5 text-white backdrop-blur-md
+                         shadow-[inset_0_1px_0_rgba(255,255,255,.25)] hover:bg-white/10 transition"
             >
               <div className="text-xs text-white/70">Step {s}</div>
               <div className="text-base font-medium">{t}</div>
