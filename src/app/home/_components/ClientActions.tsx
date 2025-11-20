@@ -310,15 +310,15 @@ useEffect(() => {
   /* ---------- UI ---------- */
   return (
     <>
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => setAddOpen(true)} className={ctaPrimary}>
+      <div className="flex flex-nowrap gap-2 overflow-x-auto">
+        <button onClick={() => setAddOpen(true)} className={`${ctaPrimary} whitespace-nowrap`}>
           + Add Record
         </button>
 
         {/* Messages Button - shows count for THIS home only */}
         <Link
           href={`/home/${homeId}/messages`}
-          className={`${ctaGhost} relative`}
+          className={`${ctaGhost} relative whitespace-nowrap`}
         >
           Messages
           {unreadMessagesCount > 0 && (
@@ -332,21 +332,23 @@ useEffect(() => {
         <button
           type="button"
           onClick={() => setConnectionsOpen(true)}
-          className={`${ctaGhost} relative`}
+          className={`${ctaGhost} relative whitespace-nowrap`}
         >
           Connections
-          <div className="absolute -top-2 -right-2 flex flex-col gap-1">
-            {pendingInvitationsCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-bold text-white">
-                {pendingInvitationsCount}
-              </span>
-            )}
-            {pendingWorkCount > 0 && (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#33C17D] text-xs font-bold text-white">
-                {pendingWorkCount}
-              </span>
-            )}
-          </div>
+          {(pendingInvitationsCount > 0 || pendingWorkCount > 0) && (
+            <span className="ml-1.5 inline-flex items-center gap-1">
+              {pendingInvitationsCount > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
+                  {pendingInvitationsCount}
+                </span>
+              )}
+              {pendingWorkCount > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#33C17D] px-1.5 text-xs font-bold text-white">
+                  {pendingWorkCount}
+                </span>
+              )}
+            </span>
+          )}
         </button>
       </div>
 
