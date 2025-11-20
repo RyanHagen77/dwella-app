@@ -310,15 +310,15 @@ useEffect(() => {
   /* ---------- UI ---------- */
   return (
     <>
-      <div className="flex flex-nowrap gap-2 overflow-x-auto">
-        <button onClick={() => setAddOpen(true)} className={`${ctaPrimary} whitespace-nowrap`}>
+      <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+        <button onClick={() => setAddOpen(true)} className={`${ctaPrimary} whitespace-nowrap text-sm`}>
           + Add Record
         </button>
 
         {/* Messages Button - shows count for THIS home only */}
         <Link
           href={`/home/${homeId}/messages`}
-          className={`${ctaGhost} relative whitespace-nowrap`}
+          className={`${ctaGhost} relative whitespace-nowrap text-sm`}
         >
           Messages
           {unreadMessagesCount > 0 && (
@@ -332,9 +332,10 @@ useEffect(() => {
         <button
           type="button"
           onClick={() => setConnectionsOpen(true)}
-          className={`${ctaGhost} relative whitespace-nowrap`}
+          className={`${ctaGhost} relative whitespace-nowrap text-sm w-full sm:w-auto`}
         >
-          Connect
+          <span className="hidden sm:inline">Connect</span>
+          <span className="inline sm:hidden">Connect</span>
           {(pendingInvitationsCount > 0 || pendingWorkCount > 0) && (
             <span className="ml-1.5 inline-flex items-center gap-1">
               {pendingInvitationsCount > 0 && (
@@ -352,47 +353,47 @@ useEffect(() => {
         </button>
       </div>
 
-      {/* Unified Add Modal */}
-      <AddRecordModal
-        open={addOpen}
-        onCloseAction={() => setAddOpen(false)}
-        onCreateAction={onCreateUnified}
-      />
+    {/* Unified Add Modal */}
+    <AddRecordModal
+      open={addOpen}
+      onCloseAction={() => setAddOpen(false)}
+      onCreateAction={onCreateUnified}
+    />
 
-      {/* Share Access */}
-      <ShareAccessModal
-        open={shareOpen}
-        onCloseAction={() => setShareOpen(false)}
-        homeId={homeId}
-      />
+    {/* Share Access */}
+    <ShareAccessModal
+      open={shareOpen}
+      onCloseAction={() => setShareOpen(false)}
+      homeId={homeId}
+    />
 
-      {/* Find Vendors */}
-      <FindVendorsModal
-        open={findVendorsOpen}
-        onCloseAction={() => setFindVendorsOpen(false)}
-        onAdd={(v: VendorDirectoryItem) => {
-          console.log("picked vendor", v.id);
-        }}
-      />
+    {/* Find Vendors */}
+    <FindVendorsModal
+      open={findVendorsOpen}
+      onCloseAction={() => setFindVendorsOpen(false)}
+      onAdd={(v: VendorDirectoryItem) => {
+        console.log("picked vendor", v.id);
+      }}
+    />
 
-      {/* Connections Modal */}
-      <ConnectionsModal
-        open={connectionsOpen}
-        onCloseAction={() => setConnectionsOpen(false)}
-        homeId={homeId}
-        pendingWorkCount={pendingWorkCount}
-        loadingWork={loadingPending}
-        pendingInvitationsCount={pendingInvitationsCount}
-        loadingInvites={loadingInvitations}
-        onOpenShareAction={() => {
-          setConnectionsOpen(false);
-          setShareOpen(true);
-        }}
-        onOpenVendorsAction={() => {
-          setConnectionsOpen(false);
-          setFindVendorsOpen(true);
-        }}
-      />
-    </>
-  );
+    {/* Connections Modal */}
+    <ConnectionsModal
+      open={connectionsOpen}
+      onCloseAction={() => setConnectionsOpen(false)}
+      homeId={homeId}
+      pendingWorkCount={pendingWorkCount}
+      loadingWork={loadingPending}
+      pendingInvitationsCount={pendingInvitationsCount}
+      loadingInvites={loadingInvitations}
+      onOpenShareAction={() => {
+        setConnectionsOpen(false);
+        setShareOpen(true);
+      }}
+      onOpenVendorsAction={() => {
+        setConnectionsOpen(false);
+        setFindVendorsOpen(true);
+      }}
+    />
+  </>
+);
 }
