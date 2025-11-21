@@ -11,7 +11,6 @@ import {
   AddRecordModal,
   type UnifiedRecordPayload,
 } from "@/app/home/_components/AddRecordModal";
-import { ShareAccessModal } from "@/app/home/_components/ShareAccessModal";
 import {
   FindVendorsModal,
   type VendorDirectoryItem,
@@ -40,50 +39,63 @@ export default function ClientActions({ homeId }: { homeId: string }) {
   const router = useRouter();
 
   const [addOpen, setAddOpen] = useState(false);
-  const [shareOpen, setShareOpen] = useState(false);
   const [findVendorsOpen, setFindVendorsOpen] = useState(false);
   const [connectionsOpen, setConnectionsOpen] = useState(false);
 
   const [pendingWorkCount, setPendingWorkCount] = useState(0);
   const [loadingPending, setLoadingPending] = useState(true);
+
   const [pendingInvitationsCount, setPendingInvitationsCount] = useState(0);
   const [loadingInvitations, setLoadingInvitations] = useState(true);
+
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
-useEffect(() => {
-  async function fetchPendingWork() {
-    try {
-      const res = await fetch(`/api/home/${homeId}/completed-work-submissions/pending`);
-      if (!res.ok) {
+  /* ---------- Fetch pending work submissions ---------- */
+  useEffect(() => {
+    async function fetchPendingWork() {
+      try {
+        const res = await fetch(
+          `/api/home/${homeId}/completed-work-submissions/pending`
+        );
+        if (!res.ok) {
+          setPendingWorkCount(0);
+          return;
+        }
+
+        const data = await res.json();
+        // using data.total (fallback 0)
+        const count = data.total || 0;
+        setPendingWorkCount(count);
+      } catch (error) {
+        console.error(
+          "Error fetching pending document-completed-work-submissions:",
+          error
+        );
         setPendingWorkCount(0);
-        return;
+      } finally {
+        setLoadingPending(false);
       }
-
-      const data = await res.json();
-      // Changed from data.totalPending to data.total
-      const count = data.total || 0;
-
-      setPendingWorkCount(count);
-    } catch (error) {
-      console.error("Error fetching pending document-completed-work-submissions:", error);
-      setPendingWorkCount(0);
-    } finally {
-      setLoadingPending(false);
     }
-  }
 
-  void fetchPendingWork();
-}, [homeId]);
+    void fetchPendingWork();
+  }, [homeId]);
 
   /* ---------- Fetch pending invitations count ---------- */
   useEffect(() => {
     async function fetchPendingInvitations() {
       try {
-        const res = await fetch(`/api/home/${homeId}/invitations?status=PENDING`);
+        const res = await fetch(
+          `/api/home/${homeId}/invitations?status=PENDING`
+        );
         if (res.ok) {
           const data = (await res.json()) as InvitationResponse;
-          const sentCount = data.sentInvitations?.filter((inv) => inv.status === 'PENDING').length || 0;
-          const receivedCount = data.receivedInvitations?.filter((inv) => inv.status === 'PENDING').length || 0;
+          const sentCount =
+            data.sentInvitations?.filter((inv) => inv.status === "PENDING")
+              .length || 0;
+          const receivedCount =
+            data.receivedInvitations?.filter(
+              (inv) => inv.status === "PENDING"
+            ).length || 0;
           setPendingInvitationsCount(sentCount + receivedCount);
         }
       } catch (error) {
@@ -311,7 +323,10 @@ useEffect(() => {
   return (
     <>
       <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-        <button onClick={() => setAddOpen(true)} className={`${ctaPrimary} whitespace-nowrap text-sm`}>
+        <button
+          onClick={() => setAddOpen(true)}
+          className={`${ctaPrimary} whitespace-nowrap text-sm`}
+        >
           + Add Record
         </button>
 
@@ -328,70 +343,59 @@ useEffect(() => {
           )}
         </Link>
 
-      <button
-        type="button"
-        onClick={() => setConnectionsOpen(true)}
-        className={`${ctaGhost} relative whitespace-nowrap text-sm w-full sm:w-auto`}
-      >
-        Connect
-        {(pendingInvitationsCount > 0 || pendingWorkCount > 0) && (
-          <span className="ml-1.5 inline-flex items-center gap-1">
-            {pendingInvitationsCount > 0 && (
-              <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
-                {pendingInvitationsCount}
-              </span>
-            )}
-            {pendingWorkCount > 0 && (
-              <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#33C17D] px-1.5 text-xs font-bold text-white">
-                {pendingWorkCount}
-              </span>
-            )}
-          </span>
-        )}
-      </button>
+        <button
+          type="button"
+          onClick={() => setConnectionsOpen(true)}
+          className={`${ctaGhost} relative w-full whitespace-nowrap text-sm sm:w-auto`}
+        >
+          I want to...
+          {(pendingInvitationsCount > 0 || pendingWorkCount > 0) && (
+            <span className="ml-1.5 inline-flex items-center gap-1">
+              {pendingInvitationsCount > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
+                  {pendingInvitationsCount}
+                </span>
+              )}
+              {pendingWorkCount > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#33C17D] px-1.5 text-xs font-bold text-white">
+                  {pendingWorkCount}
+                </span>
+              )}
+            </span>
+          )}
+        </button>
       </div>
 
-    {/* Unified Add Modal */}
-    <AddRecordModal
-      open={addOpen}
-      onCloseAction={() => setAddOpen(false)}
-      onCreateAction={onCreateUnified}
-    />
+      {/* Unified Add Modal */}
+      <AddRecordModal
+        open={addOpen}
+        onCloseAction={() => setAddOpen(false)}
+        onCreateAction={onCreateUnified}
+      />
 
-    {/* Share Access */}
-    <ShareAccessModal
-      open={shareOpen}
-      onCloseAction={() => setShareOpen(false)}
-      homeId={homeId}
-    />
+      {/* Find Vendors */}
+      <FindVendorsModal
+        open={findVendorsOpen}
+        onCloseAction={() => setFindVendorsOpen(false)}
+        onAdd={(v: VendorDirectoryItem) => {
+          console.log("picked vendor", v.id);
+        }}
+      />
 
-    {/* Find Vendors */}
-    <FindVendorsModal
-      open={findVendorsOpen}
-      onCloseAction={() => setFindVendorsOpen(false)}
-      onAdd={(v: VendorDirectoryItem) => {
-        console.log("picked vendor", v.id);
-      }}
-    />
-
-    {/* Connections Modal */}
-    <ConnectionsModal
-      open={connectionsOpen}
-      onCloseAction={() => setConnectionsOpen(false)}
-      homeId={homeId}
-      pendingWorkCount={pendingWorkCount}
-      loadingWork={loadingPending}
-      pendingInvitationsCount={pendingInvitationsCount}
-      loadingInvites={loadingInvitations}
-      onOpenShareAction={() => {
-        setConnectionsOpen(false);
-        setShareOpen(true);
-      }}
-      onOpenVendorsAction={() => {
-        setConnectionsOpen(false);
-        setFindVendorsOpen(true);
-      }}
-    />
-  </>
-);
+      {/* Connections Modal */}
+      <ConnectionsModal
+        open={connectionsOpen}
+        onCloseAction={() => setConnectionsOpen(false)}
+        homeId={homeId}
+        pendingWorkCount={pendingWorkCount}
+        loadingWork={loadingPending}
+        pendingInvitationsCount={pendingInvitationsCount}
+        loadingInvites={loadingInvitations}
+        onOpenVendorsAction={() => {
+          setConnectionsOpen(false);
+          setFindVendorsOpen(true);
+        }}
+      />
+    </>
+  );
 }

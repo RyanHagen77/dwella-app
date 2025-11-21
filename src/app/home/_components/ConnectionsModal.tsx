@@ -133,7 +133,7 @@ export function ConnectionsModal({
               >
                 <div>
                   <p className="text-sm font-medium text-white">
-                    📝 Requests &amp; Submissions
+                    📝 Manage Requests &amp; Submissions
                   </p>
                   <p className={`text-xs ${textMeta}`}>
                     Request work, track quotes, and approve jobs.
@@ -175,7 +175,7 @@ export function ConnectionsModal({
               >
                 <div>
                   <p className="text-sm font-medium text-white">
-                    👷 My Contractors
+                    👷 Manage My Contractors
                   </p>
                   <p className={`text-xs ${textMeta}`}>
                     View and manage your connected pros.
@@ -192,7 +192,7 @@ export function ConnectionsModal({
               >
                 <div>
                   <p className="text-sm font-medium text-white">
-                    ✉️ All Invitations
+                    ✉️ Manage Invitations
                   </p>
                   <p className={`text-xs ${textMeta}`}>
                     See all sent and received invites.
