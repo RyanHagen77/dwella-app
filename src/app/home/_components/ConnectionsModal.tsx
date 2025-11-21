@@ -104,7 +104,7 @@ export function ConnectionsModal({
                   >
                     <div>
                       <p className="text-sm font-medium text-white">
-                        ✉️ Pending Invitations
+                        ✉️ View Pending Invitations
                       </p>
                       <p className={`text-xs ${textMeta}`}>
                         Invites that haven&apos;t been accepted yet.
