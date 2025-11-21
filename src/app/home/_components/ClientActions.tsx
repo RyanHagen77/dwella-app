@@ -63,14 +63,9 @@ export default function ClientActions({ homeId }: { homeId: string }) {
         }
 
         const data = await res.json();
-        // using data.total (fallback 0)
-        const count = data.total || 0;
-        setPendingWorkCount(count);
+        setPendingWorkCount(data.total || 0);
       } catch (error) {
-        console.error(
-          "Error fetching pending document-completed-work-submissions:",
-          error
-        );
+        console.error("Error fetching pending work submissions:", error);
         setPendingWorkCount(0);
       } finally {
         setLoadingPending(false);
@@ -265,9 +260,7 @@ export default function ClientActions({ homeId }: { homeId: string }) {
       body: JSON.stringify(uploaded),
     });
     if (!persist.ok)
-      throw new Error(
-        `Persist attachments failed: ${await persist.text()}`
-      );
+      throw new Error(`Persist attachments failed: ${await persist.text()}`);
   }
 
   /* ---------- Unified handler for all types ---------- */
@@ -322,35 +315,49 @@ export default function ClientActions({ homeId }: { homeId: string }) {
   /* ---------- UI ---------- */
   return (
     <>
-      <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-        <button
-          onClick={() => setAddOpen(true)}
-          className={`${ctaPrimary} whitespace-nowrap text-sm`}
-        >
-          + Add Record
-        </button>
+      {/* Stack on mobile, match screenshot spacing */}
+      <div className="flex flex-col gap-4 pt-4 sm:pt-2">
+        {/* Top row: small pills */}
+        <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+          <button
+            onClick={() => setAddOpen(true)}
+            className={`${ctaPrimary} whitespace-nowrap text-sm`}
+          >
+            + Add Record
+          </button>
 
-        {/* Messages Button - shows count for THIS home only */}
-        <Link
-          href={`/home/${homeId}/messages`}
-          className={`${ctaGhost} relative whitespace-nowrap text-sm`}
-        >
-          Messages
-          {unreadMessagesCount > 0 && (
-            <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">
-              {unreadMessagesCount}
-            </span>
-          )}
-        </Link>
+          <Link
+            href={`/home/${homeId}/messages`}
+            className={`${ctaGhost} relative whitespace-nowrap text-sm`}
+          >
+            Messages
+            {unreadMessagesCount > 0 && (
+              <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">
+                {unreadMessagesCount}
+              </span>
+            )}
+          </Link>
+        </div>
 
+        {/* Big full-width "I want to..." pill */}
         <button
           type="button"
           onClick={() => setConnectionsOpen(true)}
-          className={`${ctaGhost} relative w-full whitespace-nowrap text-sm sm:w-auto`}
+          className={[
+            // size + shape (big pill)
+            "relative w-full rounded-full px-4 py-3 text-sm font-medium",
+            // glassy darker background like screenshot
+            "border border-white/25 bg-black/30 backdrop-blur-md",
+            "text-white/90 hover:bg-black/40 hover:border-white/35 transition-colors",
+            // layout for centered label + right badges
+            "flex items-center justify-center",
+          ].join(" ")}
         >
-          I want to...
+          <span className="truncate">I want to...</span>
+
+          {/* right-side badges (don’t shift center) */}
           {(pendingInvitationsCount > 0 || pendingWorkCount > 0) && (
-            <span className="ml-1.5 inline-flex items-center gap-1">
+            <span className="absolute right-3 flex items-center gap-1.5">
               {pendingInvitationsCount > 0 && (
                 <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
                   {pendingInvitationsCount}

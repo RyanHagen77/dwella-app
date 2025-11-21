@@ -7,12 +7,12 @@ import { glass, ctaGhost } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
 import { EditWarrantyModal } from "./EditWarrantyModal";
 
-type WarrantyItem = {
+export type WarrantyItem = {
   id: string;
   item: string;
   provider: string | null;
   policyNo: string | null;
-  expiresAt: Date | null;
+  expiresAt: string | Date | null;
   note: string | null;
   isExpired: boolean;
   isExpiringSoon: boolean;
@@ -23,7 +23,7 @@ type WarrantyItem = {
     filename: string;
     url: string;
     mimeType: string;
-    size: number;
+    size: number | null; // <-- allow null
   }>;
 };
 
@@ -288,7 +288,7 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
 
       <EditWarrantyModal
         open={editOpen}
-        onClose={() => setEditOpen(false)}
+        onCloseAction={() => setEditOpen(false)}
         warranty={warranty}
         homeId={homeId}
       />

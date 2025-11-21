@@ -170,7 +170,7 @@ export default async function JobRequestDetailPage({ params }: PageProps) {
           </Link>
           <span className="text-white/50">/</span>
           <Link
-            href={`/home/${homeId}/job-requests`}
+            href={`/home/${homeId}/completed-work-submissions`}
             className="text-white/70 transition-colors hover:text-white"
           >
             Job Requests

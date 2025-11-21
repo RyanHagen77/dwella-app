@@ -1,4 +1,5 @@
 // app/pro/contractor/document-completed-work-submissions-records/[id]/page.tsx
+
 export const dynamic = "force-dynamic";
 
 import { getServerSession } from "next-auth";
@@ -22,20 +23,27 @@ export default async function WorkRecordDetailPage({
     redirect("/login");
   }
 
+  const userId = session.user.id;
+
+  // Optional: verify contractor role/type if you want consistency with other pro pages
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { proProfile: true },
+  });
+  if (user?.role !== "PRO" || user.proProfile?.type !== "CONTRACTOR") {
+    redirect("/pro/contractor/dashboard");
+  }
+
   const workRecord = await prisma.workRecord.findFirst({
     where: {
       id,
-      contractorId: session.user.id,
+      contractorId: userId,
     },
     include: {
       home: {
         include: {
           owner: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
+            select: { id: true, name: true, email: true },
           },
         },
       },
@@ -55,6 +63,14 @@ export default async function WorkRecordDetailPage({
     redirect("/pro/contractor/work-records");
   }
 
+  const addrLine = [
+    workRecord.home.address,
+    workRecord.home.city,
+    workRecord.home.state,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   const serializedWorkRecord = {
     id: workRecord.id,
     homeId: workRecord.homeId,
@@ -69,26 +85,68 @@ export default async function WorkRecordDetailPage({
     <main className="relative min-h-screen text-white">
       <Bg />
 
-      <div className="mx-auto max-w-4xl p-6 space-y-6">
-        <div>
+      <div className="mx-auto max-w-6xl space-y-6 p-6">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm">
+          <Link
+            href="/pro/contractor/dashboard"
+            className="text-white/70 hover:text-white transition-colors"
+          >
+            Dashboard
+          </Link>
+          <span className="text-white/50">/</span>
           <Link
             href="/pro/contractor/work-records"
-            className="text-sm text-white/70 hover:text-white"
+            className="text-white/70 hover:text-white transition-colors"
           >
-            ← Back to Work Records
+            Work Records
           </Link>
-        </div>
+          <span className="text-white/50">/</span>
+          <span className="text-white truncate max-w-[40%]">
+            {workRecord.workType}
+          </span>
+        </nav>
 
+        {/* Header w/ back arrow */}
         <section className={glass}>
-          <div className="mb-4 flex items-start justify-between">
-            <div className="flex-1">
-              <h1 className={`text-2xl font-semibold ${heading}`}>
-                {workRecord.workType}
-              </h1>
-              <p className={textMeta}>
-                {new Date(workRecord.workDate).toLocaleDateString()}
-              </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Link
+                href="/pro/contractor/work-records"
+                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
+                aria-label="Back to work records"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
+                  />
+                </svg>
+              </Link>
+
+              <div className="min-w-0">
+                <h1 className={`text-2xl font-bold ${heading} truncate`}>
+                  {workRecord.workType}
+                </h1>
+                <p className={`mt-1 text-sm ${textMeta}`}>
+                  {new Date(workRecord.workDate).toLocaleDateString()}
+                </p>
+                {addrLine && (
+                  <p className={`mt-1 text-xs ${textMeta} truncate`}>
+                    {addrLine}
+                  </p>
+                )}
+              </div>
             </div>
+
             <div className="flex items-center gap-2">
               <StatusBadge status={workRecord.status} />
               <WorkRecordActions
@@ -97,7 +155,10 @@ export default async function WorkRecordDetailPage({
               />
             </div>
           </div>
+        </section>
 
+        {/* Details */}
+        <section className={glass}>
           <div className="space-y-4">
             {/* Property info */}
             <div>
@@ -121,7 +182,9 @@ export default async function WorkRecordDetailPage({
                 <h3 className="text-sm font-medium text-white/70">
                   Description
                 </h3>
-                <p className="text-white">{workRecord.description}</p>
+                <p className="text-white whitespace-pre-wrap">
+                  {workRecord.description}
+                </p>
               </div>
             )}
 
@@ -142,7 +205,7 @@ export default async function WorkRecordDetailPage({
                   Attachments ({workRecord.attachments.length})
                 </h3>
 
-                {/* Photo Gallery - Images only */}
+                {/* Photos */}
                 {workRecord.attachments.some((a) =>
                   a.mimeType?.startsWith("image/")
                 ) && (
@@ -164,7 +227,7 @@ export default async function WorkRecordDetailPage({
                             <img
                               src={`/api/home/${workRecord.homeId}/attachments/${attachment.id}`}
                               alt={attachment.filename}
-                              className="h-full w-full object-cover"
+                              className="h-full w-full object-cover transition group-hover:scale-105"
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
                               <svg
@@ -188,7 +251,7 @@ export default async function WorkRecordDetailPage({
                   </div>
                 )}
 
-                {/* Other Documents - Non-images */}
+                {/* Documents */}
                 {workRecord.attachments.some(
                   (a) => !a.mimeType?.startsWith("image/")
                 ) && (

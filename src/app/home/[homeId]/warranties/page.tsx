@@ -14,34 +14,28 @@ export default async function WarrantiesPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ homeId: string }>;
-  searchParams: Promise<{ search?: string; sort?: string }>;
+  params: { homeId: string };
+  searchParams: { search?: string; sort?: string };
 }) {
-  const { homeId } = await params;
-  const { search, sort } = await searchParams;
+  const { homeId } = params;
+  const { search, sort } = searchParams;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Get home info for header
   const home = await prisma.home.findUnique({
     where: { id: homeId },
-    select: {
-      id: true,
-      address: true,
-      city: true,
-      state: true,
-      zip: true,
-    },
+    select: { id: true, address: true, city: true, state: true, zip: true },
   });
 
   if (!home) notFound();
 
-  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
+  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${
+    home.state ? `, ${home.state}` : ""
+  }${home.zip ? ` ${home.zip}` : ""}`;
 
-  // Build query filters
   const where: {
     homeId: string;
     OR?: Array<{
@@ -50,7 +44,6 @@ export default async function WarrantiesPage({
     }>;
   } = { homeId };
 
-  // Search
   if (search) {
     where.OR = [
       { item: { contains: search, mode: "insensitive" } },
@@ -58,13 +51,11 @@ export default async function WarrantiesPage({
     ];
   }
 
-  // Build sort order
   type OrderBy = { expiresAt: "asc" | "desc" } | { item: "asc" };
-  let orderBy: OrderBy = { expiresAt: "asc" }; // Default: soonest expiring first
+  let orderBy: OrderBy = { expiresAt: "asc" };
   if (sort === "latest") orderBy = { expiresAt: "desc" };
   if (sort === "item") orderBy = { item: "asc" };
 
-  // Get all warranties
   const warranties = await prisma.warranty.findMany({
     where,
     orderBy,
@@ -88,19 +79,10 @@ export default async function WarrantiesPage({
     },
   });
 
-  // DEBUG: Log what we got from DB
-  console.log('[WARRANTIES] Total warranties:', warranties.length);
-  warranties.forEach(w => {
-    console.log(`[WARRANTY] ${w.item}: ${w.attachments?.length || 0} attachments`,
-      w.attachments?.map(a => a.filename));
-  });
-
-  // Calculate status on server (avoids hydration issues)
-  // Normalize to midnight to ensure consistent calculations
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  const warrantiesWithStatus = warranties.map(w => {
+  const warrantiesWithStatus = warranties.map((w) => {
     let isExpired = false;
     let isExpiringSoon = false;
     let daysUntilExpiry = 0;
@@ -110,9 +92,12 @@ export default async function WarrantiesPage({
       const expiryDate = new Date(w.expiresAt);
       expiryDate.setHours(0, 0, 0, 0);
 
-      daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+      daysUntilExpiry = Math.ceil(
+        (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
       isExpired = expiryDate < now;
-      isExpiringSoon = !isExpired && daysUntilExpiry <= 30; // 30 days warning
+      isExpiringSoon = !isExpired && daysUntilExpiry <= 30;
 
       formattedExpiry = expiryDate.toLocaleDateString("en-US", {
         month: "short",
@@ -132,20 +117,23 @@ export default async function WarrantiesPage({
       isExpiringSoon,
       daysUntilExpiry,
       formattedExpiry,
-      attachments: w.attachments.map(att => ({
+      attachments: w.attachments.map((att) => ({
         id: att.id,
         filename: att.filename,
         url: att.url,
         mimeType: att.mimeType,
-        size: att.size,
+        size: att.size == null ? null : Number(att.size),
       })),
     };
   });
 
-  // Calculate counts for stats
-  const expiredCount = warrantiesWithStatus.filter(w => w.isExpired).length;
-  const activeCount = warrantiesWithStatus.filter(w => !w.isExpired && w.expiresAt).length;
-  const expiringSoonCount = warrantiesWithStatus.filter(w => w.isExpiringSoon).length;
+  const expiredCount = warrantiesWithStatus.filter((w) => w.isExpired).length;
+  const activeCount = warrantiesWithStatus.filter(
+    (w) => !w.isExpired && w.expiresAt
+  ).length;
+  const expiringSoonCount = warrantiesWithStatus.filter(
+    (w) => w.isExpiringSoon
+  ).length;
 
   return (
     <main className="min-h-screen text-white">
@@ -163,17 +151,17 @@ export default async function WarrantiesPage({
       </div>
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-
-        {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">
-          <Link href={`/home/${homeId}`} className="text-white/70 hover:text-white transition-colors">
+          <Link
+            href={`/home/${homeId}`}
+            className="text-white/70 hover:text-white transition-colors"
+          >
             {addrLine}
           </Link>
           <span className="text-white/50">/</span>
           <span className="text-white">Warranties</span>
         </nav>
 
-        {/* Header */}
         <section className={glass}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -190,23 +178,31 @@ export default async function WarrantiesPage({
                   stroke="currentColor"
                   className="w-5 h-5"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                  />
                 </svg>
               </Link>
               <div className="flex-1 min-w-0">
                 <h1 className={`text-2xl font-bold ${heading}`}>Warranties</h1>
                 <p className={`text-sm ${textMeta} mt-1`}>
-                  {warrantiesWithStatus.length} {warrantiesWithStatus.length === 1 ? "warranty" : "warranties"}
+                  {warrantiesWithStatus.length}{" "}
+                  {warrantiesWithStatus.length === 1 ? "warranty" : "warranties"}
                 </p>
               </div>
             </div>
             <div className="flex-shrink-0">
-              <AddRecordButton homeId={homeId} label="+ Add Warranty" defaultType="warranty" />
+              <AddRecordButton
+                homeId={homeId}
+                label="+ Add Warranty"
+                defaultType="warranty"
+              />
             </div>
           </div>
         </section>
 
-        {/* Stats Overview */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total" value={warrantiesWithStatus.length} />
           <StatCard
@@ -222,7 +218,6 @@ export default async function WarrantiesPage({
           />
         </section>
 
-        {/* Client-side component for filters and list */}
         <WarrantiesPageClient
           warranties={warrantiesWithStatus}
           homeId={homeId}
@@ -239,7 +234,7 @@ export default async function WarrantiesPage({
 function StatCard({
   label,
   value,
-  highlight
+  highlight,
 }: {
   label: string;
   value: string | number;
@@ -248,11 +243,15 @@ function StatCard({
   return (
     <div className={glassTight}>
       <div className="text-sm text-white/70">{label}</div>
-      <div className={`mt-1 text-xl font-semibold ${
-        highlight === "red" ? "text-red-400" :
-        highlight === "yellow" ? "text-yellow-400" :
-        "text-white"
-      }`}>
+      <div
+        className={`mt-1 text-xl font-semibold ${
+          highlight === "red"
+            ? "text-red-400"
+            : highlight === "yellow"
+            ? "text-yellow-400"
+            : "text-white"
+        }`}
+      >
         {value}
       </div>
     </div>

@@ -388,7 +388,7 @@ function ReminderCard({
 
       <EditReminderModal
         open={editOpen}
-        onClose={() => setEditOpen(false)}
+        onCloseAction={() => setEditOpen(false)}
         reminder={{
           ...reminder,
           dueAt: new Date(reminder.dueAt),

@@ -21,17 +21,12 @@ import { MessagesList } from "./_components/MessagesList";
 export default async function MessagesPage() {
   const session = await getServerSession(authConfig);
 
-  if (!session?.user || session.user.role !== "PRO") {
-    redirect("/login");
-  }
-
-  if (!session.user.id) {
+  if (!session?.user?.id || session.user.role !== "PRO") {
     redirect("/login");
   }
 
   const userId = session.user.id;
 
-  // Get all active connections with messages data (works for all pro types)
   const connections = await prisma.connection.findMany({
     where: {
       OR: [
@@ -61,9 +56,7 @@ export default async function MessagesPage() {
         take: 1,
         orderBy: { createdAt: "desc" },
         include: {
-          reads: {
-            where: { userId },
-          },
+          reads: { where: { userId } },
         },
       },
       _count: {
@@ -71,52 +64,47 @@ export default async function MessagesPage() {
           messages: {
             where: {
               senderId: { not: userId },
-              reads: {
-                none: {
-                  userId,
-                },
-              },
+              reads: { none: { userId } },
             },
           },
         },
       },
     },
-    orderBy: {
-      updatedAt: "desc",
-    },
+    orderBy: { updatedAt: "desc" },
   });
 
-  // Format conversations
-  const conversations = connections.map((conn) => {
-    const lastMessage = conn.messages[0];
-    const unreadCount = conn._count.messages;
+  const conversations = connections
+    .filter((c) => c.homeowner && c.home) // extra safety
+    .map((conn) => {
+      const lastMessage = conn.messages[0] ?? null;
+      const unreadCount = conn._count.messages ?? 0;
 
-    const homeownerName =
-      conn.homeowner?.name ||
-      conn.homeowner?.email ||
-      "Homeowner";
+      const homeownerName =
+        conn.homeowner.name ||
+        conn.homeowner.email ||
+        "Homeowner";
 
-    return {
-      connectionId: conn.id,
-      homeowner: {
-        name: homeownerName,
-        image: conn.homeowner?.image || null,
-      },
-      property: {
-        address: conn.home?.address || "",
-        city: conn.home?.city || "",
-        state: conn.home?.state || "",
-      },
-      lastMessage: lastMessage
-        ? {
-            content: lastMessage.content,
-            createdAt: lastMessage.createdAt,
-            isRead: lastMessage.reads.length > 0,
-          }
-        : null,
-      unreadCount,
-    };
-  });
+      return {
+        connectionId: conn.id,
+        homeowner: {
+          name: homeownerName,
+          image: conn.homeowner.image ?? null,
+        },
+        property: {
+          address: conn.home.address ?? "",
+          city: conn.home.city ?? "",
+          state: conn.home.state ?? "",
+        },
+        lastMessage: lastMessage
+          ? {
+              content: lastMessage.content,
+              createdAt: lastMessage.createdAt,
+              isRead: lastMessage.reads.length > 0,
+            }
+          : null,
+        unreadCount,
+      };
+    });
 
   const conversationsCount = conversations.length;
 

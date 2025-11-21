@@ -26,11 +26,7 @@ export default async function ChatPage({
 }) {
   const session = await getServerSession(authConfig);
 
-  if (!session?.user || session.user.role !== "PRO") {
-    redirect("/login");
-  }
-
-  if (!session.user.id) {
+  if (!session?.user?.id || session.user.role !== "PRO") {
     redirect("/login");
   }
 
@@ -66,7 +62,7 @@ export default async function ChatPage({
     },
   });
 
-  if (!connection) {
+  if (!connection || !connection.homeowner || !connection.home) {
     notFound();
   }
 
@@ -75,23 +71,12 @@ export default async function ChatPage({
     where: { connectionId },
     include: {
       sender: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
+        select: { id: true, name: true, image: true },
       },
       attachments: {
-        select: {
-          id: true,
-          filename: true,
-          mimeType: true,
-          url: true,
-        },
+        select: { id: true, filename: true, mimeType: true, url: true },
       },
-      reads: {
-        where: { userId },
-      },
+      reads: { where: { userId } },
     },
     orderBy: { createdAt: "asc" },
     take: 100,
@@ -106,13 +91,11 @@ export default async function ChatPage({
     image: connection.homeowner.image,
   };
 
-  const property = {
-    address: connection.home.address,
-    city: connection.home.city,
-    state: connection.home.state,
-  };
-
-  const addressLine = [property.address, property.city, property.state]
+  const addressLine = [
+    connection.home.address,
+    connection.home.city,
+    connection.home.state,
+  ]
     .filter(Boolean)
     .join(", ");
 
@@ -120,7 +103,7 @@ export default async function ChatPage({
     <main className="relative min-h-screen text-white">
       <Bg />
 
-      <div className="mx-auto flex h-screen max-w-4xl flex-col gap-4 p-4">
+      <div className="mx-auto max-w-6xl space-y-6 p-6">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">
           <Link
@@ -183,9 +166,7 @@ export default async function ChatPage({
             )}
 
             <div className="min-w-0">
-              <h1
-                className={`text-lg font-semibold ${heading} truncate`}
-              >
+              <h1 className={`text-lg font-semibold ${heading} truncate`}>
                 {otherUser.name}
               </h1>
               {addressLine && (
@@ -197,9 +178,15 @@ export default async function ChatPage({
           </div>
         </section>
 
-        {/* Messages thread */}
-        <section className={`${glass} flex min-h-0 flex-1 overflow-hidden`}>
-          <div className="flex-1 overflow-hidden">
+        {/* Messages thread (darker shell so composer doesn't look disabled) */}
+        <section
+          className="
+            rounded-2xl border border-white/15
+            bg-black/45 backdrop-blur-sm
+            flex min-h-[60vh] flex-col overflow-hidden
+          "
+        >
+          <div className="flex-1 min-h-[300px] overflow-hidden">
             <MessageThread
               connectionId={connectionId}
               initialMessages={messages}
