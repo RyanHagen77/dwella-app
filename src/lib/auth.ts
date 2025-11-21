@@ -50,7 +50,7 @@ export const authConfig: NextAuthOptions = {
     }),
 
     EmailProvider({
-      from: process.env.EMAIL_FROM ?? "Dwella <no-reply@dwella.com>",
+      from: process.env.EMAIL_FROM ?? "Dwella <hello@mydwellaapp.com>",
       async sendVerificationRequest({ identifier, url, provider }) {
         if (process.env.NODE_ENV !== "production") {
           console.log("[DEV] Magic link:", url);
@@ -62,9 +62,61 @@ export const authConfig: NextAuthOptions = {
 
         await resend.emails.send({
           to,
-          from: (provider.from ?? "dwella <no-reply@dwella.com>") as string,
-          subject: "Your Dwella sign-in link",
-          html: `<p>Click to sign in:</p><p><a href="${url}">${url}</a></p>`,
+          from: (provider.from ?? "Dwella <hello@mydwellaapp.com>") as string,
+          subject: "Sign in to Dwella",
+          html: `
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <div style="text-align: center; margin-bottom: 30px;">
+                <h1 style="color: #ffffff; background: linear-gradient(135deg, #33C17D 0%, #2BA36A 100%); padding: 20px; border-radius: 12px; margin: 0; font-size: 24px;">
+                  Dwella
+                </h1>
+              </div>
+              
+              <div style="background: #f9f9f9; border-radius: 12px; padding: 30px; margin-bottom: 20px;">
+                <h2 style="color: #333; margin-top: 0; font-size: 20px;">Sign in to Dwella</h2>
+                <p style="color: #666; line-height: 1.6; margin: 0 0 20px 0;">
+                  Click the button below to sign in to your account:
+                </p>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${url}" 
+                     style="background: linear-gradient(135deg, #F35A1F 0%, #E04A0F 100%); 
+                            color: white; 
+                            padding: 14px 32px; 
+                            text-decoration: none; 
+                            border-radius: 8px; 
+                            display: inline-block;
+                            font-weight: 600;
+                            font-size: 15px;">
+                    Sign In to Dwella
+                  </a>
+                </div>
+                
+                <p style="color: #999; font-size: 14px; line-height: 1.5; margin: 0 0 8px 0;">
+                  Or copy and paste this link into your browser:
+                </p>
+                <p style="color: #F35A1F; font-size: 13px; word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 6px; margin: 0 0 20px 0;">
+                  ${url}
+                </p>
+                
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                  <p style="color: #999; font-size: 13px; margin: 0 0 8px 0;">
+                    ⏱️ This link expires in <strong>24 hours</strong>
+                  </p>
+                  <p style="color: #999; font-size: 13px; margin: 0;">
+                    🔒 If you didn't request this, you can safely ignore this email
+                  </p>
+                </div>
+              </div>
+              
+              <div style="text-align: center; color: #999; font-size: 12px;">
+                <p style="margin: 0;">
+                  The Dwella Team<br>
+                  <a href="https://mydwellaapp.com" style="color: #33C17D; text-decoration: none;">mydwellaapp.com</a>
+                </p>
+              </div>
+            </div>
+          `,
         });
       },
     }),
