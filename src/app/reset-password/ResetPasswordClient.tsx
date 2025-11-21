@@ -1,4 +1,4 @@
-// app/reset-password/ResetPasswordClient.tsx
+// app/password/ResetPasswordClient.tsx
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
@@ -79,7 +79,7 @@ export function ResetPasswordClient() {
           Reset your password
         </h1>
         <p className="mb-6 text-sm text-white/75">
-          Choose a new password for your Dwella account.
+          Choose a new password for your Mywella account.
         </p>
 
         {!token && (
