@@ -414,7 +414,7 @@ function DwellaLogo({ className }: { className?: string }) {
         x={80}
         y={50}
         fill="#FFFFFF"
-        fontSize={42}
+        fontSize={39}
         fontWeight={600}
         style={{
           fontFamily:
@@ -422,7 +422,7 @@ function DwellaLogo({ className }: { className?: string }) {
           letterSpacing: 0.5,
         }}
       >
-        Dwella
+        MyDwella
       </text>
     </svg>
   );

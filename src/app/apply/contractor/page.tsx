@@ -112,7 +112,7 @@ export default function ContractorApplyPage() {
           Apply as a contractor
         </h1>
         <p className="mb-5 text-sm text-white/75">
-          Join Dwella and start building a verified record of the work you do on real homes.
+          Join MyDwella and start building a verified record of the work you do on real homes.
         </p>
 
         {/* Why join box */}
@@ -146,6 +146,54 @@ export default function ContractorApplyPage() {
               <span>Get discovered when homes change hands.</span>
             </li>
           </ul>
+        </div>
+
+        {/* Pricing box */}
+        <div className="mb-6 rounded-xl border border-[#33C17D]/30 bg-gradient-to-br from-[#33C17D]/10 to-transparent p-5 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-white/90 mb-1">
+                Launch pricing
+              </h2>
+              <p className="text-xs text-white/70 mb-3">
+                Lock in founder pricing before rates increase
+              </p>
+
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl sm:text-4xl font-bold text-white">
+                  $27
+                </span>
+                <span className="text-white/70 text-sm">/ month</span>
+              </div>
+
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-xs text-white/60 line-through">
+                  $39/month
+                </span>
+                <span className="rounded-full bg-[#33C17D]/20 px-2 py-0.5 text-xs font-medium text-[#33C17D]">
+                  Save 30%
+                </span>
+              </div>
+
+              <p className="mt-2 text-xs text-white/75">
+                $327 billed annually — less than one service call
+              </p>
+            </div>
+
+            <div className="flex-shrink-0">
+              <div className="text-right">
+                <div className="text-xs text-white/60 mb-1">Limited time offer</div>
+                <div className="text-sm font-medium text-white">
+                  McHenry County contractors
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-white/10 flex items-start gap-2 text-xs text-white/70">
+            <span className="text-[#33C17D] flex-shrink-0">✓</span>
+            <span>Cancel anytime. 30-day money-back guarantee.</span>
+          </div>
         </div>
 
         {/* Error */}
@@ -380,7 +428,7 @@ function DwellaLogo({ className }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       role="img"
-      aria-label="Dwella"
+      aria-label="MyDwella"
     >
       {/* House outline */}
       <path
@@ -405,7 +453,7 @@ function DwellaLogo({ className }: { className?: string }) {
         x={80}
         y={50}
         fill="#FFFFFF"
-        fontSize={42}
+        fontSize={39}
         fontWeight={600}
         style={{
           fontFamily:
@@ -413,7 +461,7 @@ function DwellaLogo({ className }: { className?: string }) {
           letterSpacing: 0.5,
         }}
       >
-        Dwella
+        MyDwella
       </text>
     </svg>
   );

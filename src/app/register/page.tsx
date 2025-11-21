@@ -170,7 +170,7 @@ function RegisterForm() {
               <strong>{invitationData.inviterName}</strong>
               {invitationData.inviterCompany &&
                 ` (${invitationData.inviterCompany})`}{" "}
-              has invited you to join Dwella.
+              has invited you to join MyDwella.
             </p>
             {invitationData.message && (
               <p className="mt-2 text-sm italic text-white/80">
@@ -181,7 +181,7 @@ function RegisterForm() {
         )}
 
         <h1 className="mb-1 text-xl sm:text-2xl font-semibold tracking-tight text-white">
-          {invitationData ? "Accept your invitation" : "Create your Dwella account"}
+          {invitationData ? "Accept your invitation" : "Create your MyDwella account"}
         </h1>
         <p className="mb-5 text-sm text-white/75">
           Manage your home, projects, and pro history in one secure place.
@@ -318,7 +318,7 @@ function DwellaLogo({ className }: { className?: string }) {
         x={80}
         y={50}
         fill="#FFFFFF"
-        fontSize={42}
+        fontSize={39}
         fontWeight={600}
         style={{
           fontFamily:
@@ -326,7 +326,7 @@ function DwellaLogo({ className }: { className?: string }) {
           letterSpacing: 0.5,
         }}
       >
-        Dwella
+        MyDwella
       </text>
     </svg>
   );

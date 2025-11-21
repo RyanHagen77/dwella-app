@@ -16,8 +16,8 @@ export type ProTopBarLink = {
 
 export function GlobalProHeader({
   links = [],
-  srBrand = "Dwella Pro",
-  logoAlt = "Dwella Pro",
+  srBrand = "MyDwella Pro",
+  logoAlt = "MyDwella Pro",
 }: {
   links?: ProTopBarLink[];
   srBrand?: string;
@@ -336,7 +336,7 @@ function DwellaLogo({ className }: { className?: string }) {
         x={80}
         y={50}
         fill="#FFFFFF"
-        fontSize={42}
+        fontSize={39}
         fontWeight={600}
         style={{
           fontFamily:
@@ -344,7 +344,7 @@ function DwellaLogo({ className }: { className?: string }) {
           letterSpacing: 0.5,
         }}
       >
-        Dwella
+        MyDwella
       </text>
     </svg>
   );

@@ -40,7 +40,7 @@ export default function ApplySelectPage() {
         {/* Page title */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">
-            Join Dwella
+            Join MyDwella
           </h1>
           <p className="mt-2 text-sm sm:text-base text-white/80">
             Create your professional contractor account.
@@ -104,6 +104,19 @@ export default function ApplySelectPage() {
               </li>
             </ul>
 
+            {/* Pricing callout */}
+            <div className="mb-4 rounded-lg border border-[#33C17D]/30 bg-[#33C17D]/8 px-4 py-2.5 text-center">
+              <div className="text-xs text-white/70 mb-0.5">Launch special</div>
+              <div className="flex items-baseline justify-center gap-2">
+                <span className="text-2xl font-bold text-white">$27</span>
+                <span className="text-sm text-white/70">/month</span>
+              </div>
+              <div className="text-xs text-white/60 mt-0.5">
+                <span className="line-through">$39</span>
+                <span className="ml-2 text-[#33C17D]">Save 30%</span>
+              </div>
+            </div>
+
             <div className="rounded-xl bg-[rgba(243,90,31,0.9)] px-6 py-3 text-center text-sm font-medium tracking-normal text-white border border-white/25 shadow-[0_12px_32px_rgba(243,90,31,0.35)] group-hover:bg-[rgba(243,90,31,0.96)] transition-colors">
               Apply as contractor →
             </div>
@@ -132,7 +145,7 @@ function DwellaLogo({ className }: { className?: string }) {
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       role="img"
-      aria-label="Dwella"
+      aria-label="MyDwella"
     >
       {/* House outline */}
       <path
@@ -157,7 +170,7 @@ function DwellaLogo({ className }: { className?: string }) {
         x={80}
         y={50}
         fill="#FFFFFF"
-        fontSize={42}
+        fontSize={39}
         fontWeight={600}
         style={{
           fontFamily:
@@ -165,7 +178,7 @@ function DwellaLogo({ className }: { className?: string }) {
           letterSpacing: 0.5,
         }}
       >
-        Dwella
+        MyDwella
       </text>
     </svg>
   );

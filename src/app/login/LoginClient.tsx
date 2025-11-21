@@ -77,7 +77,7 @@ export default function LoginClient() {
         {/* Header */}
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Sign in to Dwella
+            Sign in to MyDwella
           </h1>
           <p className="mt-2 text-sm text-white/75">
             Your home’s journal, plus the tools your contractors need to keep it
@@ -172,7 +172,7 @@ export default function LoginClient() {
 
             <div className="space-y-2">
               <h3 className="text-xs font-medium uppercase tracking-[0.14em] text-white/60">
-                New to Dwella?
+                New to MyDwella?
               </h3>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <a
