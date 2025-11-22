@@ -8,39 +8,21 @@ const APP_BASE_URL =
   process.env.APP_BASE_URL ||
   "http://localhost:3000";
 
-// Generic email sender (for future use)
-export async function sendEmail({
-  to,
-  subject,
-  html,
-  text,
-}: {
-  to: string;
-  subject: string;
-  html: string;
-  text?: string;
-}) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY is not set – email will not be sent.");
-    return { success: false, error: "No API key" };
+// Clean and validate the FROM address
+const getFromAddress = () => {
+  const raw = process.env.EMAIL_FROM || "hello@mydwellaapp.com";
+
+  // Remove any quotes that might be in the env var
+  const cleaned = raw.replace(/^["']|["']$/g, '').trim();
+
+  // If it's just an email, add display name
+  if (cleaned && !cleaned.includes('<')) {
+    return `Dwella <${cleaned}>`;
   }
 
-  try {
-    const data = await resend.emails.send({
-      from: process.env.EMAIL_FROM || "Dwella <hello@mydwellaapp.com>",
-      to,
-      subject,
-      html,
-      text,
-    });
-
-    console.log("Email sent successfully:", data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error sending email:", error);
-    return { success: false, error };
-  }
-}
+  // If it already has format "Name <email>", return as-is
+  return cleaned || "Dwella <hello@mydwellaapp.com>";
+};
 
 // Password reset email
 export async function sendPasswordResetEmail({
@@ -130,7 +112,7 @@ export async function sendPasswordResetEmail({
 
   try {
     const data = await resend.emails.send({
-      from: process.env.EMAIL_FROM || "Dwella <hello@mydwellaapp.com>",
+      from: getFromAddress(),
       to,
       subject,
       html,
@@ -271,7 +253,7 @@ export async function sendInvitationEmail({
 
   try {
     const data = await resend.emails.send({
-      from: process.env.EMAIL_FROM || "MyDwella Team <hello@mydwellaapp.com>",
+      from: getFromAddress(),
       to,
       subject,
       html,
