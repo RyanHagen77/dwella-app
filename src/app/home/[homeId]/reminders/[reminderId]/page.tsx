@@ -72,7 +72,7 @@ export default async function ReminderDetailPage({
         <Breadcrumb
           items={[
             { label: addrLine, href: `/home/${homeId}` },
-            { label: "Reminders", href: `/home/${homeId}/reminder` },
+            { label: "Reminders", href: `/home/${homeId}/reminders` },
             { label: reminder.title }, // current page
           ]}
         />
