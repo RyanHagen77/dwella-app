@@ -126,14 +126,21 @@ export default function WorkClient({
       </div>
 
       <div className="mx-auto max-w-5xl space-y-6 p-6">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link href={`/home/${homeId}`} className="text-white/70 hover:text-white transition-colors">
-            {homeAddress}
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white">Requests & Submissions</span>
-        </nav>
+      {/* Breadcrumb */}
+<nav className="flex items-center gap-2 text-sm whitespace-nowrap overflow-hidden">
+  <Link
+    href={`/home/${homeId}`}
+    className="text-white/70 hover:text-white transition-colors truncate max-w-[60vw] sm:max-w-none"
+  >
+    {homeAddress}
+  </Link>
+
+  <span className="text-white/50">/</span>
+
+  <span className="text-white truncate max-w-[40vw] sm:max-w-none">
+    Requests & Submissions
+  </span>
+</nav>
 
         {/* Header */}
         <section className={glass}>
