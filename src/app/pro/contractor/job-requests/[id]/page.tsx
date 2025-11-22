@@ -3,7 +3,7 @@
  *
  * View job request from homeowner, submit quote
  *
- * Location: app/contractor/job-requests/[id]/page.tsx
+ * Location: app/contractor/job-requests/[workId]/page.tsx
  */
 
 export const dynamic = "force-dynamic";

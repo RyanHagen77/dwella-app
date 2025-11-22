@@ -30,7 +30,7 @@ function HomeContextBarInner() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
 
-  // derive current home from URL when on /home/[id]
+  // derive current home from URL when on /home/[workId]
   useEffect(() => {
     const match = pathname?.match(/\/home\/([^/]+)/);
     if (match) {

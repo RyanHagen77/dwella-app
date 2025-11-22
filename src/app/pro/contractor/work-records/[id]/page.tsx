@@ -1,4 +1,4 @@
-// app/pro/contractor/document-completed-work-submissions-records/[id]/page.tsx
+// app/pro/contractor/document-completed-work-submissions-records/[workId]/page.tsx
 
 export const dynamic = "force-dynamic";
 

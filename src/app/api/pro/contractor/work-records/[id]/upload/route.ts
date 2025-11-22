@@ -1,4 +1,4 @@
-// app/api/pro/contractor/document-completed-work-submissions-records-records/[id]/upload/route.ts
+// app/api/pro/contractor/document-completed-work-submissions-records-records/[workId]/upload/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";

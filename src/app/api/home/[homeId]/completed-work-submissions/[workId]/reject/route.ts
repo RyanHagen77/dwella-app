@@ -1,4 +1,4 @@
-// app/api/home/[homeId]/document-completed-work-submissions/[id]/reject/route.ts
+// app/api/home/[homeId]/document-completed-work-submissions/[workId]/reject/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";

@@ -1,4 +1,4 @@
-// app/pro/contractor/document-completed-work-submissions-records/[id]/EditWorkRecordModal.tsx
+// app/pro/contractor/document-completed-work-submissions-records/[workId]/EditWorkRecordModal.tsx
 "use client";
 
 import { useState } from "react";

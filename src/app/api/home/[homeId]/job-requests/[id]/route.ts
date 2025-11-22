@@ -1,11 +1,11 @@
 /**
  * INDIVIDUAL JOB REQUEST API (HOMEOWNER)
  *
- * GET /api/home/[homeId]/job-requests/[id] - Get single job request
- * PATCH /api/home/[homeId]/job-requests/[id] - Update job request (accept quote, cancel, etc.)
- * DELETE /api/home/[homeId]/job-requests/[id] - Delete/cancel job request
+ * GET /api/home/[homeId]/job-requests/[workId] - Get single job request
+ * PATCH /api/home/[homeId]/job-requests/[workId] - Update job request (accept quote, cancel, etc.)
+ * DELETE /api/home/[homeId]/job-requests/[workId] - Delete/cancel job request
  *
- * Location: app/api/home/[homeId]/job-requests/[id]/route.ts
+ * Location: app/api/home/[homeId]/job-requests/[workId]/route.ts
  */
 
 import { NextRequest, NextResponse } from "next/server";

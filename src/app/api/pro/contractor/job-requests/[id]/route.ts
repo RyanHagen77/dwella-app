@@ -1,10 +1,10 @@
 /**
  * INDIVIDUAL JOB REQUEST API (CONTRACTOR)
  *
- * GET /api/pro/contractor/job-requests/[id] - Get single job request
- * PATCH /api/pro/contractor/job-requests/[id] - Update job request (respond, decline, etc.)
+ * GET /api/pro/contractor/job-requests/[workId] - Get single job request
+ * PATCH /api/pro/contractor/job-requests/[workId] - Update job request (respond, decline, etc.)
  *
- * Location: app/api/pro/contractor/job-requests/[id]/route.ts
+ * Location: app/api/pro/contractor/job-requests/[workId]/route.ts
  */
 
 import { NextRequest, NextResponse } from "next/server";

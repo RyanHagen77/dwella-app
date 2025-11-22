@@ -48,7 +48,7 @@ export default function InviteClientPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to [id] invitation");
+        throw new Error(data.error || "Failed to [workId] invitation");
       }
 
       setSuccess(true);

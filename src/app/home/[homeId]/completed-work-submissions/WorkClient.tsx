@@ -449,7 +449,7 @@ function PendingWorkTab({
 
   async function handleApprove(workId: string) {
     try {
-      const res = await fetch(`/api/home/${homeId}/work/${workId}/approve`, {
+      const res = await fetch(`/api/home/${homeId}/completed-work-submissions/${workId}/approve`, {
         method: "POST",
       });
 
