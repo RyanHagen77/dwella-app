@@ -17,6 +17,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
 import { MessageThread } from "@/app/pro/messages/[connectionId]/_components/MessageThread";
+import ChatBreadcrumb from "@/components/ui/ChatBreadcrumb";
 
 export default async function HomeownerChatPage({
   params,
@@ -120,25 +121,11 @@ export default async function HomeownerChatPage({
 
       <div className="mx-auto max-w-6xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href={`/home/${homeId}`}
-            className="text-white/70 hover:text-white transition-colors"
-          >
-            {addrLine || "Home"}
-          </Link>
-          <span className="text-white/50">/</span>
-          <Link
-            href={`/home/${homeId}/messages`}
-            className="text-white/70 hover:text-white transition-colors"
-          >
-            Messages
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white truncate max-w-[40%]">
-            {otherUser.name}
-          </span>
-        </nav>
+        <ChatBreadcrumb
+          homeId={homeId}
+          homeAddress={addrLine}         // already exists
+          otherUserName={otherUser.name} // already exists
+        />
 
         {/* Header w/ back arrow + contractor info */}
         <section className={glass}>

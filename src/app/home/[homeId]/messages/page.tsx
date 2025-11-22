@@ -17,6 +17,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { glass, glassTight, heading, textMeta } from "@/lib/glass";
+import {Breadcrumb} from "@/components/ui/Breadcrumb";
+
 
 export default async function HomeMessagesPage({
   params,
@@ -144,16 +146,11 @@ export default async function HomeMessagesPage({
 
       <div className="mx-auto max-w-6xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href={`/home/${homeId}`}
-            className="text-white/70 hover:text-white transition-colors"
-          >
-            {addrLine}
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white">Messages</span>
-        </nav>
+        <Breadcrumb
+          href={`/home/${homeId}`}
+          label={addrLine}       // already exists, no new var needed
+          current="Messages"        // or Maintenance & Repairs, etc.
+        />
 
         {/* Header */}
         <section className={glass}>
