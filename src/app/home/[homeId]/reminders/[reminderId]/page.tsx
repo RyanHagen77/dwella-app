@@ -8,6 +8,8 @@ import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import { ReminderActions } from "./_components/ReminderActions";
+import Breadcrumb from "@/components/ui/Breadcrumb";
+
 
 export default async function ReminderDetailPage({
   params,
@@ -67,25 +69,11 @@ export default async function ReminderDetailPage({
 
       <div className="mx-auto max-w-4xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href={`/home/${homeId}`}
-            className="text-white/70 transition-colors hover:text-white"
-          >
-            {addrLine}
-          </Link>
-          <span className="text-white/50">/</span>
-          <Link
-            href={`/home/${homeId}/reminders`}
-            className="text-white/70 transition-colors hover:text-white"
-          >
-            Reminders
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="max-w-xs truncate text-white">
-            {reminder.title}
-          </span>
-        </nav>
+        <Breadcrumb
+          href={`/home/${homeId}`}
+          label={addrLine}
+          current="Reminders"
+        />
 
         {/* Header */}
         <section className={glass}>
