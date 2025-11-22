@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { glass, ctaGhost } from "@/lib/glass";
+import { glass, glassTight, ctaGhost } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
 import { EditWarrantyModal } from "./EditWarrantyModal";
 
@@ -147,11 +147,7 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
       const res = await fetch(`/api/home/${homeId}/warranties/${warranty.id}`, {
         method: "DELETE",
       });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete warranty");
-      }
-
+      if (!res.ok) throw new Error("Failed to delete warranty");
       router.refresh();
     } catch (error) {
       console.error("Delete failed:", error);
@@ -161,128 +157,158 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
     }
   }
 
+  const tint =
+    warranty.isExpired
+      ? "border-red-400/30 bg-red-500/5"
+      : warranty.isExpiringSoon
+      ? "border-yellow-400/30 bg-yellow-500/5"
+      : "";
+
   return (
     <>
-      <div className={`block p-4 rounded-lg transition-colors border ${
-        warranty.isExpired 
-          ? "border-red-400/30 bg-red-500/5" 
-          : warranty.isExpiringSoon 
-          ? "border-yellow-400/30 bg-yellow-500/5" 
-          : "border-white/10 bg-white/5"
-      }`}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0 space-y-2">
-            {/* Item name */}
-            <h3 className="font-medium text-white text-lg">{warranty.item}</h3>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => router.push(`/home/${homeId}/warranties/${warranty.id}`)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            router.push(`/home/${homeId}/warranties/${warranty.id}`);
+          }
+        }}
+        className={`${glassTight} ${tint} cursor-pointer flex items-start justify-between gap-4 transition-colors hover:bg-white/10`}
+      >
+        <div className="flex-1 min-w-0 space-y-2">
+          {/* Item name */}
+          <h3 className="font-medium text-white text-lg truncate">
+            {warranty.item}
+          </h3>
 
-            {/* Provider and expiry */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-              {warranty.provider && (
-                <span className="text-white/70">
-                  🏢 {warranty.provider}
-                </span>
-              )}
-              {warranty.policyNo && (
-                <span className="text-white/70">
-                  📋 {warranty.policyNo}
-                </span>
-              )}
-              <span className={`font-medium ${
-                warranty.isExpired ? "text-red-400" : 
-                warranty.isExpiringSoon ? "text-yellow-400" :
-                "text-white/90"
-              }`}>
-                📅 {warranty.formattedExpiry}
+          {/* Provider and expiry */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            {warranty.provider && (
+              <span className="text-white/70">🏢 {warranty.provider}</span>
+            )}
+            {warranty.policyNo && (
+              <span className="text-white/70">📋 {warranty.policyNo}</span>
+            )}
+            <span
+              className={`font-medium ${
+                warranty.isExpired
+                  ? "text-red-400"
+                  : warranty.isExpiringSoon
+                  ? "text-yellow-400"
+                  : "text-white/90"
+              }`}
+            >
+              📅 {warranty.formattedExpiry}
+            </span>
+
+            {warranty.expiresAt && (
+              <span
+                className={`text-xs ${
+                  warranty.isExpiringSoon
+                    ? "text-yellow-400"
+                    : warranty.isExpired
+                    ? "text-red-400"
+                    : "text-white/60"
+                }`}
+              >
+                {warranty.isExpired ? (
+                  Math.abs(warranty.daysUntilExpiry) === 1
+                    ? "Expired 1 day ago"
+                    : `Expired ${Math.abs(warranty.daysUntilExpiry)} days ago`
+                ) : warranty.daysUntilExpiry === 0 ? (
+                  "Expires today"
+                ) : warranty.daysUntilExpiry === 1 ? (
+                  "Expires tomorrow"
+                ) : (
+                  `Expires in ${warranty.daysUntilExpiry} days`
+                )}
               </span>
-              {warranty.expiresAt && (
-                <span className={`text-xs ${
-                  warranty.isExpiringSoon ? "text-yellow-400" : 
-                  warranty.isExpired ? "text-red-400" : 
-                  "text-white/60"
-                }`}>
-                  {warranty.isExpired ? (
-                    Math.abs(warranty.daysUntilExpiry) === 1
-                      ? "Expired 1 day ago"
-                      : `Expired ${Math.abs(warranty.daysUntilExpiry)} days ago`
-                  ) : warranty.daysUntilExpiry === 0 ? (
-                    "Expires today"
-                  ) : warranty.daysUntilExpiry === 1 ? (
-                    "Expires tomorrow"
-                  ) : (
-                    `Expires in ${warranty.daysUntilExpiry} days`
-                  )}
-                </span>
+            )}
+          </div>
+
+          {/* Note */}
+          {warranty.note && (
+            <p className="text-sm text-white/70 line-clamp-1">
+              {warranty.note}
+            </p>
+          )}
+
+          {/* Attachments (safe now, no nested <a>) */}
+          {warranty.attachments?.length > 0 && (
+            <div className="flex items-center gap-2 text-xs text-white/60">
+              <span>📎</span>
+              <span>
+                {warranty.attachments.length} attachment
+                {warranty.attachments.length > 1 ? "s" : ""}
+              </span>
+
+              {warranty.attachments.slice(0, 3).map((att) => (
+                <a
+                  key={att.id}
+                  href={`/api/home/${homeId}/attachments/${att.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="hover:text-white/90 underline"
+                >
+                  {att.filename.length > 15
+                    ? att.filename.slice(0, 12) + "..."
+                    : att.filename}
+                </a>
+              ))}
+
+              {warranty.attachments.length > 3 && (
+                <span>+{warranty.attachments.length - 3} more</span>
               )}
             </div>
+          )}
+        </div>
 
-            {/* Note */}
-            {warranty.note && (
-              <p className="text-sm text-white/70 line-clamp-1">{warranty.note}</p>
-            )}
+        {/* Actions and Badge */}
+        <div className="flex-shrink-0 flex items-center gap-2">
+          {warranty.isExpired && (
+            <span className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-red-400/20 text-red-300 border border-red-400/30">
+              Expired
+            </span>
+          )}
+          {warranty.isExpiringSoon && (
+            <span className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30">
+              Expiring Soon
+            </span>
+          )}
 
-            {/* Attachments */}
-            {warranty.attachments && warranty.attachments.length > 0 && (
-              <div className="flex items-center gap-2 text-xs text-white/60">
-                <span>📎</span>
-                <span>{warranty.attachments.length} attachment{warranty.attachments.length > 1 ? 's' : ''}</span>
-                {warranty.attachments.slice(0, 3).map((att) => (
-                  <a
-                    key={att.id}
-                    href={`/api/home/${homeId}/attachments/${att.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={(e) => e.stopPropagation()}
-                    className="hover:text-white/90 underline"
-                  >
-                    {att.filename.length > 15 ? att.filename.slice(0, 12) + '...' : att.filename}
-                  </a>
-                ))}
-                {warranty.attachments.length > 3 && (
-                  <span>+{warranty.attachments.length - 3} more</span>
-                )}
-              </div>
-            )}
-          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditOpen(true);
+            }}
+            className="px-3 py-1.5 text-sm rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors text-white"
+          >
+            Edit
+          </button>
 
-          {/* Actions and Badge */}
-          <div className="flex-shrink-0 flex items-center gap-2">
-            {warranty.isExpired && (
-              <span className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-red-400/20 text-red-300 border border-red-400/30">
-                Expired
-              </span>
-            )}
-            {warranty.isExpiringSoon && (
-              <span className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-yellow-400/20 text-yellow-300 border border-yellow-400/30">
-                Expiring Soon
-              </span>
-            )}
-            <button
-              onClick={() => setEditOpen(true)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors text-white"
-            >
-              Edit
-            </button>
-
-            <button
-              onClick={() => {
-                if (showConfirm) {
-                  handleDelete();
-                } else {
-                  setShowConfirm(true);
-                  // Reset after 3 seconds if not clicked
-                  setTimeout(() => setShowConfirm(false), 3000);
-                }
-              }}
-              disabled={deleting}
-              className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
-                showConfirm
-                  ? "border-red-400/50 bg-red-500/30 text-red-200 hover:bg-red-500/40"
-                  : "border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-              } disabled:opacity-50`}
-            >
-              {deleting ? "Deleting..." : showConfirm ? "Confirm Delete?" : "Delete"}
-            </button>
-          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (showConfirm) {
+                handleDelete();
+              } else {
+                setShowConfirm(true);
+                setTimeout(() => setShowConfirm(false), 3000);
+              }
+            }}
+            disabled={deleting}
+            className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+              showConfirm
+                ? "border-red-400/50 bg-red-500/30 text-red-200 hover:bg-red-500/40"
+                : "border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+            } disabled:opacity-50`}
+          >
+            {deleting ? "Deleting..." : showConfirm ? "Confirm Delete?" : "Delete"}
+          </button>
         </div>
       </div>
 
