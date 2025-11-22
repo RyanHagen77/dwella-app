@@ -9,6 +9,7 @@ import Link from "next/link";
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import { RecordsPageClient } from "@/app/home/[homeId]/records/[recordId]/RecordsPageClient";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
+import {Breadcrumb} from "@/components/ui/Breadcrumb";
 
 export default async function RecordsPage({
   params,
@@ -131,16 +132,13 @@ export default async function RecordsPage({
 
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
+        <div className="mx-auto max-w-7xl px-4">
+          <Breadcrumb
             href={`/home/${homeId}`}
-            className="text-white/70 transition-colors hover:text-white"
-          >
-            {addrLine}
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white">Maintenance &amp; Repairs</span>
-        </nav>
+            label={addrLine}
+            current="Maintenance & Repairs"
+          />
+        </div>
 
         {/* Header */}
         <section className={glass}>
