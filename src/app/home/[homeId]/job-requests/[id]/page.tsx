@@ -21,6 +21,8 @@ import { glass, heading, textMeta } from "@/lib/glass";
 import { format } from "date-fns";
 import { JobRequestActions } from "../_components/JobRequestActions";
 import type { JobRequestForActions } from "../_types";
+import Breadcrumb from "@/components/ui/Breadcrumb";
+
 
 type PageProps = {
   params: Promise<{ homeId: string; id: string }>;
@@ -161,25 +163,13 @@ export default async function JobRequestDetailPage({ params }: PageProps) {
 
       <div className="mx-auto max-w-5xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href={`/home/${homeId}`}
-            className="text-white/70 transition-colors hover:text-white"
-          >
-            {addrLine}
-          </Link>
-          <span className="text-white/50">/</span>
-          <Link
-            href={`/home/${homeId}/completed-work-submissions`}
-            className="text-white/70 transition-colors hover:text-white"
-          >
-            Job Requests
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="max-w-xs truncate text-white">
-            {jobRequest.title}
-          </span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: addrLine, href: `/home/${homeId}` },
+            { label: "Requests & Submissions", href: `/home/${homeId}/completed-work-submissions` },
+            { label: jobRequest.title },
+          ]}
+        />
 
         {/* Header */}
         <section className={glass}>
