@@ -112,7 +112,7 @@ export default function ContractorApplyPage() {
           Apply as a contractor
         </h1>
         <p className="mb-5 text-sm text-white/75">
-          Join MyDwella and start building a verified record of the work you do on real homes.
+          Join MyDwella and start building a verified record of work for the homes you serve.
         </p>
 
         {/* Why join box */}
@@ -125,19 +125,19 @@ export default function ContractorApplyPage() {
               <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
                 ✓
               </span>
-              <span>Document your work on client properties.</span>
+              <span>Connect and stay connected with homes you serve.</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
                 ✓
               </span>
-              <span>Build a verified work history portfolio tied to real addresses.</span>
+              <span>Receive service requests, and provide a quote seamlessly.</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
                 ✓
               </span>
-              <span>Stay connected with homeowners after the job is done.</span>
+              <span>Store photo's, notes and warranty info.</span>
             </li>
             <li className="flex items-start gap-2.5">
               <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">

@@ -44,7 +44,7 @@ export default function CheckEmailPage() {
         </p>
 
         <div className="rounded-lg border border-white/15 bg-white/5 p-4 text-left text-sm text-white/80">
-          <p className="mb-2 font-medium">Didn&post receive the email?</p>
+          <p className="mb-2 font-medium">Didn&pos;t receive the email?</p>
           <ul className="space-y-1 text-xs text-white/70">
             <li>• Check your spam or junk folder</li>
             <li>• Make sure you entered the correct email</li>

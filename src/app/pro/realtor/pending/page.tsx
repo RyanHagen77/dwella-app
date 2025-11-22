@@ -94,7 +94,7 @@ export default async function RealtorPendingPage() {
             </li>
             <li className="flex items-start gap-2">
               <span className="mt-0.5">✓</span>
-              <span>Once approved, you can add verified records to listings</span>
+              <span>Once approved, receive work requests and provide verified records to the homes you serve</span>
             </li>
           </ul>
         </div>

@@ -106,7 +106,6 @@ export default async function RecordDetailPage({ params }: PageProps) {
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
-
         <Breadcrumb
           items={[
             { label: addrLine, href: `/home/${homeId}` },
