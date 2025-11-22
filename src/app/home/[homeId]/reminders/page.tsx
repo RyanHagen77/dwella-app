@@ -28,7 +28,6 @@ export default async function RemindersPage({
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Get home info for header
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: {
@@ -42,26 +41,26 @@ export default async function RemindersPage({
 
   if (!home) notFound();
 
-  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
+  const addrLine = `${home.address}${
+    home.city ? `, ${home.city}` : ""
+  }${home.state ? `, ${home.state}` : ""}${
+    home.zip ? ` ${home.zip}` : ""
+  }`;
 
-  // Build query filters
   const where: {
     homeId: string;
     title?: { contains: string; mode: "insensitive" };
   } = { homeId };
 
-  // Search
   if (search) {
     where.title = { contains: search, mode: "insensitive" };
   }
 
-  // Build sort order
   type OrderBy = { dueAt: "asc" | "desc" } | { title: "asc" };
-  let orderBy: OrderBy = { dueAt: "asc" }; // Default: soonest first
+  let orderBy: OrderBy = { dueAt: "asc" };
   if (sort === "latest") orderBy = { dueAt: "desc" };
   if (sort === "title") orderBy = { title: "asc" };
 
-  // Get all reminders
   const reminders = await prisma.reminder.findMany({
     where,
     orderBy,
@@ -82,55 +81,54 @@ export default async function RemindersPage({
     },
   });
 
-  // Calculate status on server (avoids hydration issues)
-  // Normalize to midnight to ensure consistent calculations
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
   const remindersWithStatus: ReminderItem[] = reminders.map((r) => {
-  const dueDate = new Date(r.dueAt);
-  dueDate.setHours(0, 0, 0, 0);
+    const dueDate = new Date(r.dueAt);
+    dueDate.setHours(0, 0, 0, 0);
 
-  const daysUntil = Math.ceil(
-    (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
-  const isOverdue = dueDate < now;
-  const isDueSoon = !isOverdue && daysUntil <= 7;
+    const daysUntil = Math.ceil(
+      (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const isOverdue = dueDate < now;
+    const isDueSoon = !isOverdue && daysUntil <= 7;
 
-  const status: ReminderItem["status"] = isOverdue
-    ? "overdue"
-    : isDueSoon
-    ? "due-soon"
-    : "upcoming";
+    const status: ReminderItem["status"] = isOverdue
+      ? "overdue"
+      : isDueSoon
+      ? "due-soon"
+      : "upcoming";
 
-  return {
-    id: r.id,
-    title: r.title,
-    dueAt: r.dueAt.toISOString(), // string for client
-    note: r.note,
-    isOverdue,
-    isDueSoon,
-    daysUntil,
-    formattedDate: dueDate.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }),
-    status,
-    attachments: r.attachments.map((att) => ({
-      id: att.id,
-      filename: att.filename,
-      url: att.url,
-      mimeType: att.mimeType,
-      size: Number(att.size ?? 0),
-    })),
-  };
-});
+    return {
+      id: r.id,
+      title: r.title,
+      dueAt: r.dueAt.toISOString(),
+      note: r.note,
+      isOverdue,
+      isDueSoon,
+      daysUntil,
+      formattedDate: dueDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      status,
+      attachments: r.attachments.map((att) => ({
+        id: att.id,
+        filename: att.filename,
+        url: att.url,
+        mimeType: att.mimeType,
+        size: Number(att.size ?? 0),
+      })),
+    };
+  });
 
-  // Calculate counts for stats
-  const overdueCount = remindersWithStatus.filter(r => r.isOverdue).length;
-  const upcomingCount = remindersWithStatus.filter(r => !r.isOverdue).length;
-  const next7DaysCount = remindersWithStatus.filter(r => !r.isOverdue && r.daysUntil <= 7).length;
+  const overdueCount = remindersWithStatus.filter((r) => r.isOverdue).length;
+  const upcomingCount = remindersWithStatus.filter((r) => !r.isOverdue).length;
+  const next7DaysCount = remindersWithStatus.filter(
+    (r) => !r.isOverdue && r.daysUntil <= 7
+  ).length;
 
   return (
     <main className="min-h-screen text-white">
@@ -148,15 +146,8 @@ export default async function RemindersPage({
       </div>
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
+        <Breadcrumb href={`/home/${homeId}`} label={addrLine} current="Reminders" />
 
-        {/* Breadcrumb */}
-        <Breadcrumb
-          href={`/home/${homeId}`}
-          label={addrLine}
-          current="Reminders"
-        />
-
-        {/* Header */}
         <section className={glass}>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -173,13 +164,18 @@ export default async function RemindersPage({
                   stroke="currentColor"
                   className="w-5 h-5"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                  />
                 </svg>
               </Link>
               <div className="flex-1 min-w-0">
                 <h1 className={`text-2xl font-bold ${heading}`}>Reminders</h1>
                 <p className={`text-sm ${textMeta} mt-1`}>
-                  {remindersWithStatus.length} {remindersWithStatus.length === 1 ? "reminder" : "reminders"}
+                  {remindersWithStatus.length}{" "}
+                  {remindersWithStatus.length === 1 ? "reminder" : "reminders"}
                 </p>
               </div>
             </div>
@@ -189,7 +185,6 @@ export default async function RemindersPage({
           </div>
         </section>
 
-        {/* Stats Overview */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total" value={remindersWithStatus.length} />
           <StatCard
@@ -205,7 +200,6 @@ export default async function RemindersPage({
           />
         </section>
 
-        {/* Client-side component for filters and list */}
         <RemindersPageClient
           reminders={remindersWithStatus}
           homeId={homeId}
@@ -213,7 +207,9 @@ export default async function RemindersPage({
           initialSort={sort}
           overdueCount={overdueCount}
           upcomingCount={upcomingCount}
+          // ✅ don't pass onAddReminderAction from server unless it's a Server Action
         />
+
         <div className="h-12" />
       </div>
     </main>
@@ -223,7 +219,7 @@ export default async function RemindersPage({
 function StatCard({
   label,
   value,
-  highlight
+  highlight,
 }: {
   label: string;
   value: string | number;
@@ -232,11 +228,15 @@ function StatCard({
   return (
     <div className={glassTight}>
       <div className="text-sm text-white/70">{label}</div>
-      <div className={`mt-1 text-xl font-semibold ${
-        highlight === "red" ? "text-red-400" :
-        highlight === "yellow" ? "text-yellow-400" :
-        "text-white"
-      }`}>
+      <div
+        className={`mt-1 text-xl font-semibold ${
+          highlight === "red"
+            ? "text-red-400"
+            : highlight === "yellow"
+            ? "text-yellow-400"
+            : "text-white"
+        }`}
+      >
         {value}
       </div>
     </div>

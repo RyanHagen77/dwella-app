@@ -34,8 +34,8 @@ type Props = {
   initialSort?: string;
   overdueCount: number;
   upcomingCount: number;
-  /** Callback to open the “add reminder” modal from the parent page */
-  onAddReminder?: () => void;
+  /** Optional UI callback (client-only). If passed from server it must be a Server Action. */
+  onAddReminderAction?: () => void;
 };
 
 export function RemindersPageClient({
@@ -46,7 +46,7 @@ export function RemindersPageClient({
   initialSort,
   overdueCount,
   upcomingCount,
-  onAddReminder,
+  onAddReminderAction,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -66,27 +66,20 @@ export function RemindersPageClient({
     const params = new URLSearchParams(searchParams?.toString());
 
     if (updates.search !== undefined) {
-      if (updates.search) {
-        params.set("search", updates.search);
-      } else {
-        params.delete("search");
-      }
+      if (updates.search) params.set("search", updates.search);
+      else params.delete("search");
     }
 
     if (updates.status !== undefined) {
-      if (updates.status && updates.status !== "all") {
+      if (updates.status && updates.status !== "all")
         params.set("status", updates.status);
-      } else {
-        params.delete("status");
-      }
+      else params.delete("status");
     }
 
     if (updates.sort !== undefined) {
-      if (updates.sort && updates.sort !== "soonest") {
+      if (updates.sort && updates.sort !== "soonest")
         params.set("sort", updates.sort);
-      } else {
-        params.delete("sort");
-      }
+      else params.delete("sort");
     }
 
     const queryString = params.toString();
@@ -179,10 +172,10 @@ export function RemindersPageClient({
               >
                 Clear filters
               </button>
-            ) : onAddReminder ? (
+            ) : onAddReminderAction ? (
               <button
                 type="button"
-                onClick={onAddReminder}
+                onClick={onAddReminderAction}
                 className={ctaGhost}
               >
                 + Add your first reminder
@@ -230,14 +223,10 @@ function ReminderCard({
     try {
       const res = await fetch(
         `/api/home/${homeId}/reminders/${reminder.id}`,
-        {
-          method: "DELETE",
-        }
+        { method: "DELETE" }
       );
 
-      if (!res.ok) {
-        throw new Error("Failed to delete reminder");
-      }
+      if (!res.ok) throw new Error("Failed to delete reminder");
 
       router.refresh();
     } catch (error) {
@@ -250,25 +239,24 @@ function ReminderCard({
 
   return (
     <>
-      <div
+      <Link
+        href={`/home/${homeId}/reminders/${reminder.id}`}
         className={`block rounded-lg border p-4 transition-colors ${
           isOverdue
-            ? "border-red-400/30 bg-red-500/5"
+            ? "border-red-400/30 bg-red-500/5 hover:bg-red-500/10"
             : isDueSoon
-            ? "border-yellow-400/30 bg-yellow-500/5"
-            : "border-white/10 bg-white/5"
+            ? "border-yellow-400/30 bg-yellow-500/5 hover:bg-yellow-500/10"
+            : "border-white/10 bg-white/5 hover:bg-white/10"
         }`}
       >
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1 space-y-2">
-            {/* Title */}
             <div className="flex items-center gap-2">
-              <h3 className="flex-1 text-lg font-medium text-white">
+              <h3 className="flex-1 truncate text-lg font-medium text-white">
                 {reminder.title}
               </h3>
             </div>
 
-            {/* Date Info */}
             <div className="flex flex-wrap items-center gap-4">
               <span
                 className={`text-sm font-medium ${
@@ -282,6 +270,7 @@ function ReminderCard({
                   year: "numeric",
                 })}
               </span>
+
               <span
                 className={`text-sm ${
                   isDueSoon
@@ -305,24 +294,24 @@ function ReminderCard({
               </span>
             </div>
 
-            {/* Note */}
             {reminder.note && (
               <p className="line-clamp-1 text-sm text-white/70">
                 {reminder.note}
               </p>
             )}
 
-            {/* Attachments */}
-            {reminder.attachments && reminder.attachments.length > 0 && (
+            {reminder.attachments?.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
                 <span>📎</span>
                 <span>
                   {reminder.attachments.length} attachment
                   {reminder.attachments.length > 1 ? "s" : ""}
                 </span>
+
                 {reminder.attachments.slice(0, 3).map((att) => (
                   <button
                     key={att.id}
+                    type="button"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -338,6 +327,7 @@ function ReminderCard({
                       : att.filename}
                   </button>
                 ))}
+
                 {reminder.attachments.length > 3 && (
                   <span>+{reminder.attachments.length - 3} more</span>
                 )}
@@ -345,7 +335,6 @@ function ReminderCard({
             )}
           </div>
 
-          {/* Actions and Badge */}
           <div className="flex flex-shrink-0 items-center gap-2">
             {isOverdue && (
               <span className="inline-flex items-center rounded border border-red-400/30 bg-red-400/20 px-2 py-1.5 text-xs font-medium text-red-300">
@@ -357,15 +346,25 @@ function ReminderCard({
                 Due Soon
               </span>
             )}
+
             <button
-              onClick={() => setEditOpen(true)}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setEditOpen(true);
+              }}
               className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/15"
             >
               Edit
             </button>
 
             <button
-              onClick={() => {
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
                 if (showConfirm) {
                   handleDelete();
                 } else {
@@ -388,7 +387,7 @@ function ReminderCard({
             </button>
           </div>
         </div>
-      </div>
+      </Link>
 
       <EditReminderModal
         open={editOpen}
