@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
+import {Breadcrumb} from "@/components/ui/Breadcrumb";
 
 type Connection = {
   id: string;
@@ -94,7 +95,6 @@ type Tab = "requests-and-approvals" | "find-pros";
 export default function WorkClient({
   homeId,
   homeAddress,
-  connections,
   pendingWork,
   jobRequests,
 }: {
@@ -127,20 +127,11 @@ export default function WorkClient({
 
       <div className="mx-auto max-w-5xl space-y-6 p-6">
       {/* Breadcrumb */}
-<nav className="flex items-center gap-2 text-sm whitespace-nowrap overflow-hidden">
-  <Link
-    href={`/home/${homeId}`}
-    className="text-white/70 hover:text-white transition-colors truncate max-w-[60vw] sm:max-w-none"
-  >
-    {homeAddress}
-  </Link>
-
-  <span className="text-white/50">/</span>
-
-  <span className="text-white truncate max-w-[40vw] sm:max-w-none">
-    Requests & Submissions
-  </span>
-</nav>
+      <Breadcrumb
+        href={`/home/${homeId}`}
+        label={homeAddress}
+        current="Maintenance & Repairs"
+      />
 
         {/* Header */}
         <section className={glass}>
@@ -284,106 +275,6 @@ function RequestsAndApprovalsTab({
           </div>
         </>
       )}
-    </div>
-  );
-}
-
-/* ---------- Request Service Tab (unchanged) ---------- */
-
-function RequestServiceTab({
-  connections,
-  homeId,
-}: {
-  connections: Connection[];
-  homeId: string;
-}) {
-  if (connections.length === 0) {
-    return (
-      <div className="py-10 text-center text-white/80">
-        <div className="mb-4 text-5xl">🔧</div>
-        <p className="text-lg">No connected contractors yet.</p>
-        <p className={`mt-1 text-sm ${textMeta}`}>
-          Invite pros to connect to this home so you can request service from
-          them.
-        </p>
-        <Link
-          href={`/home/${homeId}/invitations`}
-          className={`${ctaPrimary} mt-4 inline-block`}
-        >
-          Invite a Pro
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <p className="mb-4 text-sm text-white/70">
-        Request service from your connected contractors
-      </p>
-      {connections.map((connection) => (
-        <div
-          key={connection.id}
-          className="rounded-xl border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {connection.contractor.image && (
-                <Image
-                  src={connection.contractor.image}
-                  alt={
-                    connection.contractor.name || connection.contractor.email
-                  }
-                  width={48}
-                  height={48}
-                  className="rounded-full"
-                />
-              )}
-              <div>
-                <p className="text-lg font-semibold text-white">
-                  {connection.contractor.name || connection.contractor.email}
-                </p>
-                {connection.contractor.proProfile && (
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-white/60">
-                    <span>
-                      {connection.contractor.proProfile.businessName ||
-                        connection.contractor.proProfile.company}
-                    </span>
-                    {connection.contractor.proProfile.rating && (
-                      <span>
-                        ⭐ {connection.contractor.proProfile.rating}
-                      </span>
-                    )}
-                    {connection.contractor.proProfile.verified && (
-                      <span className="text-emerald-300">✓ Verified</span>
-                    )}
-                  </div>
-                )}
-                {connection.contractor.proProfile?.phone && (
-                  <p className="mt-1 text-sm text-white/60">
-                    📞 {connection.contractor.proProfile.phone}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Link
-                href={`/home/${homeId}/job-requests/new`}
-                className={`${ctaPrimary} whitespace-nowrap text-center text-sm`}
-              >
-                Request Service
-              </Link>
-              <Link
-                href={`/home/${homeId}/connections/${connection.id}`}
-                className="whitespace-nowrap rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-center text-sm text-white hover:bg-white/10"
-              >
-                View History
-              </Link>
-            </div>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
