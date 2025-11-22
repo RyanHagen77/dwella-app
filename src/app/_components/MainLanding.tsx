@@ -264,7 +264,7 @@ function MyDwallaLogo({ className }: { className?: string }) {
           letterSpacing: 0.5,
         }}
       >
-        MyDwalla
+        MyDwella
       </text>
     </svg>
   );
