@@ -127,14 +127,12 @@ export default async function HomeInvitationsPage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      <div className="mx-auto max-w-6xl p-6">
       <HomeInvitationsClient
           homeId={homeId}
           homeAddress={homeAddress}
           receivedInvitations={receivedInvitations}
           sentInvitations={sentInvitations}
         />
-      </div>
     </main>
   );
 }
