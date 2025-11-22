@@ -130,7 +130,7 @@ export default function WorkClient({
       <Breadcrumb
         href={`/home/${homeId}`}
         label={homeAddress}
-        current="Maintenance & Repairs"
+        current="Requests & Submissions"
       />
 
         {/* Header */}
@@ -278,6 +278,7 @@ function RequestsAndApprovalsTab({
     </div>
   );
 }
+
 
 /* ---------- Requested Jobs Tab (same logic) ---------- */
 
