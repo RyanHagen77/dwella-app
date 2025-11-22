@@ -9,6 +9,9 @@ import Link from "next/link";
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import { RemindersPageClient } from "./_components/RemindersPageClient";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
+import Breadcrumb from "@/components/ui/Breadcrumb";
+
+import type { ReminderItem } from "./_components/RemindersPageClient";
 
 export default async function RemindersPage({
   params,
@@ -84,33 +87,45 @@ export default async function RemindersPage({
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  const remindersWithStatus = reminders.map(r => {
-    const dueDate = new Date(r.dueAt);
-    dueDate.setHours(0, 0, 0, 0);
+  const remindersWithStatus: ReminderItem[] = reminders.map((r) => {
+  const dueDate = new Date(r.dueAt);
+  dueDate.setHours(0, 0, 0, 0);
 
-    const daysUntil = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    const isOverdue = dueDate < now;
-    const isDueSoon = !isOverdue && daysUntil <= 7;
+  const daysUntil = Math.ceil(
+    (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  );
+  const isOverdue = dueDate < now;
+  const isDueSoon = !isOverdue && daysUntil <= 7;
 
-    // Format date on server to avoid hydration issues
-    const formattedDate = new Date(r.dueAt).toLocaleDateString("en-US", {
+  const status: ReminderItem["status"] = isOverdue
+    ? "overdue"
+    : isDueSoon
+    ? "due-soon"
+    : "upcoming";
+
+  return {
+    id: r.id,
+    title: r.title,
+    dueAt: r.dueAt.toISOString(), // string for client
+    note: r.note,
+    isOverdue,
+    isDueSoon,
+    daysUntil,
+    formattedDate: dueDate.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
-    });
-
-    return {
-      id: r.id,
-      title: r.title,
-      dueAt: r.dueAt,
-      note: r.note,
-      isOverdue,
-      isDueSoon,
-      daysUntil,
-      formattedDate,
-      attachments: r.attachments,
-    };
-  });
+    }),
+    status,
+    attachments: r.attachments.map((att) => ({
+      id: att.id,
+      filename: att.filename,
+      url: att.url,
+      mimeType: att.mimeType,
+      size: Number(att.size ?? 0),
+    })),
+  };
+});
 
   // Calculate counts for stats
   const overdueCount = remindersWithStatus.filter(r => r.isOverdue).length;
@@ -135,13 +150,11 @@ export default async function RemindersPage({
       <div className="mx-auto max-w-7xl p-6 space-y-6">
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link href={`/home/${homeId}`} className="text-white/70 hover:text-white transition-colors">
-            {addrLine}
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white">Reminders</span>
-        </nav>
+        <Breadcrumb
+          href={`/home/${homeId}`}
+          label={addrLine}
+          current="Reminders"
+        />
 
         {/* Header */}
         <section className={glass}>
@@ -198,8 +211,9 @@ export default async function RemindersPage({
           homeId={homeId}
           initialSearch={search}
           initialSort={sort}
+          overdueCount={overdueCount}
+          upcomingCount={upcomingCount}
         />
-
         <div className="h-12" />
       </div>
     </main>

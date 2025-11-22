@@ -18,6 +18,7 @@ type Props = {
   reminder: ReminderData;
 };
 
+
 export function ReminderActions({ reminderId, homeId, reminder }: Props) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
@@ -84,7 +85,7 @@ export function ReminderActions({ reminderId, homeId, reminder }: Props) {
 
       <EditReminderModal
         open={editOpen}
-        onClose={() => setEditOpen(false)}
+        onCloseAction={() => setEditOpen(false)}
         reminder={reminder}
         homeId={homeId}
       />

@@ -7,19 +7,23 @@ import { glass, ctaGhost } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
 import { EditReminderModal } from "./EditReminderModal";
 
-type ReminderItem = {
+export type ReminderItem = {
   id: string;
   title: string;
   dueAt: string;
   note: string | null;
+  formattedDate: string;
   status: "overdue" | "due-soon" | "upcoming";
-  attachments: Array<{
+  isOverdue: boolean;
+  isDueSoon: boolean;
+  daysUntil: number;
+  attachments: {
     id: string;
     filename: string;
     url: string;
     mimeType: string;
     size: number;
-  }>;
+  }[];
 };
 
 type Props = {
