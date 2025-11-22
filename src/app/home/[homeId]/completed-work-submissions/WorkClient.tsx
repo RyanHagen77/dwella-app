@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
-import {Breadcrumb} from "@/components/ui/Breadcrumb";
+import Breadcrumb from "@/components/ui/Breadcrumb";
 
 type Connection = {
   id: string;

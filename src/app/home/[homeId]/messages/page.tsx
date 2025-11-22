@@ -17,8 +17,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
 import { glass, glassTight, heading, textMeta } from "@/lib/glass";
-import {Breadcrumb} from "@/components/ui/Breadcrumb";
-
+import Breadcrumb from "@/components/ui/Breadcrumb";
 
 export default async function HomeMessagesPage({
   params,

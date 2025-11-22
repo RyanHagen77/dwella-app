@@ -7,6 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
 import { RecordActions } from "./_components/RecordActions";
+import Breadcrumb from "@/components/ui/Breadcrumb";
 
 type PageProps = {
   params: Promise<{
@@ -105,25 +106,14 @@ export default async function RecordDetailPage({ params }: PageProps) {
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href={`/home/${homeId}`}
-            className="text-white/70 hover:text-white transition-colors"
-          >
-            {addrLine}
-          </Link>
-          <span className="text-white/50">/</span>
-          <Link
-            href={`/home/${homeId}/records`}
-            className="text-white/70 hover:text-white transition-colors"
-          >
-            Maintenance &amp; Repairs
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white truncate max-w-xs">
-            {record.title}
-          </span>
-        </nav>
+
+        <Breadcrumb
+          items={[
+            { label: addrLine, href: `/home/${homeId}` },
+            { label: "Maintenance & Repairs", href: `/home/${homeId}/records` },
+            { label: record.title }, // current page
+          ]}
+        />
 
         {/* Header */}
         <section className={glass}>
