@@ -467,7 +467,7 @@ function PendingWorkTab({
     if (!confirm("Are you sure you want to reject this work?")) return;
 
     try {
-      const res = await fetch(`/api/home/${homeId}/work/${workId}/reject`, {
+      const res = await fetch(`/api/home/${homeId}/completed-work-submissions/${workId}/reject`, {
         method: "POST",
       });
 
