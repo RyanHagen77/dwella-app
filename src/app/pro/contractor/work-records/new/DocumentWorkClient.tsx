@@ -194,7 +194,7 @@ export function DocumentWorkClient({ connectedHomes }: DocumentWorkClientProps) 
       <section className={glass}>
         <h1 className={`mb-2 text-2xl font-semibold ${heading}`}>Document Work</h1>
         <p className={textMeta}>
-          Add a record of work you&pos;ve completed at a connected property
+          Add a record of work you&#39;ve completed at a connected property
         </p>
       </section>
 

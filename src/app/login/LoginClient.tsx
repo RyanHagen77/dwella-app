@@ -80,8 +80,7 @@ export default function LoginClient() {
             Sign in to MyDwella
           </h1>
           <p className="mt-2 text-sm text-white/75">
-            Your home’s journal, plus the tools your contractors need to keep it
-            up to date.
+            Your home’s digital record.
           </p>
         </div>
 
