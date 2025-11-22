@@ -17,7 +17,7 @@ const getFromAddress = () => {
     return `Dwella <${cleaned}>`;
   }
 
-  return cleaned || "Dwella <hello@mydwellaapp.com>";
+  return cleaned || "MyDwella Team <hello@mydwellaapp.com>";
 };
 
 // Password reset email
@@ -39,10 +39,10 @@ export async function sendPasswordResetEmail({
     token
   )}`;
 
-  const subject = "Reset your Dwella password";
+  const subject = "Reset your MyDwella password";
 
   const text = [
-    "You requested to reset your Dwella password.",
+    "You requested to reset your MyDwella password.",
     "",
     "Click the link below to choose a new password:",
     resetUrl,
@@ -138,10 +138,10 @@ export async function sendPasswordResetEmail({
                 <tr>
                   <td style="padding: 30px 40px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
                     <p style="margin: 0 0 8px 0; font-size: 14px; color: rgba(255, 255, 255, 0.5);">
-                      The Dwella Team
+                      The MyDwella Team
                     </p>
                     <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.4);">
-                      Your home's journal, plus the tools your contractors need
+                      Your home's journal. Organized. Verified.
                     </p>
                   </td>
                 </tr>

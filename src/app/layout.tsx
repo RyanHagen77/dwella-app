@@ -5,7 +5,7 @@ import SessionProviderWrapper from "@/components/SessionProviderWrapper";
 import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata = {
-  title: "Dwella",
+  title: "MyDwella",
   description: "Your home's digital record",
 };
 

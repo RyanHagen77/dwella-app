@@ -3,8 +3,6 @@
 import * as React from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Input } from "@/components/ui";
-import type { PropertyPayload } from "@/lib/types";
 
 type Audience = "home" | "pro";
 
@@ -21,33 +19,6 @@ export default function MainLanding() {
     router.replace(`/?${qs.toString()}`);
   }, [aud, router, search]);
 
-  const [addr, setAddr] = React.useState("");
-  const [data, setData] = React.useState<PropertyPayload | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-
-  async function onLookup(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setData(null);
-    try {
-      const res = await fetch("/api/property/lookup", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: addr }),
-      });
-      if (!res.ok) throw new Error("Lookup failed");
-      setData(await res.json());
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const hero = React.useMemo(() => {
     if (aud === "home") {
       return {
@@ -55,7 +26,6 @@ export default function MainLanding() {
         sub: "Store repairs, upgrades, reminders and warranties. Invite and connect professionals to document their work and stay connected.",
         primary: { label: "Create home record", href: "/home" },
         secondary: { label: "See sample report", href: "/report" },
-        showAddress: true,
       };
     }
     return {
@@ -63,9 +33,15 @@ export default function MainLanding() {
       sub: "Document your completed work on client properties, maintain verified portfolios, and stay connected with homeowners and their trusted circle long after the job is done.",
       primary: { label: "Apply as a Pro", href: "/apply" },
       secondary: { label: "View sample record", href: "/report" },
-      showAddress: false,
     };
   }, [aud]);
+
+  const pillBase =
+    "px-3 py-1 text-xs rounded-full transition flex items-center justify-center";
+  const pillActive =
+    "bg-orange-500 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.15),0_8px_24px_rgba(255,140,0,0.35)]";
+  const pillInactive =
+    "text-white/85 hover:text-white hover:bg-orange-500/10";
 
   return (
     <main className="relative min-h-screen text-white">
@@ -91,9 +67,9 @@ export default function MainLanding() {
               type="button"
               onClick={() => router.push("/home")}
               className="cursor-pointer"
-              aria-label="Dwella home"
+              aria-label="MyDwalla home"
             >
-              <DwellaLogo className="h-8 w-auto sm:h-10" />
+              <MyDwallaLogo className="h-8 w-auto sm:h-10" />
             </button>
           </div>
 
@@ -109,24 +85,20 @@ export default function MainLanding() {
       {/* Hero */}
       <section className="px-4 pt-8 md:px-8">
         <div className="mx-auto max-w-6xl">
-          {/* Audience pills */}
-          <div className="mb-6 md:mb-8 inline-flex overflow-hidden rounded-full border border-white/20 bg-white/10 p-0.5 backdrop-blur-sm">
+          {/* Audience pills (orange always, active orange bg) */}
+          <div className="mb-6 md:mb-8 inline-flex overflow-hidden rounded-full border border-orange-400/40 bg-orange-500/10 p-0.5 backdrop-blur-sm">
             <button
               onClick={() => setAud("home")}
-              className={`px-3 py-1 text-xs rounded-full transition ${
-                aud === "home"
-                  ? "bg-white text-slate-900"
-                  : "text-white/85 hover:text-white"
+              className={`${pillBase} ${
+                aud === "home" ? pillActive : pillInactive
               }`}
             >
               For Homeowners
             </button>
             <button
               onClick={() => setAud("pro")}
-              className={`px-3 py-1 text-xs rounded-full transition ${
-                aud === "pro"
-                  ? "bg-white text-slate-900"
-                  : "text-white/85 hover:text-white"
+              className={`${pillBase} ${
+                aud === "pro" ? pillActive : pillInactive
               }`}
             >
               For Pros
@@ -202,7 +174,7 @@ export default function MainLanding() {
                 [
                   "1",
                   "Claim your home",
-                  "Find your address and verify ownership to start your home’s journal.",
+                  "Verify ownership to start your home’s journal.",
                 ],
                 [
                   "2",
@@ -246,53 +218,20 @@ export default function MainLanding() {
         </div>
       </section>
 
-      {/* Preview state */}
-      {loading && (
-        <div className="mx-auto mt-6 max-w-6xl px-4 md:px-8">
-          <div className="h-24 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm" />
-        </div>
-      )}
-
-      {data && (
-        <section className="mx-auto mt-6 grid max-w-6xl grid-cols-1 gap-6 px-4 md:grid-cols-3 md:px-8">
-          <div className="rounded-2xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm">
-            <h3 className="text-lg font-medium">Property</h3>
-            <p className="text-white/85">{data.property.address}</p>
-          </div>
-          <div className="space-y-3">
-            <div className="rounded-2xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm">
-              <div className="text-xs text-white/70">Est. Value</div>
-              <div className="text-lg font-semibold">
-                {data.property.estValue.toLocaleString(undefined, {
-                  style: "currency",
-                  currency: "USD",
-                })}
-              </div>
-            </div>
-            <div className="rounded-2xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm">
-              <div className="text-xs text-white/70">Beds/Baths</div>
-              <div className="text-lg font-semibold">
-                {data.property.beds}/{data.property.baths}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
       <div className="h-16" />
     </main>
   );
 }
 
-/** Inline SVG Dwella logo: house + green check + rounded wordmark */
-function DwellaLogo({ className }: { className?: string }) {
+/** Inline SVG MyDwalla logo */
+function MyDwallaLogo({ className }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 260 72"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       role="img"
-      aria-label="Dwella"
+      aria-label="MyDwalla"
     >
       {/* House outline */}
       <path
@@ -325,7 +264,7 @@ function DwellaLogo({ className }: { className?: string }) {
           letterSpacing: 0.5,
         }}
       >
-        MyDwella
+        MyDwalla
       </text>
     </svg>
   );
