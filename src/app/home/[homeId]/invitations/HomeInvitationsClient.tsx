@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import AddressVerification from "@/components/AddressVerification";
-import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
+import { glass, glassTight, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import { InviteProModal } from "./InviteProModal";
 import { useToast } from "@/components/ui/Toast";
 import Breadcrumb from "@/components/ui/Breadcrumb";
@@ -59,11 +59,32 @@ type SentInvitation = InvitationBase & {
 
 type Tab = "received" | "sent";
 
+/* ---------- Helpers ---------- */
+
+function fmtDate(d: string | Date) {
+  try {
+    return new Date(d).toLocaleDateString();
+  } catch {
+    return "—";
+  }
+}
+
+function inviterLabel(inv: ReceivedInvitation) {
+  return (
+    inv.inviter?.proProfile?.businessName ||
+    inv.inviter?.proProfile?.company ||
+    inv.inviter?.name ||
+    inv.inviter?.email ||
+    inv.invitedEmail
+  );
+}
+
 /* ---------- Shared Status Badge ---------- */
 
 function StatusBadge({ status }: { status: string }) {
   const styles =
     {
+      PENDING: "bg-sky-500/15 text-sky-200 border-sky-500/30",
       ACCEPTED: "bg-green-500/20 text-green-300 border-green-500/30",
       DECLINED: "bg-red-500/20 text-red-300 border-red-500/30",
       CANCELLED: "bg-gray-500/20 text-gray-300 border-gray-500/30",
@@ -71,7 +92,7 @@ function StatusBadge({ status }: { status: string }) {
     }[status] || "bg-white/10 text-white/60 border-white/20";
 
   return (
-    <span className={`rounded-lg border px-3 py-1 text-sm font-medium ${styles}`}>
+    <span className={`shrink-0 rounded-lg border px-2.5 py-1 text-xs font-semibold tracking-wide ${styles}`}>
       {status}
     </span>
   );
@@ -95,10 +116,10 @@ function ReceivedTab({
 
   if (invitations.length === 0) {
     return (
-      <div className="py-10 text-center text-white/80">
-        <div className="mb-4 text-5xl">📨</div>
-        <p className="text-lg">No invitations received yet.</p>
-        <p className={`mt-1 text-sm ${textMeta}`}>
+      <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+        <div className="mb-3 text-5xl">📨</div>
+        <p className="mb-1 text-white/90">No invitations received yet</p>
+        <p className={`text-sm ${textMeta}`}>
           When a contractor invites you to connect, you&apos;ll see it here.
         </p>
       </div>
@@ -109,73 +130,95 @@ function ReceivedTab({
     <div className="space-y-6">
       {pending.length > 0 && (
         <div>
-          <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
+          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
             Pending ({pending.length})
           </h2>
-          <div className="space-y-4">
-            {pending.map((invitation) => (
+
+          <div className="space-y-3">
+            {pending.map((inv) => (
               <div
-                key={invitation.id}
-                className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-colors hover:bg-white/10"
+                key={inv.id}
+                className={`${glassTight} flex flex-col gap-4 p-4 sm:p-5`}
               >
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    {invitation.inviter?.image && (
+                {/* Top row */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    {/* Avatar */}
+                    {inv.inviter?.image ? (
                       <Image
-                        src={invitation.inviter.image}
-                        alt={invitation.inviter.name || invitation.inviter.email}
-                        width={50}
-                        height={50}
+                        src={inv.inviter.image}
+                        alt={inv.inviter.name || inv.inviter.email}
+                        width={48}
+                        height={48}
                         className="rounded-full"
                       />
+                    ) : (
+                      <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                        <span className="text-lg font-medium">
+                          {inviterLabel(inv)[0]?.toUpperCase() || "?"}
+                        </span>
+                      </div>
                     )}
-                    <div>
-                      <p className="text-lg font-semibold text-white">
-                        {invitation.inviter?.name ||
-                          invitation.inviter?.email ||
-                          invitation.invitedEmail}
+
+                    {/* Names + meta */}
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-white">
+                        {inviterLabel(inv)}
                       </p>
-                      {invitation.inviter?.proProfile && (
-                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-white/60">
-                          <span>
-                            {invitation.inviter.proProfile.businessName ||
-                              invitation.inviter.proProfile.company}
-                          </span>
-                          {invitation.inviter.proProfile.rating != null && (
-                            <span>⭐ {invitation.inviter.proProfile.rating}</span>
+
+                      {inv.inviter?.proProfile && (
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/60">
+                          {!!inv.inviter.proProfile.rating && (
+                            <span>⭐ {inv.inviter.proProfile.rating}</span>
                           )}
-                          {invitation.inviter.proProfile.verified && (
+                          {inv.inviter.proProfile.verified && (
                             <span className="text-emerald-300">✓ Verified</span>
+                          )}
+                          {inv.inviter.proProfile.phone && (
+                            <span>{inv.inviter.proProfile.phone}</span>
                           )}
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="shrink-0 text-right text-xs text-white/60">
-                    <p>Sent {new Date(invitation.createdAt).toLocaleDateString()}</p>
-                    <p>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
+
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <StatusBadge status={inv.status} />
+                    <p className={`text-[11px] ${textMeta}`}>
+                      Sent {fmtDate(inv.createdAt)}
+                    </p>
+                    <p className={`text-[11px] ${textMeta}`}>
+                      Expires {fmtDate(inv.expiresAt)}
+                    </p>
                   </div>
                 </div>
 
-                {invitation.message && (
-                  <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="mb-1 text-xs font-medium text-white/80">Message:</p>
-                    <p className="text-sm text-white/70">{invitation.message}</p>
+                {/* Message */}
+                {inv.message && (
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                    <p className="mb-1 text-[11px] font-semibold text-white/80">
+                      Message
+                    </p>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      {inv.message}
+                    </p>
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
-                    onClick={() => onAccept(invitation.id)}
-                    disabled={processing === invitation.id}
-                    className="rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-medium text-white transition-all hover:from-green-600 hover:to-emerald-600 disabled:opacity-50"
+                    onClick={() => onAccept(inv.id)}
+                    disabled={processing === inv.id}
+                    className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white transition-all hover:from-green-600 hover:to-emerald-600 disabled:opacity-50"
                   >
-                    {processing === invitation.id ? "Processing..." : "✓ Accept"}
+                    {processing === inv.id ? "Processing..." : "✓ Accept"}
                   </button>
+
                   <button
-                    onClick={() => onDecline(invitation.id)}
-                    disabled={processing === invitation.id}
-                    className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10 disabled:opacity-50"
+                    onClick={() => onDecline(inv.id)}
+                    disabled={processing === inv.id}
+                    className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10 disabled:opacity-50"
                   >
                     ✗ Decline
                   </button>
@@ -188,26 +231,43 @@ function ReceivedTab({
 
       {history.length > 0 && (
         <div>
-          <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
+          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
             History ({history.length})
           </h2>
+
           <div className="space-y-2">
-            {history.map((invitation) => (
+            {history.map((inv) => (
               <div
-                key={invitation.id}
-                className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-xl transition-colors hover:bg-white/10"
+                key={inv.id}
+                className={`${glassTight} flex items-center justify-between gap-3 p-4`}
               >
-                <div>
-                  <p className="font-medium text-white">
-                    {invitation.inviter?.name ||
-                      invitation.inviter?.email ||
-                      invitation.invitedEmail}
-                  </p>
-                  <p className={`text-sm ${textMeta}`}>
-                    {new Date(invitation.createdAt).toLocaleDateString()}
-                  </p>
+                <div className="flex items-center gap-3 min-w-0">
+                  {inv.inviter?.image ? (
+                    <Image
+                      src={inv.inviter.image}
+                      alt={inv.inviter.name || inv.inviter.email}
+                      width={36}
+                      height={36}
+                      className="rounded-full"
+                    />
+                  ) : (
+                    <div className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-medium">
+                        {inviterLabel(inv)[0]?.toUpperCase() || "?"}
+                      </span>
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-white">
+                      {inviterLabel(inv)}
+                    </p>
+                    <p className={`text-xs ${textMeta}`}>
+                      {fmtDate(inv.createdAt)}
+                    </p>
+                  </div>
                 </div>
-                <StatusBadge status={invitation.status} />
+
+                <StatusBadge status={inv.status} />
               </div>
             ))}
           </div>
@@ -233,9 +293,9 @@ function SentTab({
 
   if (invitations.length === 0) {
     return (
-      <div className="rounded-xl border border-white/10 bg-white/5 p-10 text-center backdrop-blur-xl">
-        <p className="text-lg text-white/80">No invitations sent yet.</p>
-        <p className={`mt-2 text-sm ${textMeta}`}>
+      <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+        <p className="mb-1 text-white/90">No invitations sent yet</p>
+        <p className={`text-sm ${textMeta}`}>
           Invite trusted pros to connect to this home from the home dashboard.
         </p>
       </div>
@@ -245,50 +305,62 @@ function SentTab({
   return (
     <div className="space-y-6">
       {pending.length > 0 && (
-        <div className="mb-4">
-          <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
+        <div>
+          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
             Pending ({pending.length})
           </h2>
-          <div className="space-y-4">
-            {pending.map((invitation) => (
+
+          <div className="space-y-3">
+            {pending.map((inv) => (
               <div
-                key={invitation.id}
-                className="rounded-xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
+                key={inv.id}
+                className={`${glassTight} flex flex-col gap-3 p-4 sm:p-5`}
               >
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <p className="text-lg font-semibold text-white">
-                      {invitation.invitedEmail}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-white">
+                      {inv.invitedEmail}
                     </p>
-                    {invitation.home && (
-                      <p className={`mt-1 text-sm ${textMeta}`}>
-                        📍 {invitation.home.address}
-                        {invitation.home.city && `, ${invitation.home.city}`}
-                        {invitation.home.state && `, ${invitation.home.state}`}
-                        {invitation.home.zip && ` ${invitation.home.zip}`}
+
+                    {inv.home && (
+                      <p className={`mt-1 text-xs ${textMeta} truncate`}>
+                        📍 {inv.home.address}
+                        {inv.home.city && `, ${inv.home.city}`}
+                        {inv.home.state && `, ${inv.home.state}`}
+                        {inv.home.zip && ` ${inv.home.zip}`}
                       </p>
                     )}
                   </div>
-                  <div className="shrink-0 text-right text-xs text-white/60">
-                    <p>Sent {new Date(invitation.createdAt).toLocaleDateString()}</p>
-                    <p>Expires {new Date(invitation.expiresAt).toLocaleDateString()}</p>
+
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <StatusBadge status={inv.status} />
+                    <p className={`text-[11px] ${textMeta}`}>
+                      Sent {fmtDate(inv.createdAt)}
+                    </p>
+                    <p className={`text-[11px] ${textMeta}`}>
+                      Expires {fmtDate(inv.expiresAt)}
+                    </p>
                   </div>
                 </div>
 
-                {invitation.message && (
-                  <div className="mt-3 rounded-lg border border-white/20 bg-white/10 p-3">
-                    <p className="mb-1 text-xs font-medium text-white/90">Message:</p>
-                    <p className="text-sm text-white/80">{invitation.message}</p>
+                {inv.message && (
+                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
+                    <p className="mb-1 text-[11px] font-semibold text-white/80">
+                      Message
+                    </p>
+                    <p className="text-sm text-white/80 leading-relaxed">
+                      {inv.message}
+                    </p>
                   </div>
                 )}
 
-                <div className="mt-4 flex gap-2">
+                <div className="pt-1">
                   <button
-                    onClick={() => onCancel(invitation.id)}
-                    disabled={processing === invitation.id}
-                    className="rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-300 transition-colors hover:bg-red-500/30 disabled:opacity-50"
+                    onClick={() => onCancel(inv.id)}
+                    disabled={processing === inv.id}
+                    className="inline-flex w-full sm:w-auto items-center justify-center rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/30 disabled:opacity-50"
                   >
-                    {processing === invitation.id ? "Cancelling..." : "Cancel Invitation"}
+                    {processing === inv.id ? "Cancelling..." : "Cancel Invitation"}
                   </button>
                 </div>
               </div>
@@ -299,29 +371,35 @@ function SentTab({
 
       {history.length > 0 && (
         <div>
-          <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
+          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
             History ({history.length})
           </h2>
+
           <div className="space-y-2">
-            {history.map((invitation) => (
+            {history.map((inv) => (
               <div
-                key={invitation.id}
-                className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-4 backdrop-blur-xl"
+                key={inv.id}
+                className={`${glassTight} flex items-center justify-between gap-3 p-4`}
               >
-                <div className="flex-1">
-                  <p className="font-medium text-white">{invitation.invitedEmail}</p>
-                  {invitation.home && (
-                    <p className={`mt-1 text-sm ${textMeta}`}>
-                      {invitation.home.address}
-                      {invitation.home.city && `, ${invitation.home.city}`}
-                      {invitation.home.state && `, ${invitation.home.state}`}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-white">
+                    {inv.invitedEmail}
+                  </p>
+
+                  {inv.home && (
+                    <p className={`mt-1 text-xs ${textMeta} truncate`}>
+                      {inv.home.address}
+                      {inv.home.city && `, ${inv.home.city}`}
+                      {inv.home.state && `, ${inv.home.state}`}
                     </p>
                   )}
-                  <p className={`mt-1 text-xs ${textMeta}`}>
-                    {new Date(invitation.createdAt).toLocaleDateString()}
+
+                  <p className={`mt-1 text-[11px] ${textMeta}`}>
+                    {fmtDate(inv.createdAt)}
                   </p>
                 </div>
-                <StatusBadge status={invitation.status} />
+
+                <StatusBadge status={inv.status} />
               </div>
             ))}
           </div>
@@ -377,18 +455,21 @@ export default function HomeInvitationsClient({
     setProcessing(selectedInvitation);
 
     try {
-      const response = await fetch(`/api/invitations/${selectedInvitation}/accept`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          address: verifiedAddress.unit
-            ? `${verifiedAddress.street} ${verifiedAddress.unit}`
-            : verifiedAddress.street,
-          city: verifiedAddress.city,
-          state: verifiedAddress.state,
-          zip: verifiedAddress.zip,
-        }),
-      });
+      const response = await fetch(
+        `/api/invitations/${selectedInvitation}/accept`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address: verifiedAddress.unit
+              ? `${verifiedAddress.street} ${verifiedAddress.unit}`
+              : verifiedAddress.street,
+            city: verifiedAddress.city,
+            state: verifiedAddress.state,
+            zip: verifiedAddress.zip,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const error = await response.json().catch(() => null);
@@ -413,9 +494,10 @@ export default function HomeInvitationsClient({
     setProcessing(invitationId);
 
     try {
-      const response = await fetch(`/api/invitations/${invitationId}/decline`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `/api/invitations/${invitationId}/decline`,
+        { method: "POST" }
+      );
       if (!response.ok) throw new Error("Failed to decline invitation");
 
       toast("Invitation declined.");
@@ -433,9 +515,10 @@ export default function HomeInvitationsClient({
     setProcessing(invitationId);
 
     try {
-      const response = await fetch(`/api/invitations/${invitationId}/cancel`, {
-        method: "POST",
-      });
+      const response = await fetch(
+        `/api/invitations/${invitationId}/cancel`,
+        { method: "POST" }
+      );
 
       if (!response.ok) {
         const error = await response.json().catch(() => null);
@@ -456,45 +539,43 @@ export default function HomeInvitationsClient({
     <main className="relative min-h-screen text-white">
       <Bg />
 
+      {/* Match Messages page width/padding */}
       <div className="mx-auto max-w-6xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <Breadcrumb
-          href={`/home/${homeId}`}
-          label={homeAddress}
-          current="Invitations"
-        />
+        <Breadcrumb href={`/home/${homeId}`} label={homeAddress} current="Invitations" />
 
-        {/* Header */}
+        {/* Header (match Messages header) */}
         <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Link
-                href={`/home/${homeId}`}
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                aria-label="Back to home"
+          <div className="flex items-center gap-3">
+            <Link
+              href={`/home/${homeId}`}
+              className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
+              aria-label="Back to home"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-5 h-5"
               >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18" />
-                </svg>
-              </Link>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18" />
+              </svg>
+            </Link>
 
-              <div className="flex-1 min-w-0">
-                <h1 className={`text-2xl font-bold ${heading}`}>
-                  Contractor Invitations
-                </h1>
-                <p className={`text-sm ${textMeta} mt-1`}>
-                  {totalInvitations}{" "}
-                  {totalInvitations === 1 ? "invitation" : "invitations"} •{" "}
-                  {pendingCount} pending
-                </p>
-              </div>
+            <div className="flex-1 min-w-0">
+              <h1 className={`text-2xl font-bold ${heading}`}>
+                Contractor Invitations
+              </h1>
+              <p className={`mt-1 text-sm ${textMeta}`}>
+                Manage pros invited to this home.
+              </p>
+              <p className={`mt-1 text-xs ${textMeta}`}>
+                {totalInvitations}{" "}
+                {totalInvitations === 1 ? "invitation" : "invitations"} •{" "}
+                {pendingCount} pending
+              </p>
             </div>
 
             <div className="flex-shrink-0">
@@ -509,9 +590,9 @@ export default function HomeInvitationsClient({
           </div>
         </section>
 
-        {/* Tabs */}
+        {/* Tabs (tight + consistent) */}
         <section className={glass}>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveTab("received")}
               className={`rounded-full border px-4 py-2 text-sm transition ${
