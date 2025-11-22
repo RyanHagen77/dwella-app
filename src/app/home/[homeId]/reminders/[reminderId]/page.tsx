@@ -70,9 +70,11 @@ export default async function ReminderDetailPage({
       <div className="mx-auto max-w-4xl space-y-6 p-6">
         {/* Breadcrumb */}
         <Breadcrumb
-          href={`/home/${homeId}`}
-          label={addrLine}
-          current="Reminders"
+          items={[
+            { label: addrLine, href: `/home/${homeId}` },
+            { label: "Reminders", href: `/home/${homeId}/reminder` },
+            { label: reminder.title }, // current page
+          ]}
         />
 
         {/* Header */}
