@@ -34,7 +34,7 @@ export async function UnreadJobRequestsBadge() {
   }
 
   return (
-    <span className="inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white">
+    <span className="inline-flex items-center justify-center rounded-full bg-[#33C17D] px-2 py-0.5 text-xs font-medium text-white">
       {unreadCount}
     </span>
   );

@@ -15,7 +15,7 @@ import {
 } from "@/lib/glass";
 import { InviteHomeownerButton } from "../../_components/InviteHomeownerButton";
 import { UnreadInvitationsBadge } from "@/components/ui/UnreadInvitationsBadge";
-import { PendingWorkBadge } from "@/components/ui/PendingWorkBadge";
+import { UnreadJobRequestsBadge } from "@/components/ui/UnreadJobRequestsBadge";
 
 export default async function ProDashboardPage() {
   const session = await getServerSession(authConfig);
@@ -51,11 +51,36 @@ export default async function ProDashboardPage() {
     where: { contractorId: userId, status: "ACTIVE" },
     include: {
       homeowner: { select: { name: true, email: true } },
-      home: { select: { address: true, city: true, state: true } },
+      home: {
+        select: {
+          id: true,
+          address: true,
+          city: true,
+          state: true,
+          jobRequests: {
+            where: {
+              contractorId: userId,
+              status: { in: ["PENDING", "QUOTED"] },
+            },
+            select: { id: true },
+          },
+        }
+      },
     },
-    take: 5,
+    take: 10,
     orderBy: { createdAt: "desc" },
   });
+
+  // Count total properties
+  const totalProperties = await prisma.connection.count({
+    where: { contractorId: userId, status: "ACTIVE" },
+  });
+
+  // Prioritize properties with pending requests, then take max 3
+  const prioritizedConnections = [
+    ...connections.filter(c => c.home?.jobRequests && c.home.jobRequests.length > 0),
+    ...connections.filter(c => !c.home?.jobRequests || c.home.jobRequests.length === 0),
+  ].slice(0, 3);
 
   // Get document-completed-work-submissions records for recent document-completed-work-submissions section
   const recentWork = await prisma.workRecord.findMany({
@@ -136,7 +161,7 @@ export default async function ProDashboardPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h2 className={`text-lg font-semibold ${heading}`}>Work Requests</h2>
-                  <PendingWorkBadge />
+                  <UnreadJobRequestsBadge />
                 </div>
                 <p className={`mt-1 text-sm ${textMeta}`}>
                   Jobs submitted by homeowners
@@ -287,23 +312,39 @@ export default async function ProDashboardPage() {
               ) : (
                 <div className="space-y-3">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="text-2xl font-bold text-white">{connections.length}</p>
-                    <p className="text-xs text-white/60">Active connections</p>
+                    <p className="text-2xl font-bold text-white">{totalProperties}</p>
+                    <p className="text-xs text-white/60">Active {totalProperties === 1 ? 'property' : 'properties'}</p>
                   </div>
-                  {connections.slice(0, 3).map((conn) => (
-                    <div key={conn.id} className={glassTight}>
-                      <p className="font-medium text-white text-sm">
-                        {conn.homeowner?.name || conn.homeowner?.email || "Homeowner"}
-                      </p>
-                      <p className={`text-xs ${textMeta} truncate`}>
-                        {conn.home?.address}
-                        {conn.home?.city ? `, ${conn.home.city}` : ""}
-                      </p>
-                    </div>
-                  ))}
-                  {connections.length > 3 && (
+                  {prioritizedConnections.map((conn) => {
+                    const hasPendingRequests = conn.home?.jobRequests && conn.home.jobRequests.length > 0;
+                    return (
+                      <Link
+                        key={conn.id}
+                        href={`/pro/contractor/properties/${conn.home?.id}`}
+                        className={`${glassTight} block hover:bg-white/10 transition-colors`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-white text-sm">
+                              {conn.homeowner?.name || conn.homeowner?.email || "Homeowner"}
+                            </p>
+                            <p className={`text-xs ${textMeta} truncate`}>
+                              {conn.home?.address}
+                              {conn.home?.city ? `, ${conn.home.city}` : ""}
+                            </p>
+                          </div>
+                          {hasPendingRequests && (
+                            <span className="flex-shrink-0 rounded-full bg-orange-400/10 border border-orange-400/30 px-2 py-0.5 text-xs text-orange-300">
+                              {conn.home.jobRequests.length} pending
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                  {totalProperties > 3 && (
                     <p className="text-center text-xs text-white/60 pt-2">
-                      +{connections.length - 3} more
+                      +{totalProperties - 3} more
                     </p>
                   )}
                   <div className="pt-2 text-center">

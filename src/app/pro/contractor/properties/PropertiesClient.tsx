@@ -64,18 +64,6 @@ export function PropertiesClient({ properties }: PropertiesClientProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <section className={glass}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className={`text-2xl font-semibold ${heading}`}>Properties</h1>
-            <p className={`mt-1 ${textMeta}`}>
-              Homes you&apos;ve worked on and maintained.
-            </p>
-          </div>
-        </div>
-      </section>
-
       {/* Filters */}
       <section className={glass}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
