@@ -324,7 +324,7 @@ export async function sendInvitationEmail({
                       The Dwella Team
                     </p>
                     <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.4);">
-                      Your home's journal, plus the tools your contractors need
+                      Your home's journal. Organized. Verified.
                     </p>
                   </td>
                 </tr>
