@@ -546,11 +546,12 @@ export default function HomeInvitationsClient({
 
         {/* Header (match Messages header) */}
         <section className={glass}>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-4">
+            {/* Back button */}
             <Link
               href={`/home/${homeId}`}
-              className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-              aria-label="Back to home"
+              className="flex items-center justify-center w-10 h-10 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
+              aria-label="Back"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -564,24 +565,20 @@ export default function HomeInvitationsClient({
               </svg>
             </Link>
 
+            {/* Text */}
             <div className="flex-1 min-w-0">
-              <h1 className={`text-2xl font-bold ${heading}`}>
-                Contractor Invitations
-              </h1>
-              <p className={`mt-1 text-sm ${textMeta}`}>
-                Manage pros invited to this home.
-              </p>
+              <h1 className={`text-2xl font-bold ${heading}`}>Contractor Invitations</h1>
+              <p className={`mt-1 text-sm ${textMeta}`}>Manage pros invited to this home.</p>
               <p className={`mt-1 text-xs ${textMeta}`}>
-                {totalInvitations}{" "}
-                {totalInvitations === 1 ? "invitation" : "invitations"} •{" "}
-                {pendingCount} pending
+                {totalInvitations} {totalInvitations === 1 ? "invitation" : "invitations"} • {pendingCount} pending
               </p>
             </div>
 
-            <div className="flex-shrink-0">
+            {/* CTA */}
+            <div>
               <button
                 type="button"
-                className={ctaPrimary}
+                className={`${ctaPrimary} w-full sm:w-auto rounded-full px-5 py-2 text-sm font-semibold`}
                 onClick={() => setInviteOpen(true)}
               >
                 + Invite a Pro
