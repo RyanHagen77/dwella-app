@@ -11,16 +11,12 @@ const APP_BASE_URL =
 // Clean and validate the FROM address
 const getFromAddress = () => {
   const raw = process.env.EMAIL_FROM || "hello@mydwellaapp.com";
-
-  // Remove any quotes that might be in the env var
   const cleaned = raw.replace(/^["']|["']$/g, '').trim();
 
-  // If it's just an email, add display name
   if (cleaned && !cleaned.includes('<')) {
     return `Dwella <${cleaned}>`;
   }
 
-  // If it already has format "Name <email>", return as-is
   return cleaned || "Dwella <hello@mydwellaapp.com>";
 };
 
@@ -57,57 +53,105 @@ export async function sendPasswordResetEmail({
   ].join("\n");
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #ffffff; background: linear-gradient(135deg, #33C17D 0%, #2BA36A 100%); padding: 20px; border-radius: 12px; margin: 0; font-size: 24px;">
-          Dwella
-        </h1>
-      </div>
-      
-      <div style="background: #f9f9f9; border-radius: 12px; padding: 30px; margin-bottom: 20px;">
-        <h2 style="color: #333; margin-top: 0; font-size: 20px;">Reset Your Password</h2>
-        <p style="color: #666; line-height: 1.6; margin: 0 0 20px 0;">
-          You requested to reset your password for your Dwella account. Click the button below to choose a new password:
-        </p>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetUrl}" 
-             style="background: linear-gradient(135deg, #F35A1F 0%, #E04A0F 100%); 
-                    color: white; 
-                    padding: 14px 32px; 
-                    text-decoration: none; 
-                    border-radius: 8px; 
-                    display: inline-block;
-                    font-weight: 600;
-                    font-size: 15px;">
-            Reset Password
-          </a>
-        </div>
-        
-        <p style="color: #999; font-size: 14px; line-height: 1.5; margin: 0 0 8px 0;">
-          Or copy and paste this link into your browser:
-        </p>
-        <p style="color: #F35A1F; font-size: 13px; word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 6px; margin: 0 0 20px 0;">
-          ${resetUrl}
-        </p>
-        
-        <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
-          <p style="color: #999; font-size: 13px; margin: 0 0 8px 0;">
-            ⏱️ This link expires in <strong>1 hour</strong>
-          </p>
-          <p style="color: #999; font-size: 13px; margin: 0;">
-            🔒 If you didn't request this, you can safely ignore this email
-          </p>
-        </div>
-      </div>
-      
-      <div style="text-align: center; color: #999; font-size: 12px;">
-        <p style="margin: 0;">
-          The Dwella Team<br>
-          <a href="https://mydwellaapp.com" style="color: #33C17D; text-decoration: none;">mydwellaapp.com</a>
-        </p>
-      </div>
-    </div>
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      </head>
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background-color: #1a1a1a;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: rgba(40, 40, 40, 0.95); border-radius: 24px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.6);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="padding: 40px 40px 30px 40px; text-align: center;">
+                    <h1 style="margin: 0; font-size: 32px; font-weight: 600; color: #ffffff; letter-spacing: -0.02em;">
+                      Reset Your Password
+                    </h1>
+                    <p style="margin: 12px 0 0 0; font-size: 15px; color: rgba(255, 255, 255, 0.75); line-height: 1.5;">
+                      You requested to reset your password for your Dwella account.
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 0 40px 40px 40px;">
+                    
+                    <!-- Button -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" style="padding: 20px 0 30px 0;">
+                          <a href="${resetUrl}" 
+                             style="display: inline-block; 
+                                    background: linear-gradient(135deg, rgba(243, 90, 31, 0.9) 0%, rgba(224, 74, 15, 0.9) 100%); 
+                                    color: #ffffff; 
+                                    padding: 16px 48px; 
+                                    text-decoration: none; 
+                                    border-radius: 12px; 
+                                    font-weight: 600; 
+                                    font-size: 16px;
+                                    border: 1px solid rgba(255, 255, 255, 0.3);
+                                    box-shadow: 0 10px 28px rgba(243, 90, 31, 0.35);">
+                            Reset Password
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Divider -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 20px 0; border-top: 1px solid rgba(255, 255, 255, 0.1);"></td>
+                      </tr>
+                    </table>
+
+                    <!-- Link -->
+                    <p style="margin: 0 0 8px 0; font-size: 13px; color: rgba(255, 255, 255, 0.6); text-align: center;">
+                      Or copy and paste this link into your browser:
+                    </p>
+                    <p style="margin: 0; font-size: 12px; color: rgba(243, 90, 31, 0.9); text-align: center; word-break: break-all; background: rgba(255, 255, 255, 0.05); padding: 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1);">
+                      ${resetUrl}
+                    </p>
+
+                    <!-- Info -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 30px;">
+                      <tr>
+                        <td style="padding: 20px 0; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                          <p style="margin: 0 0 10px 0; font-size: 13px; color: rgba(255, 255, 255, 0.6); text-align: center;">
+                            ⏱️ This link expires in <strong style="color: rgba(255, 255, 255, 0.9);">1 hour</strong>
+                          </p>
+                          <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.6); text-align: center;">
+                            🔒 If you didn't request this, you can safely ignore this email
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 30px 40px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: rgba(255, 255, 255, 0.5);">
+                      The Dwella Team
+                    </p>
+                    <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.4);">
+                      Your home's journal, plus the tools your contractors need
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
   `;
 
   try {
@@ -170,83 +214,125 @@ export async function sendInvitationEmail({
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
       </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        
-        <div style="background: linear-gradient(135deg, #33C17D 0%, #2BA36A 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">Dwella</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">Your Home's Journal</p>
-        </div>
-
-        <div style="background: #f9fafb; padding: 40px 30px; border-radius: 0 0 10px 10px;">
-          
-          <p style="font-size: 18px; margin-top: 0;">${greeting},</p>
-          
-          <p style="font-size: 16px; margin: 20px 0;">
-            <strong>${companyName}</strong> has invited you to join Dwella${
+      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background-color: #1a1a1a;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: rgba(40, 40, 40, 0.95); border-radius: 24px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.6);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="padding: 40px 40px 30px 40px; text-align: center;">
+                    <h1 style="margin: 0 0 12px 0; font-size: 32px; font-weight: 600; color: #ffffff; letter-spacing: -0.02em;">
+                      ${greeting}!
+                    </h1>
+                    <p style="margin: 0; font-size: 16px; color: rgba(255, 255, 255, 0.75); line-height: 1.5;">
+                      <strong style="color: #ffffff;">${companyName}</strong> has invited you to join Dwella${
     role === "HOMEOWNER"
-      ? " to manage your home maintenance and stay connected"
+      ? " to manage your home maintenance"
       : " as a contractor"
   }.
-          </p>
+                    </p>
+                  </td>
+                </tr>
 
-          ${
-            message
-              ? `
-          <div style="background: white; padding: 20px; border-left: 4px solid #33C17D; margin: 25px 0; border-radius: 4px;">
-            <p style="margin: 0; font-style: italic; color: #555;">
-              "${message}"
-            </p>
-          </div>
-          `
-              : ""
-          }
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 0 40px 40px 40px;">
+                    
+                    ${
+                      message
+                        ? `
+                    <!-- Personal Message -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                      <tr>
+                        <td style="background: rgba(255, 255, 255, 0.05); padding: 20px; border-left: 4px solid rgba(243, 90, 31, 0.9); border-radius: 8px;">
+                          <p style="margin: 0; font-style: italic; color: rgba(255, 255, 255, 0.8); font-size: 15px; line-height: 1.6;">
+                            "${message}"
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    `
+                        : ""
+                    }
 
-          <p style="font-size: 16px; margin: 25px 0;">
-            Dwella helps you:
-          </p>
-          
-          <ul style="font-size: 15px; line-height: 1.8; color: #555;">
-            ${
-              role === "HOMEOWNER"
-                ? `
-              <li>Keep all contractor communications in one place</li>
-              <li>Track your home maintenance history</li>
-              <li>Receive and approve quotes easily</li>
-              <li>Never lose important home documents</li>
-            `
-                : `
-              <li>Manage all your clients in one place</li>
-              <li>Send professional quotes instantly</li>
-              <li>Build your work history and reviews</li>
-              <li>Stay organized and look professional</li>
-            `
-            }
-          </ul>
+                    <!-- Features -->
+                    <p style="margin: 0 0 16px 0; font-size: 15px; color: rgba(255, 255, 255, 0.75); font-weight: 600;">
+                      Dwella helps you:
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 30px;">
+                      ${
+                        role === "HOMEOWNER"
+                          ? `
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Keep all contractor communications in one place</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Track your home maintenance history</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Receive and approve quotes easily</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Never lose important home documents</td></tr>
+                      `
+                          : `
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Manage all your clients in one place</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Send professional quotes instantly</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Build your work history and reviews</td></tr>
+                      <tr><td style="padding: 8px 0; color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.6;">• Stay organized and look professional</td></tr>
+                      `
+                      }
+                    </table>
 
-          <div style="text-align: center; margin: 35px 0;">
-            <a href="${inviteUrl}" 
-               style="display: inline-block; background: linear-gradient(135deg, #F35A1F 0%, #E04A0F 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(243, 90, 31, 0.3);">
-              Accept Invitation
-            </a>
-          </div>
+                    <!-- Button -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" style="padding: 10px 0 30px 0;">
+                          <a href="${inviteUrl}" 
+                             style="display: inline-block; 
+                                    background: linear-gradient(135deg, rgba(243, 90, 31, 0.9) 0%, rgba(224, 74, 15, 0.9) 100%); 
+                                    color: #ffffff; 
+                                    padding: 16px 48px; 
+                                    text-decoration: none; 
+                                    border-radius: 12px; 
+                                    font-weight: 600; 
+                                    font-size: 16px;
+                                    border: 1px solid rgba(255, 255, 255, 0.3);
+                                    box-shadow: 0 10px 28px rgba(243, 90, 31, 0.35);">
+                            Accept Invitation
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
 
-          <p style="font-size: 14px; color: #666; margin-top: 30px;">
-            This invitation will expire in 7 days.
-          </p>
+                    <!-- Info -->
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding: 20px 0; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                          <p style="margin: 0 0 10px 0; font-size: 13px; color: rgba(255, 255, 255, 0.6); text-align: center;">
+                            This invitation expires in 7 days
+                          </p>
+                          <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.6); text-align: center;">
+                            If you didn't expect this invitation, you can safely ignore this email
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
 
-          <p style="font-size: 13px; color: #999; margin-top: 20px; padding-top: 20px; border-top: 1px solid #ddd;">
-            If you didn't expect this invitation, you can safely ignore this email.
-          </p>
+                  </td>
+                </tr>
 
-        </div>
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 30px 40px; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+                    <p style="margin: 0 0 8px 0; font-size: 14px; color: rgba(255, 255, 255, 0.5);">
+                      The Dwella Team
+                    </p>
+                    <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.4);">
+                      Your home's journal, plus the tools your contractors need
+                    </p>
+                  </td>
+                </tr>
 
-        <div style="text-align: center; margin-top: 30px; color: #999; font-size: 12px;">
-          <p>Dwella - Your Home's Journal</p>
-          <p>
-            <a href="${APP_BASE_URL}" style="color: #33C17D; text-decoration: none;">Visit our website</a>
-          </p>
-        </div>
-
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
     </html>
   `;
