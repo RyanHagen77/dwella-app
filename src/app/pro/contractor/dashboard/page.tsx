@@ -533,9 +533,12 @@ export default async function ProDashboardPage() {
               <div className="space-y-2">
                 <Link
                   href="/pro/contractor/work-records/new"
-                  className={`${ctaPrimary} block text-center px-4 py-3 text-sm`}
+                  className={`${glassTight} block hover:bg-white/10 transition-colors`}
                 >
-                  + Document Work
+                  <div className="flex items-center gap-3 px-3 py-2">
+                    <span className="text-xl">📝</span>
+                    <span className="text-sm text-white">Document Work</span>
+                  </div>
                 </Link>
 
                 {/* Invite button styled to match other items */}

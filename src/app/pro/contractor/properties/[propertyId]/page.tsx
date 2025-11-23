@@ -1,14 +1,13 @@
 /**
- * PROPERTY DETAIL PAGE (CONTRACTOR)
+ * PROPERTY DETAIL PAGE (CONTRACTOR) - IMPROVED
  *
- * View single property with:
- * - Property overview and homeowner info
- * - Message alerts/notifications
- * - Documented work history
- * - Job requests from this homeowner
- * - Future: automated reminder settings
- *
- * Location: app/pro/contractor/properties/[id]/page.tsx
+ * Relationship-centered view with:
+ * - Growth opportunities (warranties, reminders)
+ * - Relationship health indicators
+ * - Context-aware quick actions
+ * - Enhanced stats and metrics
+ * - Timeline view option
+ * - Private notes
  */
 
 export const dynamic = "force-dynamic";
@@ -18,9 +17,10 @@ import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import { getSignedGetUrl, extractS3Key } from "@/lib/s3";
+import { serializeConnections } from "@/lib/serialize";
 import Image from "next/image";
 import Link from "next/link";
-import { glass, glassTight, heading, textMeta } from "@/lib/glass";
+import { glass, glassTight, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import { format } from "date-fns";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
@@ -36,7 +36,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     redirect("/login");
   }
 
-  // Fetch property with all related data
+  // Fetch property with all related data including opportunities
   const property = await prisma.home.findUnique({
     where: { id },
     include: {
@@ -56,6 +56,9 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           id: true,
           status: true,
           createdAt: true,
+          verifiedWorkCount: true,
+          totalSpent: true,
+          lastWorkDate: true,
         },
       },
       workRecords: {
@@ -102,6 +105,40 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           },
         },
       },
+      // NEW: Fetch opportunities
+      warranties: {
+        where: {
+          expiresAt: {
+            gte: new Date(),
+            lte: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+          },
+        },
+        orderBy: {
+          expiresAt: "asc",
+        },
+        select: {
+          id: true,
+          item: true,
+          expiresAt: true,
+          provider: true,
+        },
+      },
+      reminders: {
+        where: {
+          dueAt: {
+            gte: new Date(),
+            lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        },
+        orderBy: {
+          dueAt: "asc",
+        },
+        select: {
+          id: true,
+          title: true,
+          dueAt: true,
+        },
+      },
     },
   });
 
@@ -110,32 +147,61 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   }
 
   // Verify contractor has access to this property
-  const connection = property.connections[0];
-  if (!connection) {
+  const rawConnection = property.connections[0];
+  if (!rawConnection) {
     redirect("/pro/contractor/properties");
   }
+
+  // Serialize connection to convert Decimal to number
+  const [connection] = serializeConnections([rawConnection]);
 
   const addrLine = [property.address, property.city, property.state, property.zip]
     .filter(Boolean)
     .join(", ");
 
-  // Use property photo if available, otherwise use default
+  // Use property photo if available
   let headerImageUrl: string | null = null;
   if (property.photos && property.photos.length > 0) {
     const key = extractS3Key(property.photos[0]);
     headerImageUrl = await getSignedGetUrl(key);
   }
 
-  // Calculate stats
-  const totalJobs = property.workRecords.length;
-  const totalRevenue = property.workRecords.reduce(
-    (sum, work) => sum + Number(work.cost || 0),
-    0
+  // Calculate relationship metrics
+  const now = Date.now();
+  const daysSinceConnection = Math.floor(
+    (now - new Date(connection.createdAt).getTime()) / (1000 * 60 * 60 * 24)
   );
+
+  const daysSinceLastWork = connection.lastWorkDate
+    ? Math.floor((now - new Date(connection.lastWorkDate).getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const relationshipHealth: 'excellent' | 'good' | 'needs-attention' =
+    !daysSinceLastWork || daysSinceLastWork > 180
+      ? 'needs-attention'
+      : daysSinceLastWork < 90
+      ? 'excellent'
+      : 'good';
+
+  // Process opportunities with days until
+  const expiringWarranties = property.warranties.map(w => ({
+    ...w,
+    daysUntil: Math.ceil((new Date(w.expiresAt!).getTime() - now) / (1000 * 60 * 60 * 24)),
+  }));
+
+  const upcomingReminders = property.reminders.map(r => ({
+    ...r,
+    daysUntil: Math.ceil((new Date(r.dueAt).getTime() - now) / (1000 * 60 * 60 * 24)),
+  }));
+
+  const totalOpportunities = expiringWarranties.length + upcomingReminders.length;
+
+  // Calculate stats
+  const totalRevenue = connection.totalSpent || 0;
   const pendingRequests = property.jobRequests.filter(
     (req) => req.status === "PENDING" || req.status === "QUOTED"
-  ).length;
-  const lastWorkDate = property.workRecords[0]?.workDate || null;
+  );
+  const firstPendingRequest = pendingRequests[0];
 
   const statusConfig: Record<
     string,
@@ -159,6 +225,12 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   };
 
   const connectionStatus = statusConfig[connection.status] || statusConfig.ACTIVE;
+
+  const healthConfig = {
+    excellent: { label: '🟢 Great', subtext: 'Engaged client' },
+    good: { label: '🔵 Good', subtext: 'Active relationship' },
+    'needs-attention': { label: '🟡 At Risk', subtext: 'Needs follow-up' },
+  };
 
   const jobStatusConfig: Record<
     string,
@@ -259,64 +331,176 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Stats Overview */}
+        {/* Improved Stats Overview - Relationship Story */}
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Total Jobs" value={totalJobs} />
           <StatCard
-            label="Total Revenue"
-            value={`$${totalRevenue.toLocaleString()}`}
+            label="Relationship Health"
+            value={healthConfig[relationshipHealth].label}
+            subtext={daysSinceLastWork !== null ? `${daysSinceLastWork}d since contact` : 'No contact yet'}
+          />
+          <StatCard
+            label="Verified Jobs"
+            value={connection.verifiedWorkCount}
+            subtext={`$${totalRevenue.toLocaleString()} total`}
+          />
+          <StatCard
+            label="Opportunities"
+            value={totalOpportunities}
+            subtext={totalOpportunities > 0 ? "Act now" : "None"}
+            highlight={totalOpportunities > 0 ? "blue" : undefined}
           />
           <StatCard
             label="Pending Requests"
-            value={pendingRequests}
-            highlight={pendingRequests > 0 ? "yellow" : undefined}
-          />
-          <StatCard
-            label="Last Work"
-            value={
-              lastWorkDate
-                ? format(new Date(lastWorkDate), "MMM d, yyyy")
-                : "None"
-            }
+            value={pendingRequests.length}
+            subtext={pendingRequests.length > 0 ? "Needs response" : "All clear"}
+            highlight={pendingRequests.length > 0 ? "orange" : undefined}
           />
         </section>
 
-        {/* Message Alerts - Phase 2 placeholder */}
-        {pendingRequests > 0 && (
-          <section className={glass}>
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 rounded-full bg-orange-500/20 p-2">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="h-5 w-5 text-orange-300"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
-                  />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-white">Action Required</h3>
-                <p className={`mt-1 text-sm ${textMeta}`}>
-                  You have {pendingRequests} pending job{" "}
-                  {pendingRequests === 1 ? "request" : "requests"} from this
-                  homeowner. Review and respond below.
-                </p>
-              </div>
-            </div>
-          </section>
-        )}
-
         {/* Main Content Grid */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - Work & Requests */}
+          {/* Left Column - Opportunities & Work */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Growth Opportunities - NEW & PROMINENT */}
+            {totalOpportunities > 0 && (
+              <section className={glass}>
+                <div className="mb-4">
+                  <h2 className={`text-lg font-semibold ${heading}`}>
+                    Growth Opportunities ({totalOpportunities})
+                  </h2>
+                  <p className={`text-sm ${textMeta} mt-1`}>
+                    Proactive outreach opportunities to grow your business
+                  </p>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Expiring Warranties */}
+                  {expiringWarranties.map((warranty) => (
+                    <div
+                      key={warranty.id}
+                      className="rounded-lg bg-blue-400/10 border border-blue-400/20 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          <span className="text-2xl flex-shrink-0">🛡️</span>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-white">
+                              {warranty.item}
+                            </h3>
+                            <p className={`text-sm ${textMeta}`}>
+                              Warranty expires{" "}
+                              {format(new Date(warranty.expiresAt!), "MMM d, yyyy")}
+                            </p>
+                            {warranty.provider && (
+                              <p className={`text-xs ${textMeta} mt-1`}>
+                                Provider: {warranty.provider}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-blue-300 font-semibold flex-shrink-0">
+                          {warranty.daysUntil}d
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/pro/contractor/job-requests/new?homeId=${id}&type=warranty&item=${encodeURIComponent(warranty.item)}`}
+                          className="rounded-lg bg-blue-500/20 border border-blue-400/30 px-3 py-1.5 text-sm text-blue-200 hover:bg-blue-500/30 transition"
+                        >
+                          Schedule Check-up
+                        </Link>
+                        <Link
+                          href={`/pro/contractor/messages/${connection.id}?topic=warranty&item=${encodeURIComponent(warranty.item)}`}
+                          className="rounded-lg bg-white/10 border border-white/20 px-3 py-1.5 text-sm text-white hover:bg-white/15 transition"
+                        >
+                          Send Message
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Upcoming Reminders */}
+                  {upcomingReminders.map((reminder) => (
+                    <div
+                      key={reminder.id}
+                      className="rounded-lg bg-blue-400/10 border border-blue-400/20 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3 mb-3">
+                        <div className="flex items-start gap-3 flex-1">
+                          <span className="text-2xl flex-shrink-0">🔔</span>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-semibold text-white">
+                              {reminder.title}
+                            </h3>
+                            <p className={`text-sm ${textMeta}`}>
+                              Due {format(new Date(reminder.dueAt), "MMM d, yyyy")}
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-blue-300 font-semibold flex-shrink-0">
+                          {reminder.daysUntil}d
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Link
+                          href={`/pro/contractor/job-requests/new?homeId=${id}&type=reminder&item=${encodeURIComponent(reminder.title)}`}
+                          className="rounded-lg bg-blue-500/20 border border-blue-400/30 px-3 py-1.5 text-sm text-blue-200 hover:bg-blue-500/30 transition"
+                        >
+                          Offer Service
+                        </Link>
+                        <Link
+                          href={`/pro/contractor/messages/${connection.id}?topic=reminder&item=${encodeURIComponent(reminder.title)}`}
+                          className="rounded-lg bg-white/10 border border-white/20 px-3 py-1.5 text-sm text-white hover:bg-white/15 transition"
+                        >
+                          Send Message
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Pending Request Alert */}
+            {pendingRequests.length > 0 && (
+              <section className={glass}>
+                <div className="flex items-start gap-3">
+                  <div className="flex-shrink-0 rounded-full bg-orange-500/20 p-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      stroke="currentColor"
+                      className="h-5 w-5 text-orange-300"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                      />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white">Action Required</h3>
+                    <p className={`mt-1 text-sm ${textMeta}`}>
+                      You have {pendingRequests.length} pending job{" "}
+                      {pendingRequests.length === 1 ? "request" : "requests"} from this
+                      homeowner.
+                    </p>
+                    {firstPendingRequest && (
+                      <Link
+                        href={`/pro/contractor/job-requests/${firstPendingRequest.id}`}
+                        className={`${ctaPrimary} inline-block mt-3 px-4 py-2 text-sm`}
+                      >
+                        Respond to Request
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Job Requests */}
             <section className={glass}>
               <div className="mb-4 flex items-center justify-between">
@@ -408,43 +592,35 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               ) : (
                 <div className="space-y-3">
                   {property.workRecords.map((work) => (
-                    <WorkRecordCard
-                      key={work.id}
-                      work={work}
-                    />
+                    <WorkRecordCard key={work.id} work={work} />
                   ))}
                 </div>
               )}
             </section>
-
-            {/* Phase 2: Automated Reminders Placeholder */}
-            <section className={glass}>
-              <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
-                Automated Reminders
-              </h2>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-6 text-center">
-                <div className="mb-3 text-4xl">🔔</div>
-                <p className="mb-2 font-medium text-white">
-                  Coming in Phase 2
-                </p>
-                <p className={`text-sm ${textMeta}`}>
-                  Set up automated maintenance reminders for your clients. Keep
-                  them engaged and ensure repeat business.
-                </p>
-              </div>
-            </section>
           </div>
 
-          {/* Right Column - Homeowner Info */}
+          {/* Right Column - Homeowner Info & Actions */}
           <div className="space-y-6">
-            {/* Homeowner card */}
+            {/* Enhanced Homeowner Card */}
             {property.owner && (
               <section className={glass}>
-                <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
-                  Homeowner
-                </h2>
-                <div className="flex items-start gap-3">
-                  {property.owner.image && (
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className={`text-lg font-semibold ${heading}`}>Homeowner</h2>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      relationshipHealth === 'excellent'
+                        ? 'bg-emerald-400/20 text-emerald-300'
+                        : relationshipHealth === 'good'
+                        ? 'bg-blue-400/20 text-blue-300'
+                        : 'bg-yellow-400/20 text-yellow-300'
+                    }`}
+                  >
+                    {healthConfig[relationshipHealth].label}
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-3 mb-4">
+                  {property.owner.image ? (
                     <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full">
                       <Image
                         src={property.owner.image}
@@ -454,19 +630,107 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                         sizes="64px"
                       />
                     </div>
+                  ) : (
+                    <div className="h-16 w-16 flex-shrink-0 rounded-full bg-white/10 flex items-center justify-center text-white text-xl font-medium">
+                      {(property.owner.name || property.owner.email)[0].toUpperCase()}
+                    </div>
                   )}
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <p className="font-semibold text-white">
-                      {property.owner.name}
+                      {property.owner.name || property.owner.email}
                     </p>
-                    <p className={`mt-1 text-sm ${textMeta}`}>
+                    <p className={`mt-1 text-sm ${textMeta} truncate`}>
                       ✉️ {property.owner.email}
                     </p>
-                    <p className={`mt-1 text-xs ${textMeta}`}>
-                      Connected since{" "}
-                      {format(new Date(connection.createdAt), "MMM d, yyyy")}
-                    </p>
                   </div>
+                </div>
+
+                {/* Relationship Metrics */}
+                <div className="space-y-2 border-t border-white/10 pt-3">
+                  <div className="flex justify-between text-sm">
+                    <span className={textMeta}>Connected</span>
+                    <span className="text-white">{daysSinceConnection} days</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className={textMeta}>Last Contact</span>
+                    <span className="text-white">
+                      {daysSinceLastWork !== null ? `${daysSinceLastWork} days ago` : 'Never'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className={textMeta}>Verified Jobs</span>
+                    <span className="text-white">{connection.verifiedWorkCount}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className={textMeta}>Lifetime Value</span>
+                    <span className="text-green-300 font-medium">
+                      ${totalRevenue.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Context-Aware Quick Actions */}
+            {property.owner && (
+              <section className={glass}>
+                <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
+                  Quick Actions
+                </h2>
+                <div className="space-y-2">
+                  {/* Context-specific actions */}
+                  {totalOpportunities > 0 && expiringWarranties[0] && (
+                    <Link
+                      href={`/pro/contractor/messages/${connection.id}?topic=warranty&item=${encodeURIComponent(expiringWarranties[0].item)}`}
+                      className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
+                    >
+                      <span className="text-xl">💬</span>
+                      <span className="text-sm text-white">
+                        Message About Warranty
+                      </span>
+                    </Link>
+                  )}
+
+                  {pendingRequests.length > 0 && firstPendingRequest && (
+                    <Link
+                      href={`/pro/contractor/job-requests/${firstPendingRequest.id}`}
+                      className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
+                    >
+                      <span className="text-xl">📋</span>
+                      <span className="text-sm text-white">
+                        Respond to Request
+                      </span>
+                    </Link>
+                  )}
+
+                  {daysSinceLastWork && daysSinceLastWork > 90 && (
+                    <Link
+                      href={`/pro/contractor/messages/${connection.id}?topic=checkin`}
+                      className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
+                    >
+                      <span className="text-xl">💬</span>
+                      <span className="text-sm text-white">
+                        Send Check-in
+                      </span>
+                    </Link>
+                  )}
+
+                  {/* Always available actions */}
+                  <Link
+                    href={`/pro/contractor/work-records/new?homeId=${id}`}
+                    className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
+                  >
+                    <span className="text-xl">📝</span>
+                    <span className="text-sm text-white">Document New Work</span>
+                  </Link>
+
+                  <Link
+                    href={`/pro/messages/${connection.id}`}
+                    className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
+                  >
+                    <span className="text-xl">💬</span>
+                    <span className="text-sm text-white">Send Message</span>
+                  </Link>
                 </div>
               </section>
             )}
@@ -495,57 +759,6 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                 )}
               </dl>
             </section>
-
-            {/* Quick Actions */}
-            {property.owner ? (
-              <section className={glass}>
-                <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
-                  Quick Actions
-                </h2>
-                <div className="space-y-2">
-                  <Link
-                    href={`mailto:${property.owner.email}`}
-                    className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm transition hover:bg-white/10"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      stroke="currentColor"
-                      className="h-4 w-4"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"
-                      />
-                    </svg>
-                    Email Homeowner
-                  </Link>
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm transition hover:bg-white/10"
-                    disabled
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={2}
-                      stroke="currentColor"
-                      className="h-4 w-4"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z"
-                      />
-                    </svg>
-                    Message (Coming Soon)
-                  </button>
-                </div>
-              </section>
-            ) : null}
           </div>
         </div>
       </div>
@@ -620,11 +833,13 @@ async function WorkRecordCard({
 function StatCard({
   label,
   value,
+  subtext,
   highlight,
 }: {
   label: string;
   value: string | number;
-  highlight?: "red" | "yellow";
+  subtext?: string;
+  highlight?: "red" | "yellow" | "blue" | "orange";
 }) {
   return (
     <div className={glassTight}>
@@ -635,11 +850,18 @@ function StatCard({
             ? "text-red-400"
             : highlight === "yellow"
             ? "text-yellow-400"
+            : highlight === "blue"
+            ? "text-blue-400"
+            : highlight === "orange"
+            ? "text-orange-400"
             : "text-white"
         }`}
       >
         {value}
       </div>
+      {subtext && (
+        <div className="mt-0.5 text-xs text-white/60">{subtext}</div>
+      )}
     </div>
   );
 }
