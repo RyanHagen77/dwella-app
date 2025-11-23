@@ -18,7 +18,7 @@ export default async function PropertiesPage() {
 
   const userId = session.user.id as string;
 
-  // Get all connections for this contractor
+  // Get all connections for this contractor with full data
   const connections = await prisma.connection.findMany({
     where: {
       contractorId: userId,
@@ -28,6 +28,56 @@ export default async function PropertiesPage() {
         select: {
           name: true,
           email: true,
+          image: true,
+        },
+      },
+      home: {
+        select: {
+          id: true,
+          address: true,
+          city: true,
+          state: true,
+          zip: true,
+          photos: true,
+          // Get opportunities
+          warranties: {
+            where: {
+              expiresAt: {
+                gte: new Date(),
+                lte: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+              },
+            },
+            select: {
+              id: true,
+              item: true,
+              expiresAt: true,
+            },
+          },
+          reminders: {
+            where: {
+              dueAt: {
+                gte: new Date(),
+                lte: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              },
+            },
+            select: {
+              id: true,
+              title: true,
+              dueAt: true,
+            },
+          },
+          // Get pending job requests
+          jobRequests: {
+            where: {
+              contractorId: userId,
+              status: { in: ["PENDING", "QUOTED"] },
+            },
+            select: {
+              id: true,
+              title: true,
+              urgency: true,
+            },
+          },
         },
       },
     },
@@ -36,21 +86,8 @@ export default async function PropertiesPage() {
     },
   });
 
+  // Get work records
   const homeIds = connections.map((c) => c.homeId);
-
-  const homes = await prisma.home.findMany({
-    where: {
-      id: { in: homeIds },
-    },
-    select: {
-      id: true,
-      address: true,
-      city: true,
-      state: true,
-      zip: true,
-      photos: true,
-    },
-  });
 
   const workRecords = await prisma.workRecord.findMany({
     where: {
@@ -61,7 +98,7 @@ export default async function PropertiesPage() {
       id: true,
       homeId: true,
       workDate: true,
-      status: true,
+      workType: true,
       description: true,
     },
     orderBy: {
@@ -69,11 +106,37 @@ export default async function PropertiesPage() {
     },
   });
 
-  // Transform data for client
+  // Transform data for client with all required fields
+  const now = Date.now();
+
   const properties = connections.map((conn) => {
-    const home = homes.find((h) => h.id === conn.homeId);
+    const home = conn.home;
     const records = workRecords.filter((r) => r.homeId === conn.homeId);
     const lastWork = records.length > 0 ? records[0] : null;
+
+    // Calculate relationship metrics
+    const daysSinceLastWork = conn.lastWorkDate
+      ? Math.floor((now - new Date(conn.lastWorkDate).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+
+    // Process opportunities
+    const expiringWarranties = home?.warranties?.map(w => ({
+      item: w.item,
+      expiresAt: w.expiresAt!.toISOString(),
+      daysUntil: Math.ceil((new Date(w.expiresAt!).getTime() - now) / (1000 * 60 * 60 * 24)),
+    })) || [];
+
+    const upcomingReminders = home?.reminders?.map(r => ({
+      title: r.title,
+      dueAt: r.dueAt.toISOString(),
+      daysUntil: Math.ceil((new Date(r.dueAt).getTime() - now) / (1000 * 60 * 60 * 24)),
+    })) || [];
+
+    const pendingRequests = home?.jobRequests?.map(req => ({
+      id: req.id,
+      title: req.title,
+      urgency: req.urgency,
+    })) || [];
 
     return {
       id: conn.homeId,
@@ -81,13 +144,20 @@ export default async function PropertiesPage() {
       city: home?.city ?? "",
       state: home?.state ?? "",
       zip: home?.zip ?? "",
-      homeownerName: conn.homeowner?.name ?? "Unknown",
+      homeownerName: conn.homeowner?.name ?? conn.homeowner?.email ?? "Unknown",
       homeownerEmail: conn.homeowner?.email ?? "",
+      homeownerImage: conn.homeowner?.image ?? null,
       connectionStatus: conn.status,
+      verifiedWorkCount: conn.verifiedWorkCount,
+      totalSpent: Number(conn.totalSpent) || null,
       jobCount: records.length,
       lastWorkDate: lastWork?.workDate?.toISOString() ?? null,
-      lastWorkTitle: lastWork?.description ?? null,
+      lastWorkTitle: lastWork?.workType ?? lastWork?.description ?? null,
+      daysSinceLastWork,
       imageUrl: home?.photos?.[0] ?? null,
+      expiringWarranties,
+      upcomingReminders,
+      pendingRequests,
     };
   });
 
