@@ -1,4 +1,4 @@
-// app/api/pro/contractor/document-completed-work-submissions-records/route.ts
+// app/api/pro/contractor/work-records/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -8,7 +8,7 @@ import { z } from "zod";
 export const runtime = "nodejs";
 
 const createWorkRecordSchema = z.object({
-  homeId: z.string().min(1, "Home ID is required"), // ✅ Accept homeId for connected homes
+  homeId: z.string().min(1, "Home ID is required"),
   workType: z.string().min(1, "Work type is required"),
   workDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid date format",
@@ -21,8 +21,8 @@ const createWorkRecordSchema = z.object({
 });
 
 /**
- * POST /api/pro/contractor/document-completed-work-submissions-records
- * Allows contractors to document document-completed-work-submissions for connected homes
+ * POST /api/pro/contractor/work-records
+ * Allows contractors to document completed work for connected homes
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
 
   if (user?.role !== "PRO" || user.proProfile?.type !== "CONTRACTOR") {
     return NextResponse.json(
-      { error: "Only contractors can document document-completed-work-submissions" },
+      { error: "Only contractors can document completed work" },
       { status: 403 }
     );
   }
@@ -64,9 +64,16 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get home details
+    // Get home details for address snapshot
     const home = await prisma.home.findUnique({
       where: { id: data.homeId },
+      select: {
+        id: true,
+        address: true,
+        city: true,
+        state: true,
+        zip: true,
+      },
     });
 
     if (!home) {
@@ -76,23 +83,31 @@ export async function POST(req: Request) {
       );
     }
 
-    // Create document-completed-work-submissions record
+    // Create work record with correct status enum value
     const workRecord = await prisma.workRecord.create({
       data: {
         homeId: data.homeId,
         contractorId: session.user.id,
-        invitationId: null,
         workType: data.workType,
         workDate: new Date(data.workDate),
         description: data.description ?? null,
-        cost: data.cost ?? null,
+        // Convert cost to string for Prisma Decimal, or null if not provided
+        cost: data.cost != null ? String(data.cost) : null,
         warrantyIncluded: data.warrantyIncluded,
         warrantyLength: data.warrantyLength ?? null,
         warrantyDetails: data.warrantyDetails ?? null,
+        // Use DOCUMENTED_UNVERIFIED for contractor-submitted work awaiting homeowner review
         status: "DOCUMENTED_UNVERIFIED",
         isVerified: false,
         photos: [],
         invoiceUrl: null,
+        // Store address snapshot for historical record
+        addressSnapshot: {
+          address: home.address,
+          city: home.city,
+          state: home.state,
+          zip: home.zip,
+        },
       },
     });
 
@@ -108,7 +123,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Error creating document-completed-work-submissions record:", error);
+    console.error("Error creating work record:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -117,16 +132,21 @@ export async function POST(req: Request) {
       );
     }
 
+    // Log full Prisma error details
+    if (error && typeof error === 'object') {
+      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    }
+
     return NextResponse.json(
-      { error: "Failed to create document-completed-work-submissions record" },
+      { error: "Failed to create work record", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
 }
 
 /**
- * GET /api/pro/contractor/document-completed-work-submissions-records
- * List contractor's document-completed-work-submissions records
+ * GET /api/pro/contractor/work-records
+ * List contractor's work records
  */
 export async function GET(req: Request) {
   const session = await getServerSession(authConfig);

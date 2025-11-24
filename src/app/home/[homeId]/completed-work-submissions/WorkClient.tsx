@@ -190,17 +190,6 @@ export default function WorkClient({
               {totalRequests + totalPendingApprovals > 0 &&
                 ` (${totalRequests + totalPendingApprovals})`}
             </button>
-
-            <button
-              onClick={() => setActiveTab("find-pros")}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === "find-pros"
-                  ? "border-white/40 bg-white/15 text-white"
-                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-              }`}
-            >
-              Find Pros
-            </button>
           </div>
         </section>
 

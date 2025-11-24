@@ -3,8 +3,6 @@
  * Converts Decimal to number and Date to string
  */
 
-import type { Prisma } from "@prisma/client";
-
 /**
  * Serialize a Connection object for client components
  */
@@ -111,18 +109,64 @@ export function serializeQuote<
  */
 export function serializeWorkRecord<T extends { cost?: unknown }>(
   workRecord: T
-) {
+): T & { cost: number | null } {
   return {
     ...workRecord,
     cost:
       workRecord.cost && typeof workRecord.cost === "object"
         ? Number(workRecord.cost)
-        : workRecord.cost,
+        : workRecord.cost != null
+        ? Number(workRecord.cost)
+        : null,
+  };
+}
+
+/**
+ * Serialize an array of WorkRecord objects
+ */
+export function serializeWorkRecords<T extends { cost?: unknown }>(
+  workRecords: T[]
+): Array<T & { cost: number | null }> {
+  return workRecords.map(serializeWorkRecord);
+}
+
+/**
+ * Serialize a Home object for client components
+ * Handles latitude, longitude, and squareFeet Decimal fields
+ */
+export function serializeHome<
+  T extends {
+    latitude?: unknown;
+    longitude?: unknown;
+    squareFeet?: unknown;
+  }
+>(home: T) {
+  return {
+    ...home,
+    latitude:
+      home.latitude && typeof home.latitude === "object"
+        ? Number(home.latitude)
+        : home.latitude != null
+        ? Number(home.latitude)
+        : null,
+    longitude:
+      home.longitude && typeof home.longitude === "object"
+        ? Number(home.longitude)
+        : home.longitude != null
+        ? Number(home.longitude)
+        : null,
+    squareFeet:
+      home.squareFeet && typeof home.squareFeet === "object"
+        ? Number(home.squareFeet)
+        : home.squareFeet != null
+        ? Number(home.squareFeet)
+        : null,
   };
 }
 
 /**
  * Generic serializer for any object with Decimal fields
+ * Recursively converts all Decimal objects to numbers
  */
 export function serializeDecimals<T extends Record<string, unknown>>(
   obj: T
@@ -132,23 +176,57 @@ export function serializeDecimals<T extends Record<string, unknown>>(
   for (const key in serialized) {
     const value = serialized[key];
 
-    // Handle Decimal objects
+    // Handle Decimal objects (they have a toNumber method)
     if (value && typeof value === "object" && "toNumber" in value) {
       (serialized[key] as number) = Number(value);
     }
-    // Recursively handle nested objects
+    // Handle Date objects - convert to ISO string
+    else if (value instanceof Date) {
+      (serialized[key] as string) = value.toISOString() as T[Extract<keyof T, string>] & string;
+    }
+    // Recursively handle nested objects (but not null)
     else if (value && typeof value === "object" && !Array.isArray(value)) {
-      serialized[key] = serializeDecimals(value as Record<string, unknown>) as T[Extract<keyof T, string>];
+      serialized[key] = serializeDecimals(
+        value as Record<string, unknown>
+      ) as T[Extract<keyof T, string>];
     }
     // Handle arrays
     else if (Array.isArray(value)) {
       serialized[key] = value.map((item) =>
         typeof item === "object" && item !== null
-          ? serializeDecimals(item as Record<string, unknown>)
+          ? item instanceof Date
+            ? item.toISOString()
+            : serializeDecimals(item as Record<string, unknown>)
           : item
       ) as T[Extract<keyof T, string>];
     }
   }
 
   return serialized;
+}
+
+/**
+ * Serialize BigInt to number (for attachment sizes, etc.)
+ */
+export function serializeBigInt<T extends { size?: unknown }>(
+  obj: T
+): T & { size: number | null } {
+  return {
+    ...obj,
+    size:
+      obj.size != null
+        ? typeof obj.size === "bigint"
+          ? Number(obj.size)
+          : Number(obj.size)
+        : null,
+  };
+}
+
+/**
+ * Serialize an array of objects with BigInt size field
+ */
+export function serializeBigInts<T extends { size?: unknown }>(
+  items: T[]
+): Array<T & { size: number | null }> {
+  return items.map(serializeBigInt);
 }
