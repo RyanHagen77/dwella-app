@@ -172,57 +172,32 @@ export default async function HomePage({
 
   if (!home) notFound();
 
-  // Get pending work submissions (contractors submitted for approval)
-  const pendingWorkSubmissions = await prisma.workSubmission.findMany({
+  // Get pending work submissions count (from WorkRecord, not WorkSubmission)
+  const pendingWorkSubmissionsCount = await prisma.workRecord.count({
     where: {
       homeId,
-      status: { in: ["PENDING_REVIEW", "DOCUMENTED", "DOCUMENTED_UNVERIFIED"] },
-    },
-    select: {
-      id: true,
-      workType: true,
-      description: true,
-      createdAt: true,
-      contractor: {
-        select: {
-          name: true,
-          proProfile: {
-            select: { businessName: true },
-          },
-        },
+      isVerified: false,
+      status: {
+        in: ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED", "DISPUTED"],
       },
+      archivedAt: null,
     },
-    orderBy: { createdAt: "desc" },
-    take: 5,
   });
 
-  // Get pending job requests (homeowner's requests awaiting response)
-  const pendingJobRequests = await prisma.jobRequest.findMany({
+  // Get pending job requests count
+  const pendingJobRequestsCount = await prisma.jobRequest.count({
     where: {
       homeId,
       status: { in: ["PENDING", "QUOTED"] },
     },
-    select: {
-      id: true,
-      title: true,
-      status: true,
-      createdAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-    take: 5,
   });
 
-  // Get pending invitations
-  const pendingInvitations = await prisma.invitation.findMany({
+  // Get pending invitations count
+  const pendingInvitationsCount = await prisma.invitation.count({
     where: {
       homeId,
       status: "PENDING",
     },
-    select: {
-      id: true,
-      createdAt: true,
-    },
-    take: 5,
   });
 
   const addrLine = `${home.address}${
@@ -330,14 +305,14 @@ export default async function HomePage({
         <PropertyStats homeId={home.id} stats={stats} />
 
         {/* Needs Attention - Pending Work & Requests */}
-        {(pendingWorkSubmissions.length > 0 || pendingJobRequests.length > 0 || pendingInvitations.length > 0) && (
+        {(pendingWorkSubmissionsCount > 0 || pendingJobRequestsCount > 0 || pendingInvitationsCount > 0) && (
           <section className={`${glass} border-l-4 border-orange-400`}>
             <h2 className={`text-lg font-semibold text-orange-400 mb-4 ${heading}`}>
               ⚡ Needs Your Attention
             </h2>
             <div className="space-y-3">
               {/* Pending Work Submissions */}
-              {pendingWorkSubmissions.length > 0 && (
+              {pendingWorkSubmissionsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
                   className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
@@ -349,18 +324,18 @@ export default async function HomePage({
                         Review Completed Work
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingWorkSubmissions.length} submission{pendingWorkSubmissions.length !== 1 ? 's' : ''} awaiting approval
+                        {pendingWorkSubmissionsCount} submission{pendingWorkSubmissionsCount !== 1 ? 's' : ''} awaiting approval
                       </p>
                     </div>
                   </div>
                   <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingWorkSubmissions.length}
+                    {pendingWorkSubmissionsCount}
                   </span>
                 </Link>
               )}
 
               {/* Pending Job Requests */}
-              {pendingJobRequests.length > 0 && (
+              {pendingJobRequestsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
                   className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
@@ -372,18 +347,18 @@ export default async function HomePage({
                         Job Requests
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingJobRequests.length} request{pendingJobRequests.length !== 1 ? 's' : ''} pending response
+                        {pendingJobRequestsCount} request{pendingJobRequestsCount !== 1 ? 's' : ''} pending response
                       </p>
                     </div>
                   </div>
                   <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingJobRequests.length}
+                    {pendingJobRequestsCount}
                   </span>
                 </Link>
               )}
 
               {/* Pending Invitations */}
-              {pendingInvitations.length > 0 && (
+              {pendingInvitationsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/invitations`}
                   className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
@@ -395,12 +370,12 @@ export default async function HomePage({
                         Pending Invitations
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingInvitations.length} invitation{pendingInvitations.length !== 1 ? 's' : ''} awaiting response
+                        {pendingInvitationsCount} invitation{pendingInvitationsCount !== 1 ? 's' : ''} awaiting response
                       </p>
                     </div>
                   </div>
                   <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingInvitations.length}
+                    {pendingInvitationsCount}
                   </span>
                 </Link>
               )}

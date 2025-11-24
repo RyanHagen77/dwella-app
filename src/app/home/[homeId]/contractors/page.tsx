@@ -12,9 +12,9 @@ import { ContractorActions } from "./ContractorActions";
 type Connection = {
   id: string;
   createdAt: Date;
-  verifiedWorkCount: number;
   totalSpent: { toNumber: () => number } | null;
   lastWorkDate: Date | null;
+  contractorId: string;
   contractor: {
     id: string;
     name: string | null;
@@ -24,6 +24,11 @@ type Connection = {
       businessName: string | null;
     } | null;
   } | null;
+};
+
+type WorkRecord = {
+  id: string;
+  contractorId: string | null;
 };
 
 function formatDate(value: Date | string | null | undefined): string {
@@ -59,9 +64,9 @@ export default async function ContractorsPage({
         select: {
           id: true,
           createdAt: true,
-          verifiedWorkCount: true,
           totalSpent: true,
           lastWorkDate: true,
+          contractorId: true,
           contractor: {
             select: {
               id: true,
@@ -77,6 +82,15 @@ export default async function ContractorsPage({
           },
         },
       },
+      workRecords: {
+        where: {
+          isVerified: true,
+        },
+        select: {
+          id: true,
+          contractorId: true,
+        },
+      },
     },
   });
 
@@ -85,6 +99,16 @@ export default async function ContractorsPage({
   const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
   const connections = home.connections as Connection[];
+  const workRecords = home.workRecords as WorkRecord[];
+
+  // Count verified work per contractor
+  const verifiedWorkByContractor = new Map<string, number>();
+  for (const record of workRecords) {
+    if (record.contractorId) {
+      const count = verifiedWorkByContractor.get(record.contractorId) || 0;
+      verifiedWorkByContractor.set(record.contractorId, count + 1);
+    }
+  }
 
   return (
     <main className="relative min-h-screen text-white">
@@ -138,6 +162,7 @@ export default async function ContractorsPage({
                 key={conn.id}
                 connection={conn}
                 homeId={homeId}
+                verifiedWorkCount={verifiedWorkByContractor.get(conn.contractorId) || 0}
               />
             ))}
           </div>
@@ -150,9 +175,11 @@ export default async function ContractorsPage({
 function ContractorRow({
   connection,
   homeId,
+  verifiedWorkCount,
 }: {
   connection: Connection;
   homeId: string;
+  verifiedWorkCount: number;
 }) {
   const contractor = connection.contractor;
   if (!contractor) return null;
@@ -196,7 +223,7 @@ function ContractorRow({
       <div className="flex gap-6 flex-shrink-0">
         <div className="text-center">
           <div className="text-lg font-semibold text-white">
-            {connection.verifiedWorkCount}
+            {verifiedWorkCount}
           </div>
           <div className="text-xs text-white/50">Verified Jobs</div>
         </div>
