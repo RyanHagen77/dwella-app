@@ -535,19 +535,6 @@ function ProHero({ router }: { router: ReturnType<typeof useRouter> }) {
           </p>
         </div>
       </section>
-
-      <FinalCta
-        headline={
-          <>
-            You&apos;ve built the relationships.
-            <br />
-            <span className="text-orange-400">Now profit from them.</span>
-          </>
-        }
-        cta="Get Started Free"
-        note="Join 500+ contractors growing their repeat business"
-        onClick={() => router.push("/apply")}
-      />
     </>
   );
 }

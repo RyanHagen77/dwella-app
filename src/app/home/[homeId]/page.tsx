@@ -1,3 +1,12 @@
+/**
+ * HOME DASHBOARD - REDESIGNED
+ *
+ * Based on working original, with additions:
+ * - Connected Pros section visible on main page
+ * - Action items section for pending work/invitations
+ * - Better layout hierarchy
+ */
+
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -7,10 +16,11 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, textMeta, ctaPrimary, heading } from "@/lib/glass";
-import ClientActions from "@/app/home/_components/ClientActions";
+import { HomeActions } from "@/app/home/_components/HomeActions";
 import { ClientCard } from "@/app/home/_components/ClientCard";
 import { HomePicker } from "@/app/home/_components/HomePicker";
 import { PropertyStats } from "@/app/home/_components/PropertyStats";
+import { ConnectedPros } from "@/app/home/_components/ConnectedPros";
 
 type HomeMeta = {
   attrs?: {
@@ -47,6 +57,21 @@ type Warranty = {
   expiresAt: Date | null;
 };
 
+type ConnectionWithContractor = {
+  id: string;
+  createdAt: Date;
+  verifiedWorkCount: number;
+  contractor: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+    proProfile: {
+      businessName: string | null;
+    } | null;
+  };
+};
+
 function formatDate(
   value: Date | string | null | undefined,
   fallback: string = "—"
@@ -75,6 +100,7 @@ export default async function HomePage({
 
   await requireHomeAccess(homeId, session.user.id);
 
+  // Original query + connections
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: {
@@ -100,7 +126,7 @@ export default async function HomePage({
       },
       reminders: {
         orderBy: { dueAt: "asc" },
-        take: 5,
+        take: 10,
         select: {
           id: true,
           title: true,
@@ -117,10 +143,87 @@ export default async function HomePage({
           expiresAt: true,
         },
       },
+      // NEW: Get connected contractors
+      connections: {
+        where: { status: "ACTIVE" },
+        orderBy: { updatedAt: "desc" },
+        take: 4,
+        select: {
+          id: true,
+          createdAt: true,
+          verifiedWorkCount: true,
+          contractor: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              image: true,
+              proProfile: {
+                select: {
+                  businessName: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 
   if (!home) notFound();
+
+  // Get pending work submissions (contractors submitted for approval)
+  const pendingWorkSubmissions = await prisma.workSubmission.findMany({
+    where: {
+      homeId,
+      status: { in: ["PENDING_REVIEW", "DOCUMENTED", "DOCUMENTED_UNVERIFIED"] },
+    },
+    select: {
+      id: true,
+      workType: true,
+      description: true,
+      createdAt: true,
+      contractor: {
+        select: {
+          name: true,
+          proProfile: {
+            select: { businessName: true },
+          },
+        },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  // Get pending job requests (homeowner's requests awaiting response)
+  const pendingJobRequests = await prisma.jobRequest.findMany({
+    where: {
+      homeId,
+      status: { in: ["PENDING", "QUOTED"] },
+    },
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+
+  // Get pending invitations
+  const pendingInvitations = await prisma.invitation.findMany({
+    where: {
+      homeId,
+      status: "PENDING",
+    },
+    select: {
+      id: true,
+      createdAt: true,
+    },
+    take: 5,
+  });
 
   const addrLine = `${home.address}${
     home.city ? `, ${home.city}` : ""
@@ -149,15 +252,18 @@ export default async function HomePage({
   const now = new Date();
 
   const overdueReminders = home.reminders.filter(
-    (r) => new Date(r.dueAt) < now
+    (r: Reminder) => new Date(r.dueAt) < now
   );
   const upcomingReminders = home.reminders.filter(
-    (r) => new Date(r.dueAt) >= now
+    (r: Reminder) => new Date(r.dueAt) >= now
   );
 
-  const expiringSoonWarranties = home.warranties.filter((w) =>
+  const expiringSoonWarranties = home.warranties.filter((w: Warranty) =>
     isWarrantyExpiringSoon(w.expiresAt, now)
   );
+
+  // Cast connections to typed array
+  const connections = home.connections as ConnectionWithContractor[];
 
   return (
     <main className="relative min-h-screen text-white">
@@ -216,12 +322,91 @@ export default async function HomePage({
             </div>
 
             {/* Actions row */}
-            <ClientActions homeId={home.id} />
+            <HomeActions homeId={home.id} homeAddress={addrLine} unreadMessages={0} />
           </div>
         </section>
 
         {/* Stats */}
         <PropertyStats homeId={home.id} stats={stats} />
+
+        {/* Needs Attention - Pending Work & Requests */}
+        {(pendingWorkSubmissions.length > 0 || pendingJobRequests.length > 0 || pendingInvitations.length > 0) && (
+          <section className={`${glass} border-l-4 border-orange-400`}>
+            <h2 className={`text-lg font-semibold text-orange-400 mb-4 ${heading}`}>
+              ⚡ Needs Your Attention
+            </h2>
+            <div className="space-y-3">
+              {/* Pending Work Submissions */}
+              {pendingWorkSubmissions.length > 0 && (
+                <Link
+                  href={`/home/${home.id}/completed-work-submissions`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📋</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Review Completed Work
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {pendingWorkSubmissions.length} submission{pendingWorkSubmissions.length !== 1 ? 's' : ''} awaiting approval
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingWorkSubmissions.length}
+                  </span>
+                </Link>
+              )}
+
+              {/* Pending Job Requests */}
+              {pendingJobRequests.length > 0 && (
+                <Link
+                  href={`/home/${home.id}/completed-work-submissions`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🔧</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Job Requests
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {pendingJobRequests.length} request{pendingJobRequests.length !== 1 ? 's' : ''} pending response
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingJobRequests.length}
+                  </span>
+                </Link>
+              )}
+
+              {/* Pending Invitations */}
+              {pendingInvitations.length > 0 && (
+                <Link
+                  href={`/home/${home.id}/invitations`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">✉️</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Pending Invitations
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {pendingInvitations.length} invitation{pendingInvitations.length !== 1 ? 's' : ''} awaiting response
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingInvitations.length}
+                  </span>
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Alerts */}
         {(overdueReminders.length > 0 ||
@@ -237,7 +422,7 @@ export default async function HomePage({
                       ⚠️ Overdue Reminders ({overdueReminders.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
-                      {overdueReminders.map((r) => (
+                      {overdueReminders.map((r: Reminder) => (
                         <li key={r.id} className="text-sm text-white/90">
                           • {r.title} (due {formatDate(r.dueAt)})
                         </li>
@@ -265,7 +450,7 @@ export default async function HomePage({
                       {expiringSoonWarranties.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
-                      {expiringSoonWarranties.map((w) => (
+                      {expiringSoonWarranties.map((w: Warranty) => (
                         <li key={w.id} className="text-sm text-white/90">
                           • {w.item}{" "}
                           {w.expiresAt && (
@@ -291,6 +476,10 @@ export default async function HomePage({
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Left column */}
           <div className="space-y-6 lg:col-span-2">
+            {/* Connected Pros Section */}
+            <ConnectedPros homeId={home.id} homeAddress={addrLine} connections={connections} />
+
+            {/* Records */}
             <ClientCard
               title="Recent Maintenance & Repairs"
               viewAllLink={`/home/${home.id}/records`}
@@ -306,7 +495,7 @@ export default async function HomePage({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {serializedRecords.map((r) => (
+                  {serializedRecords.map((r: HomeRecord) => (
                     <RecordItem key={r.id} record={r} homeId={home.id} />
                   ))}
                 </div>
@@ -328,7 +517,7 @@ export default async function HomePage({
                 </div>
               ) : (
                 <ul className="space-y-3">
-                  {upcomingReminders.map((m) => (
+                  {upcomingReminders.map((m: Reminder) => (
                     <ReminderItem
                       key={m.id}
                       reminder={m}
@@ -352,7 +541,7 @@ export default async function HomePage({
                 </div>
               ) : (
                 <ul className="space-y-3">
-                  {home.warranties.map((w) => (
+                  {home.warranties.map((w: Warranty) => (
                     <WarrantyItem
                       key={w.id}
                       warranty={w}
