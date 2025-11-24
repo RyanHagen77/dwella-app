@@ -14,9 +14,9 @@ import { WorkRecordActions } from "./WorkRecordActions";
 export default async function WorkRecordDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ workId: string }>;
 }) {
-  const { id } = await params;
+  const { workId } = await params;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) {
@@ -25,7 +25,7 @@ export default async function WorkRecordDetailPage({
 
   const userId = session.user.id;
 
-  // Optional: verify contractor role/type if you want consistency with other pro pages
+  // Verify contractor role/type
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { proProfile: true },
@@ -36,7 +36,7 @@ export default async function WorkRecordDetailPage({
 
   const workRecord = await prisma.workRecord.findFirst({
     where: {
-      id,
+      id: workId,
       contractorId: userId,
     },
     include: {
@@ -85,7 +85,7 @@ export default async function WorkRecordDetailPage({
     <main className="relative min-h-screen text-white">
       <Bg />
 
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">
           <Link
@@ -150,7 +150,7 @@ export default async function WorkRecordDetailPage({
             <div className="flex items-center gap-2">
               <StatusBadge status={workRecord.status} />
               <WorkRecordActions
-                workRecordId={id}
+                workRecordId={workId}
                 workRecord={serializedWorkRecord}
               />
             </div>
@@ -216,37 +216,46 @@ export default async function WorkRecordDetailPage({
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                       {workRecord.attachments
                         .filter((a) => a.mimeType?.startsWith("image/"))
-                        .map((attachment) => (
-                          <a
-                            key={attachment.id}
-                            href={`/api/home/${workRecord.homeId}/attachments/${attachment.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-white/5 transition hover:opacity-90"
-                          >
-                            <img
-                              src={`/api/home/${workRecord.homeId}/attachments/${attachment.id}`}
-                              alt={attachment.filename}
-                              className="h-full w-full object-cover transition group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={2}
-                                stroke="currentColor"
-                                className="h-8 w-8 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"
+                        .map((attachment) => {
+                          const src = `/api/home/${workRecord.homeId}/attachments/${attachment.id}`;
+                          return (
+                            <a
+                              key={attachment.id}
+                              href={src}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-white/5 transition hover:opacity-90"
+                            >
+                              {/* ✅ Next Image needs a relative parent */}
+                              <div className="relative h-full w-full">
+                                <Image
+                                  src={src}
+                                  alt={attachment.filename}
+                                  fill
+                                  sizes="(min-width: 640px) 33vw, 50vw"
+                                  className="object-cover transition group-hover:scale-105"
                                 />
-                              </svg>
-                            </div>
-                          </a>
-                        ))}
+                              </div>
+
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={2}
+                                  stroke="currentColor"
+                                  className="h-8 w-8 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"
+                                  />
+                                </svg>
+                              </div>
+                            </a>
+                          );
+                        })}
                     </div>
                   </div>
                 )}

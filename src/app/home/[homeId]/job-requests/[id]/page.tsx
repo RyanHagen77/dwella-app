@@ -161,7 +161,7 @@ export default async function JobRequestDetailPage({ params }: PageProps) {
     <main className="relative min-h-screen text-white">
       <Bg />
 
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
         <Breadcrumb
           items={[

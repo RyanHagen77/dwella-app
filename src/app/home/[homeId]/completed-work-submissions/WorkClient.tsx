@@ -125,7 +125,7 @@ export default function WorkClient({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="mx-auto max-w-7xl p-6 space-y-6">
       {/* Breadcrumb */}
       <Breadcrumb
         href={`/home/${homeId}`}

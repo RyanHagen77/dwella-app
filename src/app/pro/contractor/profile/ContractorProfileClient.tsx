@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { glass, glassTight, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Textarea, fieldLabel } from "@/components/ui";
@@ -10,7 +11,7 @@ import { Button, GhostButton } from "@/components/ui/Button";
 type ProfileData = {
   id: string;
   userId: string;
-  type: "CONTRACTOR"; // contractor-specific
+  type: "CONTRACTOR";
   businessName: string;
   phone: string;
   website: string;
@@ -26,13 +27,23 @@ type ProfileData = {
 type ProfileClientProps = {
   profile: ProfileData;
   user: { name: string };
-  titleByType: string;    // always "Contractor" from server
-  websiteHref: string;    // normalized on server
+  titleByType: string;
+  websiteHref: string;
 };
 
 function withHttp(url?: string | null) {
   if (!url) return "";
   return /^https?:\/\//i.test(url) ? url : `https://${url}`;
+}
+
+function isValidHttpUrl(url?: string | null) {
+  if (!url) return false;
+  try {
+    const u = new URL(withHttp(url));
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function ContractorProfileClient({
@@ -65,6 +76,7 @@ export function ContractorProfileClient({
   const [editMode, setEditMode] = useState(false);
   const [logoMode, setLogoMode] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     businessName: profile.businessName || "",
@@ -79,16 +91,16 @@ export function ContractorProfileClient({
 
   const [logoUrl, setLogoUrl] = useState(profile.logo || "");
 
-  const computedWebsiteHref = useMemo(
-    () =>
-      websiteHref && websiteHref.length
-        ? websiteHref
-        : withHttp(form.website || profile.website),
-    [websiteHref, form.website, profile.website]
-  );
+  const computedWebsiteHref = useMemo(() => {
+    if (websiteHref && websiteHref.length) return websiteHref;
+    const candidate = form.website || profile.website;
+    return isValidHttpUrl(candidate) ? withHttp(candidate) : "";
+  }, [websiteHref, form.website, profile.website]);
 
   async function handleSave() {
     setSaving(true);
+    setError(null);
+
     try {
       const payload = {
         businessName: form.businessName.trim(),
@@ -105,7 +117,6 @@ export function ContractorProfileClient({
           .map((s) => s.trim())
           .filter(Boolean),
         company: form.company.trim(),
-        // type is implicitly CONTRACTOR on this screen
       };
 
       const res = await fetch("/api/pro/profile", {
@@ -113,7 +124,11 @@ export function ContractorProfileClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(await res.text());
+
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Failed to update profile");
+      }
 
       const updated = await res.json();
 
@@ -132,10 +147,11 @@ export function ContractorProfileClient({
           : payload.serviceAreas,
         company: updated.company ?? payload.company,
       }));
+
       setEditMode(false);
     } catch (err) {
       console.error("Error updating profile:", err);
-      alert("Failed to update profile");
+      setError("Failed to update profile. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -143,31 +159,39 @@ export function ContractorProfileClient({
 
   async function handleLogoSave() {
     const url = (logoUrl || "").trim();
-    if (!url) {
-      alert("Please enter a valid logo URL.");
+    if (!isValidHttpUrl(url)) {
+      setError("Please enter a valid http(s) logo URL.");
       return;
     }
+
     setSaving(true);
+    setError(null);
+
     try {
       const res = await fetch("/api/pro/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ logo: url }),
       });
-      if (!res.ok) throw new Error(await res.text());
+
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "Failed to update logo");
+      }
+
       const updated = await res.json();
       setProfile((p) => ({ ...p, logo: updated.logo ?? url }));
       setLogoMode(false);
     } catch (err) {
       console.error("Error updating logo:", err);
-      alert("Failed to update logo");
+      setError("Failed to update logo. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="mx-auto max-w-7xl p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <Link
@@ -176,8 +200,10 @@ export function ContractorProfileClient({
         >
           ← Back to Contractor Dashboard
         </Link>
+
         <button
           onClick={() => {
+            setError(null);
             setForm({
               businessName: profile.businessName || "",
               phone: profile.phone || "",
@@ -196,6 +222,13 @@ export function ContractorProfileClient({
         </button>
       </div>
 
+      {/* Error banner (page level) */}
+      {error && (
+        <div className={`${glass} border-l-4 border-red-400`}>
+          <p className="text-sm text-red-200">{error}</p>
+        </div>
+      )}
+
       {/* Profile Card */}
       <section className={glass}>
         <div className="flex items-start gap-6">
@@ -204,16 +237,20 @@ export function ContractorProfileClient({
             type="button"
             className="group relative flex h-24 w-24 flex-shrink-0 cursor-pointer items-center justify-center rounded-xl border border-white/20 bg-white/10 transition hover:bg-white/15"
             onClick={() => {
+              setError(null);
               setLogoUrl(profile.logo || "");
               setLogoMode(true);
             }}
+            aria-label="Update logo"
           >
             {profile.logo ? (
               <>
-                <img
-                  src={profile.logo}
+                <Image
+                  src={withHttp(profile.logo)}
                   alt={`${profile.businessName || "Contractor"} logo`}
-                  className="h-full w-full rounded-xl object-cover"
+                  fill
+                  sizes="96px"
+                  className="rounded-xl object-cover"
                 />
                 <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 transition group-hover:opacity-100">
                   <span className="text-xs text-white">Change</span>
@@ -256,6 +293,7 @@ export function ContractorProfileClient({
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -280,6 +318,7 @@ export function ContractorProfileClient({
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -306,6 +345,7 @@ export function ContractorProfileClient({
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
+                    aria-hidden="true"
                   >
                     <path
                       strokeLinecap="round"
@@ -314,7 +354,9 @@ export function ContractorProfileClient({
                       d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
                     />
                   </svg>
-                  <span className="text-white/85">License: {profile.licenseNo}</span>
+                  <span className="text-white/85">
+                    License: {profile.licenseNo}
+                  </span>
                 </div>
               )}
             </div>
@@ -332,9 +374,11 @@ export function ContractorProfileClient({
 
       {/* Specialties & Service Areas */}
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {profile.specialties && profile.specialties.length > 0 && (
+        {profile.specialties.length > 0 && (
           <section className={glass}>
-            <h2 className={`mb-3 text-lg font-semibold ${heading}`}>Specialties</h2>
+            <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
+              Specialties
+            </h2>
             <div className="flex flex-wrap gap-2">
               {profile.specialties.map((item) => (
                 <span key={item} className={glassTight}>
@@ -345,9 +389,11 @@ export function ContractorProfileClient({
           </section>
         )}
 
-        {profile.serviceAreas && profile.serviceAreas.length > 0 && (
+        {profile.serviceAreas.length > 0 && (
           <section className={glass}>
-            <h2 className={`mb-3 text-lg font-semibold ${heading}`}>Service Areas</h2>
+            <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
+              Service Areas
+            </h2>
             <div className="flex flex-wrap gap-2">
               {profile.serviceAreas.map((area) => (
                 <span key={area} className={glassTight}>
@@ -361,7 +407,9 @@ export function ContractorProfileClient({
 
       {/* Work History placeholder */}
       <section className={glass}>
-        <h2 className={`mb-3 text-lg font-semibold ${heading}`}>Work History</h2>
+        <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
+          Work History
+        </h2>
         <div className="py-8 text-center">
           <p className={textMeta}>
             Your completed projects and verified work records will appear here
@@ -369,14 +417,20 @@ export function ContractorProfileClient({
         </div>
       </section>
 
-      {/* Edit Profile Modal (contractor fields only) */}
-      <Modal open={editMode} onCloseAction={() => setEditMode(false)} title="Edit Contractor Profile">
+      {/* Edit Profile Modal */}
+      <Modal
+        open={editMode}
+        onCloseAction={() => setEditMode(false)}
+        title="Edit Contractor Profile"
+      >
         <div className="space-y-4">
           <label className="block">
             <span className={fieldLabel}>Business Name *</span>
             <Input
               value={form.businessName}
-              onChange={(e) => setForm({ ...form, businessName: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, businessName: e.target.value })
+              }
               placeholder="Your Business Name"
             />
           </label>
@@ -421,20 +475,28 @@ export function ContractorProfileClient({
             <span className={fieldLabel}>Specialties</span>
             <Input
               value={form.specialties}
-              onChange={(e) => setForm({ ...form, specialties: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, specialties: e.target.value })
+              }
               placeholder="HVAC, Plumbing, Electrical"
             />
-            <p className="mt-1 text-xs text-white/60">Separate with commas</p>
+            <p className="mt-1 text-xs text-white/60">
+              Separate with commas
+            </p>
           </label>
 
           <label className="block">
             <span className={fieldLabel}>Service Areas</span>
             <Input
               value={form.serviceAreas}
-              onChange={(e) => setForm({ ...form, serviceAreas: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, serviceAreas: e.target.value })
+              }
               placeholder="60098, Woodstock, McHenry County"
             />
-            <p className="mt-1 text-xs text-white/60">Separate with commas</p>
+            <p className="mt-1 text-xs text-white/60">
+              Separate with commas
+            </p>
           </label>
 
           <label className="block">
@@ -448,7 +510,9 @@ export function ContractorProfileClient({
           </label>
 
           <div className="flex justify-end gap-2 pt-4">
-            <GhostButton onClick={() => setEditMode(false)}>Cancel</GhostButton>
+            <GhostButton onClick={() => setEditMode(false)}>
+              Cancel
+            </GhostButton>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? "Saving..." : "Save Changes"}
             </Button>
@@ -457,10 +521,14 @@ export function ContractorProfileClient({
       </Modal>
 
       {/* Logo Modal */}
-      <Modal open={logoMode} onCloseAction={() => setLogoMode(false)} title="Update Logo">
+      <Modal
+        open={logoMode}
+        onCloseAction={() => setLogoMode(false)}
+        title="Update Logo"
+      >
         <div className="space-y-4">
           <p className={`text-sm ${textMeta}`}>
-            For now, paste a URL to your logo. We'll add file upload later.
+            For now, paste a URL to your logo. We&apos;ll add file upload later.
           </p>
 
           <label className="block">
@@ -475,17 +543,25 @@ export function ContractorProfileClient({
           {logoUrl && (
             <div className="rounded-lg border border-white/20 bg-white/5 p-4">
               <p className={`mb-2 text-xs ${textMeta}`}>Preview:</p>
-              <img
-                src={logoUrl}
-                alt="Logo preview"
-                className="h-24 w-24 rounded-lg object-cover"
-                onError={() => alert("Invalid image URL")}
-              />
+              <div className="relative h-24 w-24">
+                <Image
+                  src={withHttp(logoUrl)}
+                  alt="Logo preview"
+                  fill
+                  sizes="96px"
+                  className="rounded-lg object-cover"
+                  onError={() =>
+                    setError("That logo URL doesn’t look like a valid image.")
+                  }
+                />
+              </div>
             </div>
           )}
 
           <div className="flex justify-end gap-2 pt-4">
-            <GhostButton onClick={() => setLogoMode(false)}>Cancel</GhostButton>
+            <GhostButton onClick={() => setLogoMode(false)}>
+              Cancel
+            </GhostButton>
             <Button onClick={handleLogoSave} disabled={saving}>
               {saving ? "Saving..." : "Save Logo"}
             </Button>

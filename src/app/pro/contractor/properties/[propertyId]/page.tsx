@@ -277,7 +277,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     <main className="relative min-h-screen text-white">
       <Bg imageUrl={headerImageUrl} />
 
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
         <Breadcrumb
           items={[

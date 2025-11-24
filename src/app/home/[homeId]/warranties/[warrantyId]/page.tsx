@@ -113,7 +113,7 @@ export default async function WarrantyDetailPage({
     <main className="relative min-h-screen text-white">
       <Bg />
 
-      <div className="mx-auto max-w-6xl space-y-6 p-6">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
         <Breadcrumb
           href={`/home/${homeId}`}
           label={homeAddress}

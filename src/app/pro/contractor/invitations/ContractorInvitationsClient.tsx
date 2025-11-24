@@ -7,9 +7,42 @@ import Image from "next/image";
 import Link from "next/link";
 import AddressVerification from "@/components/AddressVerification";
 import { Modal } from "@/components/ui/Modal";
-import { glass, glassTight, heading, textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
+import {
+  glass,
+  glassTight,
+  heading,
+  textMeta,
+  ctaPrimary,
+  ctaGhost,
+} from "@/lib/glass";
 
-type Invitation = {
+/** Shapes matching what page.tsx includes.
+ *  - receivedInvitations include inviter + home
+ *  - sentInvitations include home only
+ */
+type HomeLite = {
+  id: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+} | null;
+
+type InviterLite = {
+  id: string;
+  name: string | null;
+  email: string;
+  image: string | null;
+  proProfile: {
+    businessName: string | null;
+    company: string | null;
+    phone: string | null;
+    rating: number | null;
+    verified: boolean;
+  } | null;
+};
+
+type ReceivedInvitation = {
   id: string;
   invitedEmail: string;
   invitedName: string | null;
@@ -18,25 +51,28 @@ type Invitation = {
   status: string;
   createdAt: Date | string;
   expiresAt: Date | string;
-  inviter: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-    proProfile: {
-      businessName: string | null;
-      company: string | null;
-      phone: string | null;
-      rating: number | null;
-      verified: boolean;
-    } | null;
-  };
+  inviter: InviterLite;
+  home: HomeLite;
+};
+
+type SentInvitation = {
+  id: string;
+  invitedEmail: string;
+  invitedName: string | null;
+  role: string;
+  message: string | null;
+  status: string;
+  createdAt: Date | string;
+  expiresAt: Date | string;
+  home: HomeLite;
 };
 
 export default function ContractorInvitationsClient({
-  invitations,
+  receivedInvitations = [],
+  sentInvitations = [],
 }: {
-  invitations?: Invitation[];
+  receivedInvitations: ReceivedInvitation[];
+  sentInvitations: SentInvitation[];
 }) {
   const router = useRouter();
   const [processing, setProcessing] = useState<string | null>(null);
@@ -44,20 +80,24 @@ export default function ContractorInvitationsClient({
   const [selectedInvitation, setSelectedInvitation] = useState<string | null>(
     null
   );
+  const [error, setError] = useState<string | null>(null);
 
-  // Normalize undefined -> []
-  const allInvitations = invitations ?? [];
-
-  const pendingInvitations = allInvitations.filter(
+  const pendingReceived = receivedInvitations.filter(
     (inv) => inv.status === "PENDING"
   );
-  const processedInvitations = allInvitations.filter(
+  const processedReceived = receivedInvitations.filter(
+    (inv) => inv.status !== "PENDING"
+  );
+
+  const pendingSent = sentInvitations.filter((inv) => inv.status === "PENDING");
+  const processedSent = sentInvitations.filter(
     (inv) => inv.status !== "PENDING"
   );
 
   function handleAcceptClick(invitationId: string) {
     setSelectedInvitation(invitationId);
     setShowAddressModal(true);
+    setError(null);
   }
 
   async function handleAddressVerified(verifiedAddress: {
@@ -70,6 +110,8 @@ export default function ContractorInvitationsClient({
     if (!selectedInvitation) return;
 
     setProcessing(selectedInvitation);
+    setError(null);
+
     try {
       const response = await fetch(
         `/api/pro/contractor/invitations/${selectedInvitation}/accept`,
@@ -88,48 +130,42 @@ export default function ContractorInvitationsClient({
       );
 
       if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        throw new Error(error?.error || "Failed to accept invitation");
+        const e = await response.json().catch(() => null);
+        throw new Error(e?.error || "Failed to accept invitation");
       }
 
       setShowAddressModal(false);
       setSelectedInvitation(null);
       router.refresh();
-    } catch (error) {
-      console.error("Error accepting invitation:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to accept invitation"
-      );
+    } catch (e) {
+      console.error("Error accepting invitation:", e);
+      setError(e instanceof Error ? e.message : "Failed to accept invitation");
     } finally {
       setProcessing(null);
     }
   }
 
   async function handleDecline(invitationId: string) {
-    if (!confirm("Are you sure you want to decline this invitation?")) return;
-
     setProcessing(invitationId);
+    setError(null);
+
     try {
       const response = await fetch(
         `/api/pro/contractor/invitations/${invitationId}/decline`,
-        {
-          method: "POST",
-        }
+        { method: "POST" }
       );
 
       if (!response.ok) {
-        const error = await response.json().catch(() => null);
-        throw new Error(error?.error || "Failed to decline invitation");
+        const e = await response.json().catch(() => null);
+        throw new Error(e?.error || "Failed to decline invitation");
       }
 
       router.refresh();
-    } catch (error) {
-      console.error("Error declining invitation:", error);
-      alert(
-        error instanceof Error
-          ? error.message
+    } catch (e) {
+      console.error("Error declining invitation:", e);
+      setError(
+        e instanceof Error
+          ? e.message
           : "Failed to decline invitation. Please try again."
       );
     } finally {
@@ -137,10 +173,11 @@ export default function ContractorInvitationsClient({
     }
   }
 
-  const hasAnyInvitations = allInvitations.length > 0;
+  const hasAnyInvitations =
+    receivedInvitations.length > 0 || sentInvitations.length > 0;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6 text-white">
+    <div className="mx-auto max-w-7xl p-6 space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm">
         <Link
@@ -185,22 +222,36 @@ export default function ContractorInvitationsClient({
                 Homeowners inviting you to document work on their properties.
               </p>
               <p className={`mt-1 text-xs ${textMeta}`}>
-                {pendingInvitations.length} pending invitation
-                {pendingInvitations.length === 1 ? "" : "s"}
+                {pendingReceived.length} pending received invitation
+                {pendingReceived.length === 1 ? "" : "s"}
+                {pendingSent.length > 0 && (
+                  <>
+                    {" • "}
+                    {pendingSent.length} pending sent invitation
+                    {pendingSent.length === 1 ? "" : "s"}
+                  </>
+                )}
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Pending Invitations */}
-      {pendingInvitations.length > 0 && (
+      {/* Error banner */}
+      {error && (
+        <section className={`${glass} border-l-4 border-red-400`}>
+          <p className="text-sm text-red-200">{error}</p>
+        </section>
+      )}
+
+      {/* ===================== RECEIVED ===================== */}
+      {pendingReceived.length > 0 && (
         <section className={glass}>
           <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
-            Pending Invitations
+            Pending Invitations (Received)
           </h2>
           <div className="space-y-3">
-            {pendingInvitations.map((invitation) => (
+            {pendingReceived.map((invitation) => (
               <div
                 key={invitation.id}
                 className={`${glassTight} border border-blue-500/40 bg-blue-500/10`}
@@ -230,20 +281,24 @@ export default function ContractorInvitationsClient({
                         {invitation.inviter.name || invitation.inviter.email}
                       </p>
                       <p className={`text-xs ${textMeta}`}>Homeowner</p>
+
+                      {invitation.home?.address && (
+                        <p className={`text-xs ${textMeta} mt-1`}>
+                          {invitation.home.address},{" "}
+                          {invitation.home.city}, {invitation.home.state}{" "}
+                          {invitation.home.zip}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="text-right text-xs text-white/60">
                     <p>
                       Sent{" "}
-                      {new Date(
-                        invitation.createdAt
-                      ).toLocaleDateString()}
+                      {new Date(invitation.createdAt).toLocaleDateString()}
                     </p>
                     <p>
                       Expires{" "}
-                      {new Date(
-                        invitation.expiresAt
-                      ).toLocaleDateString()}
+                      {new Date(invitation.expiresAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -287,14 +342,13 @@ export default function ContractorInvitationsClient({
         </section>
       )}
 
-      {/* Past Invitations */}
-      {processedInvitations.length > 0 && (
+      {processedReceived.length > 0 && (
         <section className={glass}>
           <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
-            Past Invitations
+            Past Invitations (Received)
           </h2>
           <div className="space-y-2">
-            {processedInvitations.map((invitation) => (
+            {processedReceived.map((invitation) => (
               <div
                 key={invitation.id}
                 className={`${glassTight} flex items-center justify-between`}
@@ -305,9 +359,7 @@ export default function ContractorInvitationsClient({
                   </p>
                   <p className={`text-xs ${textMeta}`}>
                     Sent{" "}
-                    {new Date(
-                      invitation.createdAt
-                    ).toLocaleDateString()}
+                    {new Date(invitation.createdAt).toLocaleDateString()}
                   </p>
                 </div>
                 <span
@@ -324,6 +376,81 @@ export default function ContractorInvitationsClient({
               </div>
             ))}
           </div>
+        </section>
+      )}
+
+      {/* ===================== SENT ===================== */}
+      {(pendingSent.length > 0 || processedSent.length > 0) && (
+        <section className={glass}>
+          <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
+            Invitations You Sent
+          </h2>
+
+          {pendingSent.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {pendingSent.map((inv) => (
+                <div
+                  key={inv.id}
+                  className={`${glassTight} flex items-center justify-between`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">
+                      {inv.invitedName || inv.invitedEmail}
+                    </p>
+                    {inv.home?.address && (
+                      <p className={`text-xs ${textMeta} truncate`}>
+                        {inv.home.address}, {inv.home.city},{" "}
+                        {inv.home.state} {inv.home.zip}
+                      </p>
+                    )}
+                    <p className={`text-xs ${textMeta}`}>
+                      Sent {new Date(inv.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className="rounded-full px-3 py-1 text-xs font-semibold bg-yellow-500/20 text-yellow-200 border border-yellow-500/40">
+                    PENDING
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {processedSent.length > 0 && (
+            <div className="space-y-2">
+              {processedSent.map((inv) => (
+                <div
+                  key={inv.id}
+                  className={`${glassTight} flex items-center justify-between`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white truncate">
+                      {inv.invitedName || inv.invitedEmail}
+                    </p>
+                    {inv.home?.address && (
+                      <p className={`text-xs ${textMeta} truncate`}>
+                        {inv.home.address}, {inv.home.city},{" "}
+                        {inv.home.state} {inv.home.zip}
+                      </p>
+                    )}
+                    <p className={`text-xs ${textMeta}`}>
+                      Sent {new Date(inv.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      inv.status === "ACCEPTED"
+                        ? "bg-green-500/20 text-green-200 border border-green-500/40"
+                        : inv.status === "CANCELLED"
+                        ? "bg-white/10 text-white/70 border border-white/20"
+                        : "bg-red-500/20 text-red-200 border border-red-500/40"
+                    }`}
+                  >
+                    {inv.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

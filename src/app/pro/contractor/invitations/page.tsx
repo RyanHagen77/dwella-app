@@ -7,6 +7,52 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ContractorInvitationsClient from "./ContractorInvitationsClient";
 import Image from "next/image";
+import type { Prisma } from "@prisma/client";
+
+type ReceivedInvitation = Prisma.InvitationGetPayload<{
+  include: {
+    inviter: {
+      select: {
+        id: true;
+        name: true;
+        email: true;
+        image: true;
+        proProfile: {
+          select: {
+            businessName: true;
+            company: true;
+            phone: true;
+            rating: true;
+            verified: true;
+          };
+        };
+      };
+    };
+    home: {
+      select: {
+        id: true;
+        address: true;
+        city: true;
+        state: true;
+        zip: true;
+      };
+    };
+  };
+}>;
+
+type SentInvitation = Prisma.InvitationGetPayload<{
+  include: {
+    home: {
+      select: {
+        id: true;
+        address: true;
+        city: true;
+        state: true;
+        zip: true;
+      };
+    };
+  };
+}>;
 
 export default async function ContractorInvitationsPage() {
   const session = await getServerSession(authConfig);
@@ -29,50 +75,47 @@ export default async function ContractorInvitationsPage() {
 
   const email = user.email;
 
-  // 🔹 RECEIVED: homeowner → this contractor
-  const receivedInvitations = await prisma.invitation.findMany({
-    where: {
-      invitedEmail: {
-        equals: email,
-        mode: "insensitive", // <-- important so Case@Email.com matches case
+  const receivedInvitations: ReceivedInvitation[] =
+    await prisma.invitation.findMany({
+      where: {
+        invitedEmail: {
+          equals: email,
+          mode: "insensitive",
+        },
       },
-    },
-    include: {
-      inviter: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          image: true,
-          proProfile: {
-            select: {
-              businessName: true,
-              company: true,
-              phone: true,
-              rating: true,
-              verified: true,
+      include: {
+        inviter: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            proProfile: {
+              select: {
+                businessName: true,
+                company: true,
+                phone: true,
+                rating: true,
+                verified: true,
+              },
             },
           },
         },
-      },
-      home: {
-        select: {
-          id: true,
-          address: true,
-          city: true,
-          state: true,
-          zip: true,
+        home: {
+          select: {
+            id: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+          },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    });
 
-  // 🔹 SENT: this contractor → homeowners
-  const sentInvitations = await prisma.invitation.findMany({
-    where: {
-      invitedBy: userId, // ✅ your schema is correct here
-    },
+  const sentInvitations: SentInvitation[] = await prisma.invitation.findMany({
+    where: { invitedBy: userId },
     include: {
       home: {
         select: {
