@@ -146,17 +146,13 @@ export default async function RequestWorkPage({ params }: PageProps) {
       <Bg />
       <div className="mx-auto max-w-4xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm">
-          <Link href={`/home/${homeId}`} className="text-white/70 hover:text-white transition-colors">
-            {homeAddress}
-          </Link>
-          <span className="text-white/50">/</span>
-          <Link href={`/home/${homeId}/completed-work-submissions`} className="text-white/70 hover:text-white transition-colors">
-            Requests & Submissions
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white">Request Work</span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: homeAddress, href: `/home/${homeId}` },
+            { label: "Requests & Submissions", href: `/home/${homeId}/completed-work-submissions` },
+            { label: "Request Work" },
+          ]}
+        />
 
         {/* Header */}
         <section className={glass}>
