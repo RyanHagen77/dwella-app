@@ -267,68 +267,136 @@ function ContractorRow({
   const totalSpent = connection.totalSpent ? connection.totalSpent.toNumber() : 0;
 
   return (
-    <div className={`${glass} flex items-center gap-4`}>
-      {/* Avatar */}
-      {contractor.image ? (
-        <Image
-          src={contractor.image}
-          alt={displayName}
-          width={56}
-          height={56}
-          className="rounded-full object-cover flex-shrink-0"
-        />
-      ) : (
-        <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-xl flex-shrink-0">
-          {initials}
+    <div className={`${glass}`}>
+      {/* Mobile Layout */}
+      <div className="flex flex-col gap-4 sm:hidden">
+        {/* Top row: Avatar + Info */}
+        <div className="flex items-start gap-3">
+          {contractor.image ? (
+            <Image
+              src={contractor.image}
+              alt={displayName}
+              width={48}
+              height={48}
+              className="rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-lg flex-shrink-0">
+              {initials}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-semibold text-white truncate">{displayName}</h3>
+            {contractor.proProfile?.businessName && contractor.name && (
+              <p className="text-sm text-white/60 truncate">{contractor.name}</p>
+            )}
+            <p className="text-xs text-white/50 mt-1">
+              Connected {formatDate(connection.createdAt)}
+            </p>
+          </div>
         </div>
-      )}
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <h3 className="text-lg font-semibold text-white truncate">{displayName}</h3>
-        {contractor.proProfile?.businessName && contractor.name && (
-          <p className="text-sm text-white/60">{contractor.name}</p>
-        )}
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-white/50">
-          <span>Connected {formatDate(connection.createdAt)}</span>
+        {/* Stats row */}
+        <div className="flex gap-4">
+          <div className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-center">
+            <div className="text-lg font-semibold text-white">{verifiedWorkCount}</div>
+            <div className="text-xs text-white/50">Verified Jobs</div>
+          </div>
+          {totalSpent > 0 && (
+            <div className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-center">
+              <div className="text-lg font-semibold text-green-400">${totalSpent.toLocaleString()}</div>
+              <div className="text-xs text-white/50">Total Spent</div>
+            </div>
+          )}
           {connection.lastWorkDate && (
-            <span>Last work {formatDate(connection.lastWorkDate)}</span>
+            <div className="flex-1 rounded-lg bg-white/5 px-3 py-2 text-center">
+              <div className="text-sm font-semibold text-white">{formatDate(connection.lastWorkDate)}</div>
+              <div className="text-xs text-white/50">Last Work</div>
+            </div>
           )}
         </div>
+
+        {/* Action buttons */}
+        <div className="flex gap-2">
+          <Link
+            href={`/home/${homeId}/messages/${connection.id}`}
+            className="flex-1 px-3 py-2 text-sm text-center rounded-lg bg-white/10 hover:bg-white/20 transition"
+          >
+            Message
+          </Link>
+          <Link
+            href={`/home/${homeId}/contractors/${connection.id}`}
+            className="flex-1 px-3 py-2 text-sm text-center rounded-lg bg-white/10 hover:bg-white/20 transition"
+          >
+            View →
+          </Link>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex gap-6 flex-shrink-0">
-        <div className="text-center">
-          <div className="text-lg font-semibold text-white">
-            {verifiedWorkCount}
-          </div>
-          <div className="text-xs text-white/50">Verified Jobs</div>
-        </div>
-        {totalSpent > 0 && (
-          <div className="text-center">
-            <div className="text-lg font-semibold text-green-400">
-              ${totalSpent.toLocaleString()}
-            </div>
-            <div className="text-xs text-white/50">Total Spent</div>
+      {/* Desktop Layout */}
+      <div className="hidden sm:flex items-center gap-4">
+        {/* Avatar */}
+        {contractor.image ? (
+          <Image
+            src={contractor.image}
+            alt={displayName}
+            width={56}
+            height={56}
+            className="rounded-full object-cover flex-shrink-0"
+          />
+        ) : (
+          <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-xl flex-shrink-0">
+            {initials}
           </div>
         )}
-      </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 flex-shrink-0">
-        <Link
-          href={`/home/${homeId}/messages/${connection.id}`}
-          className="px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition"
-        >
-          Message
-        </Link>
-        <Link
-          href={`/home/${homeId}/contractors/${connection.id}`}
-          className="px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition"
-        >
-          View →
-        </Link>
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-semibold text-white truncate">{displayName}</h3>
+          {contractor.proProfile?.businessName && contractor.name && (
+            <p className="text-sm text-white/60">{contractor.name}</p>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-white/50">
+            <span>Connected {formatDate(connection.createdAt)}</span>
+            {connection.lastWorkDate && (
+              <span>Last work {formatDate(connection.lastWorkDate)}</span>
+            )}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="flex gap-6 flex-shrink-0">
+          <div className="text-center">
+            <div className="text-lg font-semibold text-white">
+              {verifiedWorkCount}
+            </div>
+            <div className="text-xs text-white/50">Verified Jobs</div>
+          </div>
+          {totalSpent > 0 && (
+            <div className="text-center">
+              <div className="text-lg font-semibold text-green-400">
+                ${totalSpent.toLocaleString()}
+              </div>
+              <div className="text-xs text-white/50">Total Spent</div>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2 flex-shrink-0">
+          <Link
+            href={`/home/${homeId}/messages/${connection.id}`}
+            className="px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition"
+          >
+            Message
+          </Link>
+          <Link
+            href={`/home/${homeId}/contractors/${connection.id}`}
+            className="px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition"
+          >
+            View →
+          </Link>
+        </div>
       </div>
     </div>
   );
