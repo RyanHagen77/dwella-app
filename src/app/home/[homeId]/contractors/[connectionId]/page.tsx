@@ -98,6 +98,7 @@ export default async function ContractorDetailPage({
       isVerified: true,
       status: true,
       createdAt: true,
+      finalRecordId: true,
       attachments: {
         select: {
           id: true,
@@ -174,10 +175,14 @@ export default async function ContractorDetailPage({
     home.city ? `, ${home.city}` : ""
   }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
-  // Stats
-  const verifiedJobsCount = workRecords.filter((r) => r.isVerified).length;
+  // Stats - calculate totalSpent from verified work records
+  const verifiedRecords = workRecords.filter((r) => r.isVerified);
+  const verifiedJobsCount = verifiedRecords.length;
   const totalJobsCount = workRecords.length;
-  const totalSpent = connection.totalSpent ? Number(connection.totalSpent) : 0;
+  const totalSpent = verifiedRecords.reduce(
+    (sum, r) => sum + (r.cost ? Number(r.cost) : 0),
+    0
+  );
 
   const activeRequestsCount = jobRequests.filter((r) =>
     ["PENDING", "QUOTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status)
@@ -220,6 +225,7 @@ export default async function ContractorDetailPage({
     hasImages: record.attachments.some((a) =>
       a.mimeType?.startsWith("image/")
     ),
+    finalRecordId: record.finalRecordId,
   }));
 
   const jobRequestsData = jobRequests.map((req) => ({
@@ -319,7 +325,7 @@ export default async function ContractorDetailPage({
             <div className="flex flex-1 min-w-0 items-center gap-4">
               <Link
                 href={`/home/${homeId}/contractors`}
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg白/15"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
                 aria-label="Back to contractors"
               >
                 <svg

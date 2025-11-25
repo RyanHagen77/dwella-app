@@ -15,6 +15,7 @@ type WorkRecord = {
   createdAt: string;
   attachmentCount: number;
   hasImages: boolean;
+  finalRecordId: string | null;
 };
 
 type JobRequest = {
@@ -67,9 +68,11 @@ export function ContractorDetailClient({
   jobRequests: JobRequest[];
   pendingSubmissions: PendingSubmission[];
   activeRequestsCount: number;
-  pendingApprovalsCount: number;
+  pendingApprovalsCount?: number;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("work-history");
+
+  const pendingCount = pendingApprovalsCount ?? pendingSubmissions.length;
 
   return (
     <>
@@ -109,7 +112,7 @@ export function ContractorDetailClient({
             }`}
           >
             Pending Approvals
-            {pendingApprovalsCount > 0 && ` (${pendingApprovalsCount})`}
+            {pendingCount > 0 && ` (${pendingCount})`}
           </button>
         </div>
       </section>
@@ -167,7 +170,7 @@ function WorkHistoryTab({
     if (["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED"].includes(status)) {
       return (
         <span className="inline-block rounded-full border border-orange-500/30 bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-300">
-          Awaiting Approval
+          Pending Approval
         </span>
       );
     }
@@ -199,10 +202,15 @@ function WorkHistoryTab({
       {workRecords.map((record) => {
         const needsApproval = isPendingApproval(record.status, record.isVerified);
 
+        // Verified records with finalRecordId link to record detail, others to approvals page
+        const href = record.isVerified && record.finalRecordId
+          ? `/home/${homeId}/records/${record.finalRecordId}`
+          : `/home/${homeId}/completed-work-submissions`;
+
         return (
           <Link
             key={record.id}
-            href={`/home/${homeId}/completed-work-submissions`}
+            href={href}
             className={`block rounded-xl p-6 transition-colors ${
               needsApproval
                 ? "border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10"
