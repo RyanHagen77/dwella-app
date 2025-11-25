@@ -88,20 +88,11 @@ export default async function RequestWorkPage({ params }: PageProps) {
           {/* Breadcrumb */}
           <Breadcrumb
             items={[
-              {
-                label: homeAddress,
-                href: `/home/${homeId}`,
-              },
-              {
-                label: "Requests & Submissions",
-                href: `/home/${homeId}/completed-work-submissions`,
-              },
-              {
-                label: "Request Work",
-              },
+              { label: homeAddress, href: `/home/${homeId}` },
+              { label: "Requests & Submissions", href: `/home/${homeId}/completed-work-submissions` },
+              { label: "Request Work" },
             ]}
           />
-
           {/* Header */}
           <section className={glass}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
