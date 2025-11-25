@@ -90,7 +90,7 @@ type JobRequest = {
   } | null;
 };
 
-type Tab = "requests-and-approvals" | "find-pros";
+type Tab = "all" | "requests" | "submissions";
 
 export default function WorkClient({
   homeId,
@@ -104,7 +104,7 @@ export default function WorkClient({
   pendingWork: PendingWork[];
   jobRequests: JobRequest[];
 }) {
-  const [activeTab, setActiveTab] = useState<Tab>("requests-and-approvals");
+  const [activeTab, setActiveTab] = useState<Tab>("all");
 
   const totalRequests = jobRequests.length;
   const totalPendingApprovals = pendingWork.length;
@@ -125,13 +125,13 @@ export default function WorkClient({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-    <div className="mx-auto max-w-7xl p-6 space-y-6">
-      {/* Breadcrumb */}
-      <Breadcrumb
-        href={`/home/${homeId}`}
-        label={homeAddress}
-        current="Requests & Submissions"
-      />
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb
+          href={`/home/${homeId}`}
+          label={homeAddress}
+          current="Work Requests"
+        />
 
         {/* Header */}
         <section className={glass}>
@@ -155,10 +155,10 @@ export default function WorkClient({
               </Link>
               <div className="flex-1 min-w-0">
                 <h1 className={`text-2xl font-bold ${heading}`}>
-                  Requests & Submissions
+                  Work Requests & Pending Submissions
                 </h1>
                 <p className={`text-sm ${textMeta} mt-1`}>
-                  {totalRequests} {totalRequests === 1 ? "request" : "requests"} • {totalPendingApprovals} pending {totalPendingApprovals === 1 ? "submission" : "submissions"}
+                  {totalRequests} active {totalRequests === 1 ? "request" : "requests"} • {totalPendingApprovals} awaiting approval
                 </p>
               </div>
             </div>
@@ -179,40 +179,69 @@ export default function WorkClient({
         <section className={glass}>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => setActiveTab("requests-and-approvals")}
+              onClick={() => setActiveTab("all")}
               className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === "requests-and-approvals"
+                activeTab === "all"
                   ? "border-white/40 bg-white/15 text-white"
                   : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
               }`}
             >
-              Requests &amp; Submissions
-              {totalRequests + totalPendingApprovals > 0 &&
-                ` (${totalRequests + totalPendingApprovals})`}
+              All
+              {totalRequests + totalPendingApprovals > 0 && ` (${totalRequests + totalPendingApprovals})`}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("requests")}
+              className={`rounded-full border px-4 py-2 text-sm transition ${
+                activeTab === "requests"
+                  ? "border-white/40 bg-white/15 text-white"
+                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
+              }`}
+            >
+              Service Requests
+              {totalRequests > 0 && ` (${totalRequests})`}
+            </button>
+
+            <button
+              onClick={() => setActiveTab("submissions")}
+              className={`rounded-full border px-4 py-2 text-sm transition ${
+                activeTab === "submissions"
+                  ? "border-white/40 bg-white/15 text-white"
+                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
+              }`}
+            >
+              Pending Submissions
+              {totalPendingApprovals > 0 && ` (${totalPendingApprovals})`}
             </button>
           </div>
         </section>
 
         {/* Content */}
         <section className={glass}>
-          {activeTab === "requests-and-approvals" && (
-            <RequestsAndApprovalsTab
+          {activeTab === "all" && (
+            <AllTab
               jobRequests={jobRequests}
               pendingWork={pendingWork}
               homeId={homeId}
             />
           )}
 
-          {activeTab === "find-pros" && <FindProsTab homeId={homeId} />}
+          {activeTab === "requests" && (
+            <RequestedJobsTab jobRequests={jobRequests} homeId={homeId} />
+          )}
+
+          {activeTab === "submissions" && (
+            <PendingWorkTab pendingWork={pendingWork} homeId={homeId} />
+          )}
         </section>
       </div>
     </main>
   );
 }
 
-/* ---------- Combined Requests & Pending Tab ---------- */
+/* ---------- All Tab (Combined View) ---------- */
 
-function RequestsAndApprovalsTab({
+function AllTab({
   jobRequests,
   pendingWork,
   homeId,
@@ -228,10 +257,15 @@ function RequestsAndApprovalsTab({
       <div className="py-10 text-center text-white/80">
         <div className="mb-4 text-5xl">🔨</div>
         <p className="text-lg">No requests or pending work yet.</p>
-        <p className={`mt-1 text-sm ${textMeta}`}>
-          Request service from your connected pros and approve their submitted
-          work here.
+        <p className={`mt-2 text-sm ${textMeta}`}>
+          Request work from your connected pros to get started.
         </p>
+        <Link
+          href={`/home/${homeId}/job-requests/new`}
+          className={`${ctaPrimary} inline-block mt-4`}
+        >
+          + Request Work
+        </Link>
       </div>
     );
   }
@@ -240,36 +274,30 @@ function RequestsAndApprovalsTab({
     <div className="space-y-8">
       {jobRequests.length > 0 && (
         <div>
-          <h2 className="mb-2 text-base font-semibold text-white">
-            Service Requests
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            Service Requests ({jobRequests.length})
           </h2>
-          <p className={`mb-4 text-sm ${textMeta}`}>
-            Track your requests, quotes, and scheduled work.
-          </p>
           <RequestedJobsTab jobRequests={jobRequests} homeId={homeId} />
         </div>
       )}
 
+      {jobRequests.length > 0 && pendingWork.length > 0 && (
+        <div className="h-px bg-white/10" />
+      )}
+
       {pendingWork.length > 0 && (
-        <>
-          <div className="h-px bg-white/10" />
-          <div>
-            <h2 className="mb-2 text-base font-semibold text-white">
-              Pending Completed Work Submissions
-            </h2>
-            <p className={`mb-4 text-sm ${textMeta}`}>
-              Review contractor-submitted work and add it to your records.
-            </p>
-            <PendingWorkTab pendingWork={pendingWork} homeId={homeId} />
-          </div>
-        </>
+        <div>
+          <h2 className="mb-4 text-lg font-semibold text-white">
+            Pending Submissions ({pendingWork.length})
+          </h2>
+          <PendingWorkTab pendingWork={pendingWork} homeId={homeId} />
+        </div>
       )}
     </div>
   );
 }
 
-
-/* ---------- Requested Jobs Tab (same logic) ---------- */
+/* ---------- Service Requests Tab ---------- */
 
 function RequestedJobsTab({
   jobRequests,
@@ -280,12 +308,18 @@ function RequestedJobsTab({
 }) {
   if (jobRequests.length === 0) {
     return (
-      <div className="py-6 text-center text-white/80">
-        <div className="mb-2 text-4xl">📋</div>
-        <p className="text-base">No job requests yet.</p>
-        <p className={`mt-1 text-sm ${textMeta}`}>
-          Request service from your connected pros to get started.
+      <div className="py-10 text-center text-white/80">
+        <div className="mb-4 text-5xl">📋</div>
+        <p className="text-lg">No service requests yet.</p>
+        <p className={`mt-2 text-sm ${textMeta}`}>
+          Request work from your connected pros to get started.
         </p>
+        <Link
+          href={`/home/${homeId}/job-requests/new`}
+          className={`${ctaPrimary} inline-block mt-4`}
+        >
+          + Request Work
+        </Link>
       </div>
     );
   }
@@ -364,9 +398,7 @@ function RequestedJobsTab({
                   />
                 )}
                 <span>
-                  {job.contractor.name || job.contractor.email}
-                  {job.contractor.proProfile?.businessName &&
-                    ` (${job.contractor.proProfile.businessName})`}
+                  {job.contractor.proProfile?.businessName || job.contractor.name || job.contractor.email}
                 </span>
                 {job.category && <span>• {job.category}</span>}
                 {job.desiredDate && (
@@ -425,7 +457,7 @@ function RequestedJobsTab({
   );
 }
 
-/* ---------- Pending Work Tab (same logic as before, with <Image>) ---------- */
+/* ---------- Pending Approvals Tab ---------- */
 
 function PendingWorkTab({
   pendingWork,
@@ -472,12 +504,11 @@ function PendingWorkTab({
 
   if (pendingWork.length === 0) {
     return (
-      <div className="py-6 text-center text-white/80">
-        <div className="mb-2 text-4xl">✅</div>
-        <p className="text-base">No pending work to review.</p>
-        <p className={`mt-1 text-sm ${textMeta}`}>
-          When contractors complete work, it will appear here for your
-          approval.
+      <div className="py-10 text-center text-white/80">
+        <div className="mb-4 text-5xl">✅</div>
+        <p className="text-lg">No work awaiting approval.</p>
+        <p className={`mt-2 text-sm ${textMeta}`}>
+          When contractors submit completed work, it will appear here for your review.
         </p>
       </div>
     );
@@ -499,14 +530,12 @@ function PendingWorkTab({
             className="rounded-xl border border-white/10 bg-white/5 p-6"
           >
             <div className="mb-4 flex items-start justify-between gap-4">
-              <div>
+              <div className="flex-1">
                 <h3 className="text-lg font-semibold text-white">
                   {work.title}
                 </h3>
                 <p className="mt-1 text-sm text-white/70">
-                  By: {work.contractor.name || work.contractor.email}
-                  {work.contractor.proProfile?.businessName &&
-                    ` (${work.contractor.proProfile.businessName})`}
+                  By: {work.contractor.proProfile?.businessName || work.contractor.name || work.contractor.email}
                 </p>
                 {work.workDate && (
                   <p className="mt-1 text-sm text-white/60">
@@ -520,11 +549,14 @@ function PendingWorkTab({
                   </p>
                 )}
               </div>
+              <div className="text-xs text-white/50">
+                {new Date(work.createdAt).toLocaleDateString()}
+              </div>
             </div>
 
             {work.description && (
               <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-3">
-                <p className="text-sm text-white/80">
+                <p className="text-sm text-white/80 whitespace-pre-wrap">
                   {work.description}
                 </p>
               </div>
@@ -536,9 +568,9 @@ function PendingWorkTab({
                 {hasImages && (
                   <div>
                     <h4 className={`mb-2 text-sm font-medium ${textMeta}`}>
-                      Photos
+                      Photos ({work.attachments.filter((a) => a.mimeType?.startsWith("image/")).length})
                     </h4>
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                       {work.attachments
                         .filter((a) => a.mimeType?.startsWith("image/"))
                         .map((attachment) => (
@@ -553,7 +585,7 @@ function PendingWorkTab({
                               src={`/api/home/${homeId}/attachments/${attachment.id}`}
                               alt={attachment.filename}
                               fill
-                              sizes="200px"
+                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
                               className="object-cover"
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
@@ -570,7 +602,7 @@ function PendingWorkTab({
                 {hasDocs && (
                   <div>
                     <h4 className={`mb-2 text-sm font-medium ${textMeta}`}>
-                      Documents
+                      Documents ({work.attachments.filter((a) => a.mimeType && !a.mimeType.startsWith("image/")).length})
                     </h4>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {work.attachments
@@ -594,7 +626,7 @@ function PendingWorkTab({
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate font-medium text-white">
+                              <p className="truncate text-sm font-medium text-white">
                                 {attachment.filename}
                               </p>
                               <p className="text-xs text-white/60">
@@ -609,7 +641,7 @@ function PendingWorkTab({
               </div>
             )}
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => handleApprove(work.id)}
                 className="rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-medium text-white transition-all hover:from-green-600 hover:to-emerald-600"
@@ -626,26 +658,6 @@ function PendingWorkTab({
           </div>
         );
       })}
-    </div>
-  );
-}
-
-/* ---------- Find Pros Tab ---------- */
-
-function FindProsTab({ homeId }: { homeId: string }) {
-  return (
-    <div className="py-10 text-center">
-      <div className="mb-4 text-5xl">🔍</div>
-      <p className="mb-2 text-lg text-white/80">Find and invite contractors</p>
-      <p className={`mb-6 text-sm ${textMeta}`}>
-        Invite trusted pros to connect to this home
-      </p>
-      <Link
-        href={`/home/${homeId}/invitations`}
-        className={`${ctaPrimary} inline-block`}
-      >
-        Invite a Pro
-      </Link>
     </div>
   );
 }

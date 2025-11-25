@@ -6,8 +6,9 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-import { glass, textMeta, heading } from "@/lib/glass";
+import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import { ContractorActions } from "./ContractorActions";
+import Breadcrumb from "@/components/ui/Breadcrumb";
 
 type Connection = {
   id: string;
@@ -110,6 +111,14 @@ export default async function ContractorsPage({
     }
   }
 
+  // Calculate stats
+  const totalContractors = connections.length;
+  const totalVerifiedJobs = workRecords.length;
+  const totalSpentAmount = connections.reduce((sum, conn) => {
+    return sum + (conn.totalSpent ? conn.totalSpent.toNumber() : 0);
+  }, 0);
+  const activeContractors = connections.filter(conn => conn.lastWorkDate).length;
+
   return (
     <main className="relative min-h-screen text-white">
       {/* Background */}
@@ -123,40 +132,80 @@ export default async function ContractorsPage({
           priority
         />
         <div className="absolute inset-0 bg-black/45" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      <div className="mx-auto max-w-4xl p-6 space-y-6">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
+        {/* Breadcrumb */}
+        <Breadcrumb href={`/home/${homeId}`} label={addrLine} current="Contractors" />
+
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <Link
-              href={`/home/${homeId}`}
-              className="text-sm text-white/60 hover:text-white transition"
-            >
-              ← Back to Home
-            </Link>
-            <h1 className={`text-2xl font-bold mt-2 ${heading}`}>
-              Your Trusted Pros
-            </h1>
-            <p className={`text-sm ${textMeta}`}>{addrLine}</p>
+        <section className={glass}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Link
+                href={`/home/${homeId}`}
+                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
+                aria-label="Back to home"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                  />
+                </svg>
+              </Link>
+              <div className="flex-1 min-w-0">
+                <h1 className={`text-2xl font-bold ${heading}`}>
+                  Your Trusted Pros
+                </h1>
+                <p className={`text-sm ${textMeta} mt-1`}>
+                  {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"}
+                </p>
+              </div>
+            </div>
+            <div className="flex-shrink-0">
+              <ContractorActions homeId={homeId} homeAddress={addrLine} />
+            </div>
           </div>
-          <ContractorActions homeId={homeId} homeAddress={addrLine} />
-        </div>
+        </section>
+
+        {/* Stats Cards */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard label="Total Contractors" value={totalContractors} />
+          <StatCard label="Verified Jobs" value={totalVerifiedJobs} />
+          <StatCard
+            label="Total Spent"
+            value={totalSpentAmount > 0 ? `$${totalSpentAmount.toLocaleString()}` : "$0"}
+            highlight={totalSpentAmount > 0 ? "green" : undefined}
+          />
+          <StatCard label="Active Pros" value={activeContractors} />
+        </section>
 
         {/* Contractors List */}
         {connections.length === 0 ? (
-          <div className={`${glass} py-12 text-center`}>
-            <div className="text-5xl mb-4">👷</div>
-            <h2 className="text-xl font-semibold text-white mb-2">
-              No connected contractors yet
-            </h2>
-            <p className="text-white/60 mb-6 max-w-md mx-auto">
-              Connect with pros who&apos;ve worked on your home to build your trusted network and get verified records.
-            </p>
-            <ContractorActions homeId={homeId} homeAddress={addrLine} showInviteButton />
-          </div>
+          <section className={glass}>
+            <div className="py-12 text-center">
+              <div className="text-5xl mb-4">👷</div>
+              <h2 className="text-xl font-semibold text-white mb-2">
+                No connected contractors yet
+              </h2>
+              <p className="text-white/60 mb-6 max-w-md mx-auto">
+                Connect with pros who&apos;ve worked on your home to build your trusted network and get verified records.
+              </p>
+              <ContractorActions homeId={homeId} homeAddress={addrLine} showInviteButton />
+            </div>
+          </section>
         ) : (
-          <div className="space-y-4">
+          <section className="space-y-4">
             {connections.map((conn) => (
               <ContractorRow
                 key={conn.id}
@@ -165,10 +214,39 @@ export default async function ContractorsPage({
                 verifiedWorkCount={verifiedWorkByContractor.get(conn.contractorId) || 0}
               />
             ))}
-          </div>
+          </section>
         )}
+
+        <div className="h-12" />
       </div>
     </main>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string | number;
+  highlight?: "green" | "yellow";
+}) {
+  return (
+    <div className={glassTight}>
+      <div className="text-sm text-white/70">{label}</div>
+      <div
+        className={`mt-1 text-xl font-semibold ${
+          highlight === "green"
+            ? "text-green-400"
+            : highlight === "yellow"
+            ? "text-yellow-400"
+            : "text-white"
+        }`}
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 
@@ -240,7 +318,7 @@ function ContractorRow({
       {/* Actions */}
       <div className="flex gap-2 flex-shrink-0">
         <Link
-          href={`/home/${homeId}/messages?contractor=${contractor.id}`}
+          href={`/home/${homeId}/messages/${connection.id}`}
           className="px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition"
         >
           Message
