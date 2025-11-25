@@ -310,13 +310,11 @@ export default async function ContractorDetailPage({
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         {/* Breadcrumb */}
         <Breadcrumb
-          href={`/home/${homeId}/contractors`}
-          label={addrLine || "Contractors"}
-          current={
-            contractorData.businessName ||
-            contractorData.name ||
-            "Contractor"
-          }
+          items={[
+            { label: addrLine, href: `/home/${homeId}` },
+            { label: "Contractors", href: `/home/${homeId}/contractors` },
+            { label: contractorData.businessName || contractorData.name || "Contractor" },
+          ]}
         />
 
         {/* Header */}
