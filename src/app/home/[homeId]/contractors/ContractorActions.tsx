@@ -7,10 +7,9 @@ import { InviteProModal } from "@/app/home/[homeId]/invitations/InviteProModal";
 type ContractorActionsProps = {
   homeId: string;
   homeAddress: string;
-  showInviteButton?: boolean;
 };
 
-export function ContractorActions({ homeId, homeAddress, showInviteButton }: ContractorActionsProps) {
+export function ContractorActions({ homeId, homeAddress }: ContractorActionsProps) {
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
   return (

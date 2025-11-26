@@ -3,6 +3,7 @@
  *
  * Shows all active conversations for ANY pro type (contractor, realtor, inspector).
  * Lists connections with unread counts and last messages preview.
+ * Includes archived conversations (read-only) for disconnected homeowners.
  *
  * Location: app/(pro)/pro/messages/page.tsx
  */
@@ -16,7 +17,7 @@ import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
-import { MessagesList } from "./_components/MessagesList";
+import { MessageListClient } from "./MessageListClient";
 
 export default async function MessagesPage() {
   const session = await getServerSession(authConfig);
@@ -27,6 +28,7 @@ export default async function MessagesPage() {
 
   const userId = session.user.id;
 
+  // Get both active and archived connections
   const connections = await prisma.connection.findMany({
     where: {
       OR: [
@@ -34,7 +36,7 @@ export default async function MessagesPage() {
         { realtorId: userId },
         { inspectorId: userId },
       ],
-      status: "ACTIVE",
+      status: { in: ["ACTIVE", "ARCHIVED"] },
     },
     include: {
       homeowner: {
@@ -73,40 +75,63 @@ export default async function MessagesPage() {
     orderBy: { updatedAt: "desc" },
   });
 
-  const conversations = connections
-    .filter((c) => c.homeowner && c.home) // extra safety
-    .map((conn) => {
-      const lastMessage = conn.messages[0] ?? null;
-      const unreadCount = conn._count.messages ?? 0;
+  // Format conversations
+  const formatConversation = (conn: (typeof connections)[number]) => {
+    const lastMessage = conn.messages[0] ?? null;
+    const unreadCount = conn._count.messages ?? 0;
+    const isArchived = conn.status === "ARCHIVED";
 
-      const homeownerName =
-        conn.homeowner.name ||
-        conn.homeowner.email ||
-        "Homeowner";
+    const homeownerName =
+      conn.homeowner?.name || conn.homeowner?.email || "Homeowner";
 
-      return {
-        connectionId: conn.id,
-        homeowner: {
-          name: homeownerName,
-          image: conn.homeowner.image ?? null,
-        },
-        property: {
-          address: conn.home.address ?? "",
-          city: conn.home.city ?? "",
-          state: conn.home.state ?? "",
-        },
-        lastMessage: lastMessage
-          ? {
-              content: lastMessage.content,
-              createdAt: lastMessage.createdAt,
-              isRead: lastMessage.reads.length > 0,
-            }
-          : null,
-        unreadCount,
-      };
-    });
+    return {
+      connectionId: conn.id,
+      homeowner: {
+        name: homeownerName,
+        image: conn.homeowner?.image ?? null,
+      },
+      property: {
+        address: conn.home?.address ?? "",
+        city: conn.home?.city ?? "",
+        state: conn.home?.state ?? "",
+      },
+      lastMessage: lastMessage
+        ? {
+            content: lastMessage.content,
+            createdAt: lastMessage.createdAt,
+            isRead: lastMessage.reads.length > 0,
+          }
+        : null,
+      unreadCount: isArchived ? 0 : unreadCount,
+      isArchived,
+      archivedAt: conn.archivedAt,
+    };
+  };
 
-  const conversationsCount = conversations.length;
+  const allConversations = connections
+    .filter((c) => c.homeowner && c.home)
+    .map(formatConversation);
+
+  const activeConversations = allConversations.filter((c) => !c.isArchived);
+  const archivedConversations = allConversations.filter((c) => c.isArchived);
+
+  // Sort
+  activeConversations.sort((a, b) => {
+    const aDate = a.lastMessage?.createdAt || new Date(0);
+    const bDate = b.lastMessage?.createdAt || new Date(0);
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
+  });
+
+  archivedConversations.sort((a, b) => {
+    const aDate = a.archivedAt || new Date(0);
+    const bDate = b.archivedAt || new Date(0);
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
+  });
+
+  const totalActiveUnread = activeConversations.reduce(
+    (sum, c) => sum + c.unreadCount,
+    0
+  );
 
   return (
     <main className="relative min-h-screen text-white">
@@ -150,15 +175,18 @@ export default async function MessagesPage() {
             </Link>
 
             <div className="min-w-0">
-              <h1 className={`text-2xl font-bold ${heading}`}>
-                Messages
-              </h1>
+              <h1 className={`text-2xl font-bold ${heading}`}>Messages</h1>
               <p className={`mt-1 text-sm ${textMeta}`}>
                 Communicate with homeowners about your work.
               </p>
               <p className={`mt-1 text-xs ${textMeta}`}>
-                {conversationsCount} active conversation
-                {conversationsCount === 1 ? "" : "s"}
+                {activeConversations.length} active conversation
+                {activeConversations.length === 1 ? "" : "s"}
+                {totalActiveUnread > 0 && (
+                  <span className="ml-2 text-orange-400">
+                    ({totalActiveUnread} unread)
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -166,7 +194,21 @@ export default async function MessagesPage() {
 
         {/* Conversations List - Client Component with polling */}
         <section className={glass}>
-          <MessagesList initialConversations={conversations} />
+          {activeConversations.length === 0 &&
+          archivedConversations.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+              <p className="mb-2 text-white/80">No conversations yet</p>
+              <p className={`text-sm ${textMeta}`}>
+                Messages will appear here when homeowners reach out or when you
+                start a conversation with a connected homeowner.
+              </p>
+            </div>
+          ) : (
+            <MessageListClient
+              activeConversations={activeConversations}
+              archivedConversations={archivedConversations}
+            />
+          )}
         </section>
       </div>
     </main>

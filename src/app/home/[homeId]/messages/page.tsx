@@ -3,6 +3,7 @@
  *
  * Shows all conversations with contractors for THIS specific home.
  * Lists connections with unread counts and last message preview.
+ * Includes archived conversations (read-only) for disconnected contractors.
  *
  * Location: app/home/[homeId]/messages/page.tsx
  */
@@ -15,9 +16,9 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { formatDistanceToNow } from "date-fns";
-import { glass, glassTight, heading, textMeta } from "@/lib/glass";
+import { glass, heading, textMeta } from "@/lib/glass";
 import Breadcrumb from "@/components/ui/Breadcrumb";
+import { MessagesListClient } from "./MessagesListClient";
 
 export default async function HomeMessagesPage({
   params,
@@ -45,12 +46,13 @@ export default async function HomeMessagesPage({
     redirect("/");
   }
 
-  // Get all active connections for THIS home
+  // Get all connections (both active and archived) for THIS home
   const connections = await prisma.connection.findMany({
     where: {
       homeId,
       homeownerId: userId,
-      status: "ACTIVE",
+      status: { in: ["ACTIVE", "ARCHIVED"] },
+      contractorId: { not: null },
     },
     include: {
       contractor: {
@@ -106,38 +108,59 @@ export default async function HomeMessagesPage({
     .filter(Boolean)
     .join(", ");
 
-  // Format conversations
-  const conversations = connections
-    .filter((conn) => conn.contractor !== null)
-    .map((conn) => {
-      const lastMessage = conn.messages[0];
-      const unreadCount = conn._count.messages;
+  // Format and separate conversations
+  const formatConversation = (conn: (typeof connections)[number]) => {
+    const lastMessage = conn.messages[0];
+    const unreadCount = conn._count.messages;
+    const isArchived = conn.status === "ARCHIVED";
 
-      return {
-        connectionId: conn.id,
-        contractor: {
-          name:
-            conn.contractor!.proProfile?.businessName ||
-            conn.contractor!.name ||
-            conn.contractor!.email ||
-            "Contractor",
-          image: conn.contractor!.image,
-        },
-        property: {
-          address: conn.home.address,
-          city: conn.home.city,
-          state: conn.home.state,
-        },
-        lastMessage: lastMessage
-          ? {
-              content: lastMessage.content,
-              createdAt: lastMessage.createdAt,
-              isRead: lastMessage.reads.length > 0,
-            }
-          : null,
-        unreadCount,
-      };
-    });
+    return {
+      connectionId: conn.id,
+      contractor: {
+        name:
+          conn.contractor!.proProfile?.businessName ||
+          conn.contractor!.name ||
+          conn.contractor!.email ||
+          "Contractor",
+        image: conn.contractor!.image,
+      },
+      lastMessage: lastMessage
+        ? {
+            content: lastMessage.content,
+            createdAt: lastMessage.createdAt,
+            isRead: lastMessage.reads.length > 0,
+          }
+        : null,
+      unreadCount: isArchived ? 0 : unreadCount, // No unread for archived
+      isArchived,
+      archivedAt: conn.archivedAt,
+    };
+  };
+
+  const allConversations = connections
+    .filter((conn) => conn.contractor !== null)
+    .map(formatConversation);
+
+  const activeConversations = allConversations.filter((c) => !c.isArchived);
+  const archivedConversations = allConversations.filter((c) => c.isArchived);
+
+  // Sort: active by last message, archived by archivedAt
+  activeConversations.sort((a, b) => {
+    const aDate = a.lastMessage?.createdAt || new Date(0);
+    const bDate = b.lastMessage?.createdAt || new Date(0);
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
+  });
+
+  archivedConversations.sort((a, b) => {
+    const aDate = a.archivedAt || new Date(0);
+    const bDate = b.archivedAt || new Date(0);
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
+  });
+
+  const totalActiveUnread = activeConversations.reduce(
+    (sum, c) => sum + c.unreadCount,
+    0
+  );
 
   return (
     <main className="relative min-h-screen text-white">
@@ -147,8 +170,8 @@ export default async function HomeMessagesPage({
         {/* Breadcrumb */}
         <Breadcrumb
           href={`/home/${homeId}`}
-          label={addrLine}       // already exists, no new var needed
-          current="Messages"        // or Maintenance & Repairs, etc.
+          label={addrLine}
+          current="Messages"
         />
 
         {/* Header */}
@@ -181,8 +204,15 @@ export default async function HomeMessagesPage({
                 Conversations with contractors for this home.
               </p>
               <p className={`mt-1 text-xs ${textMeta}`}>
-                {conversations.length}{" "}
-                {conversations.length === 1 ? "conversation" : "conversations"}
+                {activeConversations.length}{" "}
+                {activeConversations.length === 1
+                  ? "conversation"
+                  : "conversations"}
+                {totalActiveUnread > 0 && (
+                  <span className="ml-2 text-orange-400">
+                    ({totalActiveUnread} unread)
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -190,7 +220,8 @@ export default async function HomeMessagesPage({
 
         {/* Conversations List */}
         <section className={glass}>
-          {conversations.length === 0 ? (
+          {activeConversations.length === 0 &&
+          archivedConversations.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
               <p className="mb-2 text-white/80">No conversations yet</p>
               <p className={`text-sm ${textMeta}`}>
@@ -199,71 +230,11 @@ export default async function HomeMessagesPage({
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {conversations.map((conv) => (
-                <Link
-                  key={conv.connectionId}
-                  href={`/home/${homeId}/messages/${conv.connectionId}`}
-                  className={`${glassTight} flex items-center gap-4 hover:bg-white/10 transition-colors`}
-                >
-                  {/* Avatar */}
-                  <div className="flex-shrink-0">
-                    {conv.contractor.image ? (
-                      <Image
-                        src={conv.contractor.image}
-                        alt={conv.contractor.name}
-                        width={48}
-                        height={48}
-                        className="rounded-full"
-                      />
-                    ) : (
-                      <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
-                        <span className="text-xl font-medium">
-                          {conv.contractor.name[0]?.toUpperCase() || "?"}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <p className="font-medium text-white truncate">
-                        {conv.contractor.name}
-                      </p>
-                      {conv.lastMessage && (
-                        <p className={`text-xs ${textMeta} flex-shrink-0`}>
-                          {formatDistanceToNow(
-                            new Date(conv.lastMessage.createdAt),
-                            { addSuffix: true }
-                          )}
-                        </p>
-                      )}
-                    </div>
-                    {conv.lastMessage && (
-                      <p
-                        className={`mt-1 truncate text-sm ${
-                          conv.unreadCount > 0
-                            ? "text-white font-medium"
-                            : textMeta
-                        }`}
-                      >
-                        {conv.lastMessage.content}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Unread badge */}
-                  {conv.unreadCount > 0 && (
-                    <div className="flex-shrink-0 h-6 min-w-[24px] px-1.5 rounded-full bg-orange-500 flex items-center justify-center">
-                      <span className="text-xs font-bold text-white">
-                        {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
-                      </span>
-                    </div>
-                  )}
-                </Link>
-              ))}
-            </div>
+            <MessagesListClient
+              homeId={homeId}
+              activeConversations={activeConversations}
+              archivedConversations={archivedConversations}
+            />
           )}
         </section>
       </div>

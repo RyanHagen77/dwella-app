@@ -1,17 +1,19 @@
 /**
- * PROPERTY DETAIL PAGE (CONTRACTOR) - IMPROVED
+ * PROPERTY DETAIL PAGE (CONTRACTOR)
  *
  * Relationship-centered view with:
  * - Growth opportunities (warranties, reminders)
  * - Relationship health indicators
  * - Context-aware quick actions
  * - Enhanced stats and metrics
- * - Timeline view option
- * - Private notes
+ * - Read-only mode for archived/disconnected homeowners
+ *
+ * Location: app/(pro)/pro/contractor/properties/[propertyId]/page.tsx
  */
 
 export const dynamic = "force-dynamic";
 
+import React from "react";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -20,8 +22,14 @@ import { getSignedGetUrl, extractS3Key } from "@/lib/s3";
 import { serializeConnections } from "@/lib/serialize";
 import Image from "next/image";
 import Link from "next/link";
-import { glass, glassTight, heading, textMeta, ctaPrimary } from "@/lib/glass";
-import { format } from "date-fns";
+import {
+  glass,
+  glassTight,
+  heading,
+  textMeta,
+  ctaPrimary,
+} from "@/lib/glass";
+import { format, formatDistanceToNow } from "date-fns";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
 type PageProps = {
@@ -37,6 +45,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   }
 
   // Fetch property with all related data including opportunities
+  // Include ARCHIVED status so we can show read-only view
   const property = await prisma.home.findUnique({
     where: { id },
     include: {
@@ -51,6 +60,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
       connections: {
         where: {
           contractorId: session.user.id,
+          status: { in: ["ACTIVE", "ARCHIVED"] },
         },
         select: {
           id: true,
@@ -59,6 +69,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           verifiedWorkCount: true,
           totalSpent: true,
           lastWorkDate: true,
+          archivedAt: true,
         },
       },
       workRecords: {
@@ -105,7 +116,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           },
         },
       },
-      // NEW: Fetch opportunities
+      // Fetch opportunities
       warranties: {
         where: {
           expiresAt: {
@@ -155,7 +166,14 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   // Serialize connection to convert Decimal to number
   const [connection] = serializeConnections([rawConnection]);
 
-  const addrLine = [property.address, property.city, property.state, property.zip]
+  const isArchived = connection.status === "ARCHIVED";
+
+  const addrLine = [
+    property.address,
+    property.city,
+    property.state,
+    property.zip,
+  ]
     .filter(Boolean)
     .join(", ");
 
@@ -173,34 +191,49 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   );
 
   const daysSinceLastWork = connection.lastWorkDate
-    ? Math.floor((now - new Date(connection.lastWorkDate).getTime()) / (1000 * 60 * 60 * 24))
+    ? Math.floor(
+        (now - new Date(connection.lastWorkDate).getTime()) /
+          (1000 * 60 * 60 * 24)
+      )
     : null;
 
-  const relationshipHealth: 'excellent' | 'good' | 'needs-attention' =
-    !daysSinceLastWork || daysSinceLastWork > 180
-      ? 'needs-attention'
+  const relationshipHealth: "excellent" | "good" | "needs-attention" =
+    isArchived
+      ? "needs-attention"
+      : !daysSinceLastWork || daysSinceLastWork > 180
+      ? "needs-attention"
       : daysSinceLastWork < 90
-      ? 'excellent'
-      : 'good';
+      ? "excellent"
+      : "good";
 
-  // Process opportunities with days until
-  const expiringWarranties = property.warranties.map(w => ({
-    ...w,
-    daysUntil: Math.ceil((new Date(w.expiresAt!).getTime() - now) / (1000 * 60 * 60 * 24)),
-  }));
+  // Process opportunities with days until (only for active)
+  const expiringWarranties = isArchived
+    ? []
+    : property.warranties.map((w) => ({
+        ...w,
+        daysUntil: Math.ceil(
+          (new Date(w.expiresAt!).getTime() - now) / (1000 * 60 * 60 * 24)
+        ),
+      }));
 
-  const upcomingReminders = property.reminders.map(r => ({
-    ...r,
-    daysUntil: Math.ceil((new Date(r.dueAt).getTime() - now) / (1000 * 60 * 60 * 24)),
-  }));
+  const upcomingReminders = isArchived
+    ? []
+    : property.reminders.map((r) => ({
+        ...r,
+        daysUntil: Math.ceil(
+          (new Date(r.dueAt).getTime() - now) / (1000 * 60 * 60 * 24)
+        ),
+      }));
 
   const totalOpportunities = expiringWarranties.length + upcomingReminders.length;
 
   // Calculate stats
   const totalRevenue = connection.totalSpent || 0;
-  const pendingRequests = property.jobRequests.filter(
-    (req) => req.status === "PENDING" || req.status === "QUOTED"
-  );
+  const pendingRequests = isArchived
+    ? []
+    : property.jobRequests.filter(
+        (req) => req.status === "PENDING" || req.status === "QUOTED"
+      );
   const firstPendingRequest = pendingRequests[0];
 
   const statusConfig: Record<
@@ -211,6 +244,11 @@ export default async function PropertyDetailPage({ params }: PageProps) {
       label: "Active Client",
       color: "text-emerald-300",
       bg: "bg-emerald-500/10 border-emerald-500/30",
+    },
+    ARCHIVED: {
+      label: "Disconnected",
+      color: "text-gray-300",
+      bg: "bg-gray-500/10 border-gray-500/30",
     },
     PENDING: {
       label: "Connection Pending",
@@ -224,12 +262,29 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     },
   };
 
-  const connectionStatus = statusConfig[connection.status] || statusConfig.ACTIVE;
+  const connectionStatus =
+    statusConfig[connection.status] || statusConfig.ACTIVE;
 
   const healthConfig = {
-    excellent: { label: '🟢 Great', subtext: 'Engaged client' },
-    good: { label: '🔵 Good', subtext: 'Active relationship' },
-    'needs-attention': { label: '🟡 At Risk', subtext: 'Needs follow-up' },
+    excellent: {
+      label: "Excellent",
+      subtext: "Engaged client",
+      dot: "bg-emerald-400",
+    },
+    good: {
+      label: "Good",
+      subtext: "Active relationship",
+      dot: "bg-blue-400",
+    },
+    "needs-attention": {
+      label: isArchived ? "Archived" : "At Risk",
+      subtext: isArchived
+        ? rawConnection.archivedAt
+          ? `Disconnected ${formatDistanceToNow(new Date(rawConnection.archivedAt), { addSuffix: true })}`
+          : "Homeowner disconnected"
+        : "Needs follow-up",
+      dot: isArchived ? "bg-gray-400" : "bg-yellow-400",
+    },
   };
 
   const jobStatusConfig: Record<
@@ -282,9 +337,43 @@ export default async function PropertyDetailPage({ params }: PageProps) {
         <Breadcrumb
           items={[
             { label: "Properties", href: "/pro/contractor/properties" },
-            { label: addrLine },
+            { label: property.address || "Property" },
           ]}
         />
+
+        {/* Archived Banner */}
+        {isArchived && (
+          <div className="flex items-center gap-3 rounded-xl border border-gray-500/30 bg-gray-500/10 px-4 py-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5 text-gray-400 flex-shrink-0"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-gray-300">
+                This homeowner has disconnected. You can view work history but
+                cannot submit new work or send messages.
+              </p>
+              {rawConnection.archivedAt && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Disconnected{" "}
+                  {formatDistanceToNow(new Date(rawConnection.archivedAt), {
+                    addSuffix: true,
+                  })}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <section className={glass}>
@@ -331,12 +420,13 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Improved Stats Overview - Relationship Story */}
+        {/* Stats Overview */}
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard
-            label="Relationship Health"
+            label="Status"
             value={healthConfig[relationshipHealth].label}
-            subtext={daysSinceLastWork !== null ? `${daysSinceLastWork}d since contact` : 'No contact yet'}
+            subtext={healthConfig[relationshipHealth].subtext}
+            dot={healthConfig[relationshipHealth].dot}
           />
           <StatCard
             label="Verified Jobs"
@@ -345,15 +435,23 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           />
           <StatCard
             label="Opportunities"
-            value={totalOpportunities}
-            subtext={totalOpportunities > 0 ? "Act now" : "None"}
-            highlight={totalOpportunities > 0 ? "blue" : undefined}
+            value={isArchived ? "—" : totalOpportunities}
+            subtext={isArchived ? "N/A" : totalOpportunities > 0 ? "Act now" : "None"}
+            highlight={!isArchived && totalOpportunities > 0 ? "blue" : undefined}
           />
           <StatCard
             label="Pending Requests"
-            value={pendingRequests.length}
-            subtext={pendingRequests.length > 0 ? "Needs response" : "All clear"}
-            highlight={pendingRequests.length > 0 ? "orange" : undefined}
+            value={isArchived ? "—" : pendingRequests.length}
+            subtext={
+              isArchived
+                ? "N/A"
+                : pendingRequests.length > 0
+                ? "Needs response"
+                : "All clear"
+            }
+            highlight={
+              !isArchived && pendingRequests.length > 0 ? "orange" : undefined
+            }
           />
         </section>
 
@@ -361,8 +459,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Left Column - Opportunities & Work */}
           <div className="space-y-6 lg:col-span-2">
-            {/* Growth Opportunities - NEW & PROMINENT */}
-            {totalOpportunities > 0 && (
+            {/* Growth Opportunities - Only for active */}
+            {!isArchived && totalOpportunities > 0 && (
               <section className={glass}>
                 <div className="mb-4">
                   <h2 className={`text-lg font-semibold ${heading}`}>
@@ -389,7 +487,10 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                             </h3>
                             <p className={`text-sm ${textMeta}`}>
                               Warranty expires{" "}
-                              {format(new Date(warranty.expiresAt!), "MMM d, yyyy")}
+                              {format(
+                                new Date(warranty.expiresAt!),
+                                "MMM d, yyyy"
+                              )}
                             </p>
                             {warranty.provider && (
                               <p className={`text-xs ${textMeta} mt-1`}>
@@ -404,14 +505,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Link
-                          href={`/pro/contractor/job-requests/new?homeId=${id}&type=warranty&item=${encodeURIComponent(warranty.item)}`}
+                          href={`/pro/messages/${connection.id}?topic=warranty&item=${encodeURIComponent(warranty.item)}`}
                           className="rounded-lg bg-blue-500/20 border border-blue-400/30 px-3 py-1.5 text-sm text-blue-200 hover:bg-blue-500/30 transition"
-                        >
-                          Schedule Check-up
-                        </Link>
-                        <Link
-                          href={`/pro/contractor/messages/${connection.id}?topic=warranty&item=${encodeURIComponent(warranty.item)}`}
-                          className="rounded-lg bg-white/10 border border-white/20 px-3 py-1.5 text-sm text-white hover:bg-white/15 transition"
                         >
                           Send Message
                         </Link>
@@ -433,7 +528,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                               {reminder.title}
                             </h3>
                             <p className={`text-sm ${textMeta}`}>
-                              Due {format(new Date(reminder.dueAt), "MMM d, yyyy")}
+                              Due{" "}
+                              {format(new Date(reminder.dueAt), "MMM d, yyyy")}
                             </p>
                           </div>
                         </div>
@@ -443,14 +539,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Link
-                          href={`/pro/contractor/job-requests/new?homeId=${id}&type=reminder&item=${encodeURIComponent(reminder.title)}`}
+                          href={`/pro/messages/${connection.id}?topic=reminder&item=${encodeURIComponent(reminder.title)}`}
                           className="rounded-lg bg-blue-500/20 border border-blue-400/30 px-3 py-1.5 text-sm text-blue-200 hover:bg-blue-500/30 transition"
-                        >
-                          Offer Service
-                        </Link>
-                        <Link
-                          href={`/pro/contractor/messages/${connection.id}?topic=reminder&item=${encodeURIComponent(reminder.title)}`}
-                          className="rounded-lg bg-white/10 border border-white/20 px-3 py-1.5 text-sm text-white hover:bg-white/15 transition"
                         >
                           Send Message
                         </Link>
@@ -461,8 +551,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               </section>
             )}
 
-            {/* Pending Request Alert */}
-            {pendingRequests.length > 0 && (
+            {/* Pending Request Alert - Only for active */}
+            {!isArchived && pendingRequests.length > 0 && (
               <section className={glass}>
                 <div className="flex items-start gap-3">
                   <div className="flex-shrink-0 rounded-full bg-orange-500/20 p-2">
@@ -485,8 +575,8 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     <h3 className="font-semibold text-white">Action Required</h3>
                     <p className={`mt-1 text-sm ${textMeta}`}>
                       You have {pendingRequests.length} pending job{" "}
-                      {pendingRequests.length === 1 ? "request" : "requests"} from this
-                      homeowner.
+                      {pendingRequests.length === 1 ? "request" : "requests"}{" "}
+                      from this homeowner.
                     </p>
                     {firstPendingRequest && (
                       <Link
@@ -512,13 +602,14 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               {property.jobRequests.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="mb-3 text-4xl">📋</div>
-                  <p className={textMeta}>No job requests yet</p>
+                  <p className={textMeta}>No job requests</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {property.jobRequests.map((request) => {
                     const requestStatus =
-                      jobStatusConfig[request.status] || jobStatusConfig.PENDING;
+                      jobStatusConfig[request.status] ||
+                      jobStatusConfig.PENDING;
                     return (
                       <Link
                         key={request.id}
@@ -536,7 +627,9 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                           </span>
                         </div>
                         {request.description && (
-                          <p className={`mb-2 line-clamp-2 text-sm ${textMeta}`}>
+                          <p
+                            className={`mb-2 line-clamp-2 text-sm ${textMeta}`}
+                          >
                             {request.description}
                           </p>
                         )}
@@ -560,7 +653,10 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                           )}
                           <span>
                             📅{" "}
-                            {format(new Date(request.createdAt), "MMM d, yyyy")}
+                            {format(
+                              new Date(request.createdAt),
+                              "MMM d, yyyy"
+                            )}
                           </span>
                         </div>
                         {request.quote && (
@@ -587,7 +683,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               {property.workRecords.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="mb-3 text-4xl">🔧</div>
-                  <p className={textMeta}>No documented work yet</p>
+                  <p className={textMeta}>No documented work</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -601,20 +697,25 @@ export default async function PropertyDetailPage({ params }: PageProps) {
 
           {/* Right Column - Homeowner Info & Actions */}
           <div className="space-y-6">
-            {/* Enhanced Homeowner Card */}
+            {/* Homeowner Card */}
             {property.owner && (
               <section className={glass}>
                 <div className="mb-4 flex items-center justify-between">
-                  <h2 className={`text-lg font-semibold ${heading}`}>Homeowner</h2>
+                  <h2 className={`text-lg font-semibold ${heading}`}>
+                    Homeowner
+                  </h2>
                   <span
-                    className={`text-xs px-2 py-1 rounded-full ${
-                      relationshipHealth === 'excellent'
-                        ? 'bg-emerald-400/20 text-emerald-300'
-                        : relationshipHealth === 'good'
-                        ? 'bg-blue-400/20 text-blue-300'
-                        : 'bg-yellow-400/20 text-yellow-300'
+                    className={`text-xs px-2 py-1 rounded-full flex items-center gap-1.5 ${
+                      isArchived
+                        ? "bg-gray-500/20 text-gray-400"
+                        : relationshipHealth === "excellent"
+                        ? "bg-emerald-400/20 text-emerald-300"
+                        : relationshipHealth === "good"
+                        ? "bg-blue-400/20 text-blue-300"
+                        : "bg-yellow-400/20 text-yellow-300"
                     }`}
                   >
+                    <span className={`w-1.5 h-1.5 rounded-full ${healthConfig[relationshipHealth].dot}`} />
                     {healthConfig[relationshipHealth].label}
                   </span>
                 </div>
@@ -632,7 +733,9 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     </div>
                   ) : (
                     <div className="h-16 w-16 flex-shrink-0 rounded-full bg-white/10 flex items-center justify-center text-white text-xl font-medium">
-                      {(property.owner.name || property.owner.email)[0].toUpperCase()}
+                      {(
+                        property.owner.name || property.owner.email
+                      )[0].toUpperCase()}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
@@ -642,6 +745,11 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     <p className={`mt-1 text-sm ${textMeta} truncate`}>
                       ✉️ {property.owner.email}
                     </p>
+                    {isArchived && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Connection ended
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -654,12 +762,16 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   <div className="flex justify-between text-sm">
                     <span className={textMeta}>Last Contact</span>
                     <span className="text-white">
-                      {daysSinceLastWork !== null ? `${daysSinceLastWork} days ago` : 'Never'}
+                      {daysSinceLastWork !== null
+                        ? `${daysSinceLastWork} days ago`
+                        : "Never"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={textMeta}>Verified Jobs</span>
-                    <span className="text-white">{connection.verifiedWorkCount}</span>
+                    <span className="text-white">
+                      {connection.verifiedWorkCount}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={textMeta}>Lifetime Value</span>
@@ -671,30 +783,18 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               </section>
             )}
 
-            {/* Context-Aware Quick Actions */}
-            {property.owner && (
+            {/* Quick Actions - Only for active */}
+            {!isArchived && property.owner && (
               <section className={glass}>
                 <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
                   Quick Actions
                 </h2>
                 <div className="space-y-2">
-                  {/* Context-specific actions */}
-                  {totalOpportunities > 0 && expiringWarranties[0] && (
-                    <Link
-                      href={`/pro/contractor/messages/${connection.id}?topic=warranty&item=${encodeURIComponent(expiringWarranties[0].item)}`}
-                      className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
-                    >
-                      <span className="text-xl">💬</span>
-                      <span className="text-sm text-white">
-                        Message About Warranty
-                      </span>
-                    </Link>
-                  )}
-
+                  {/* Priority action: Pending request */}
                   {pendingRequests.length > 0 && firstPendingRequest && (
                     <Link
                       href={`/pro/contractor/job-requests/${firstPendingRequest.id}`}
-                      className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
+                      className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition border-orange-400/30`}
                     >
                       <span className="text-xl">📋</span>
                       <span className="text-sm text-white">
@@ -703,33 +803,55 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     </Link>
                   )}
 
-                  {daysSinceLastWork && daysSinceLastWork > 90 && (
-                    <Link
-                      href={`/pro/contractor/messages/${connection.id}?topic=checkin`}
-                      className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
-                    >
-                      <span className="text-xl">💬</span>
-                      <span className="text-sm text-white">
-                        Send Check-in
-                      </span>
-                    </Link>
-                  )}
-
-                  {/* Always available actions */}
+                  {/* Document work */}
                   <Link
                     href={`/pro/contractor/work-records/new?homeId=${id}`}
                     className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
                   >
                     <span className="text-xl">📝</span>
-                    <span className="text-sm text-white">Document New Work</span>
+                    <span className="text-sm text-white">
+                      Document New Work
+                    </span>
                   </Link>
 
+                  {/* Message - with context hint if applicable */}
                   <Link
-                    href={`/pro/messages/${connection.id}`}
+                    href={`/pro/messages/${connection.id}${
+                      expiringWarranties[0]
+                        ? `?topic=warranty&item=${encodeURIComponent(expiringWarranties[0].item)}`
+                        : daysSinceLastWork && daysSinceLastWork > 90
+                        ? "?topic=checkin"
+                        : ""
+                    }`}
                     className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
                   >
                     <span className="text-xl">💬</span>
-                    <span className="text-sm text-white">Send Message</span>
+                    <span className="text-sm text-white">
+                      {expiringWarranties[0]
+                        ? "Message About Warranty"
+                        : daysSinceLastWork && daysSinceLastWork > 90
+                        ? "Send Check-in"
+                        : "Send Message"}
+                    </span>
+                  </Link>
+                </div>
+              </section>
+            )}
+
+            {/* Read-only notice for archived */}
+            {isArchived && (
+              <section className={glass}>
+                <div className="text-center py-4">
+                  <div className="text-4xl mb-3">📦</div>
+                  <p className="text-sm text-gray-400">
+                    This connection is archived. You can view work history but
+                    actions are disabled.
+                  </p>
+                  <Link
+                    href={`/pro/messages/${connection.id}`}
+                    className="inline-block mt-3 text-sm text-gray-400 hover:text-gray-300 underline"
+                  >
+                    View message history →
                   </Link>
                 </div>
               </section>
@@ -816,7 +938,8 @@ async function WorkRecordCard({
           )}
           {work.cost && (
             <span className="font-semibold text-white">
-              ${typeof work.cost === 'object' && 'toNumber' in work.cost
+              $
+              {typeof work.cost === "object" && "toNumber" in work.cost
                 ? work.cost.toNumber().toLocaleString()
                 : Number(work.cost).toLocaleString()}
             </span>
@@ -835,17 +958,19 @@ function StatCard({
   value,
   subtext,
   highlight,
+  dot,
 }: {
   label: string;
-  value: string | number;
+  value: string | number | React.ReactNode;
   subtext?: string;
   highlight?: "red" | "yellow" | "blue" | "orange";
+  dot?: string;
 }) {
   return (
     <div className={glassTight}>
       <div className="text-sm text-white/70">{label}</div>
       <div
-        className={`mt-1 text-xl font-semibold ${
+        className={`mt-1 text-xl font-semibold flex items-center gap-2 ${
           highlight === "red"
             ? "text-red-400"
             : highlight === "yellow"
@@ -857,6 +982,7 @@ function StatCard({
             : "text-white"
         }`}
       >
+        {dot && <span className={`w-2.5 h-2.5 rounded-full ${dot} flex-shrink-0`} />}
         {value}
       </div>
       {subtext && (

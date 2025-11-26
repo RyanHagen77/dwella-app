@@ -1,9 +1,9 @@
 /**
- * INDIVIDUAL CHAT PAGE
+ * PRO INDIVIDUAL CHAT PAGE
  *
- * Real-time messaging interface for a specific connection.
- * Works for ALL pro types (contractor, realtor, inspector).
+ * Real-time messaging interface for contractor/realtor/inspector chatting with homeowner.
  * Shows message history and allows sending new messages.
+ * Read-only mode for archived (disconnected) connections.
  *
  * Location: app/(pro)/pro/messages/[connectionId]/page.tsx
  */
@@ -17,9 +17,9 @@ import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
-import { MessageThread } from "./_components/MessageThread";
+import { MessageThread } from "@/app/messages/_components/MessageThread";
 
-export default async function ChatPage({
+export default async function ProChatPage({
   params,
 }: {
   params: Promise<{ connectionId: string }>;
@@ -33,7 +33,8 @@ export default async function ChatPage({
   const { connectionId } = await params;
   const userId = session.user.id;
 
-  // Get connection details (supports any pro type)
+  // Get connection details - verify pro owns this connection
+  // Include ARCHIVED status so we can show read-only view
   const connection = await prisma.connection.findFirst({
     where: {
       id: connectionId,
@@ -42,6 +43,7 @@ export default async function ChatPage({
         { realtorId: userId },
         { inspectorId: userId },
       ],
+      status: { in: ["ACTIVE", "ARCHIVED"] },
     },
     include: {
       homeowner: {
@@ -62,21 +64,34 @@ export default async function ChatPage({
     },
   });
 
-  if (!connection || !connection.homeowner || !connection.home) {
+  if (!connection || !connection.homeowner) {
     notFound();
   }
+
+  const isArchived = connection.status === "ARCHIVED";
 
   // Get messages
   const messages = await prisma.message.findMany({
     where: { connectionId },
     include: {
       sender: {
-        select: { id: true, name: true, image: true },
+        select: {
+          id: true,
+          name: true,
+          image: true,
+        },
       },
       attachments: {
-        select: { id: true, filename: true, mimeType: true, url: true },
+        select: {
+          id: true,
+          filename: true,
+          mimeType: true,
+          url: true,
+        },
       },
-      reads: { where: { userId } },
+      reads: {
+        where: { userId },
+      },
     },
     orderBy: { createdAt: "asc" },
     take: 100,
@@ -91,11 +106,13 @@ export default async function ChatPage({
     image: connection.homeowner.image,
   };
 
-  const addressLine = [
-    connection.home.address,
-    connection.home.city,
-    connection.home.state,
-  ]
+  const property = {
+    address: connection.home?.address,
+    city: connection.home?.city,
+    state: connection.home?.state,
+  };
+
+  const addrLine = [property.address, property.city, property.state]
     .filter(Boolean)
     .join(", ");
 
@@ -107,7 +124,7 @@ export default async function ChatPage({
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">
           <Link
-            href="/pro"
+            href="/pro/contractor/dashboard"
             className="text-white/70 hover:text-white transition-colors"
           >
             Dashboard
@@ -120,12 +137,37 @@ export default async function ChatPage({
             Messages
           </Link>
           <span className="text-white/50">/</span>
-          <span className="text-white truncate max-w-[40%]">
+          <span className="text-white truncate max-w-[200px]">
             {otherUser.name}
           </span>
         </nav>
 
-        {/* Chat header */}
+        {/* Archived Banner */}
+        {isArchived && (
+          <div className="flex items-center gap-3 rounded-xl border border-gray-500/30 bg-gray-500/10 px-4 py-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5 text-gray-400 flex-shrink-0"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-gray-300">
+                This homeowner has disconnected. You can view past messages but cannot send new ones.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Header w/ back arrow + homeowner info */}
         <section className={glass}>
           <div className="flex items-center gap-3">
             <Link
@@ -165,26 +207,32 @@ export default async function ChatPage({
               </div>
             )}
 
-            <div className="min-w-0">
-              <h1 className={`text-lg font-semibold ${heading} truncate`}>
-                {otherUser.name}
-              </h1>
-              {addressLine && (
-                <p className={`text-sm ${textMeta} truncate`}>
-                  {addressLine}
-                </p>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className={`text-lg font-semibold ${heading} truncate`}>
+                  {otherUser.name}
+                </h1>
+                {isArchived && (
+                  <span className="inline-block rounded-full bg-gray-500/20 px-2 py-0.5 text-xs text-gray-400 flex-shrink-0">
+                    Disconnected
+                  </span>
+                )}
+              </div>
+              {addrLine && (
+                <p className={`text-sm ${textMeta} truncate`}>{addrLine}</p>
               )}
             </div>
           </div>
         </section>
 
-        {/* Messages thread (darker shell so composer doesn't look disabled) */}
+        {/* Messages thread */}
         <section
-          className="
+          className={`
             rounded-2xl border border-white/15
             bg-black/45 backdrop-blur-sm
             flex min-h-[60vh] flex-col overflow-hidden
-          "
+            ${isArchived ? "opacity-90" : ""}
+          `}
         >
           <div className="flex-1 min-h-[300px] overflow-hidden">
             <MessageThread
@@ -192,6 +240,7 @@ export default async function ChatPage({
               initialMessages={messages}
               currentUserId={userId}
               otherUser={otherUser}
+              readOnly={isArchived}
             />
           </div>
         </section>

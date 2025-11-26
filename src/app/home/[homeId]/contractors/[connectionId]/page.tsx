@@ -9,6 +9,7 @@ import Link from "next/link";
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { ContractorDetailClient } from "./ContractorDetailClient";
+import { DisconnectContractor } from "./DisconnectContractor";
 
 function formatDate(value: Date | string | null | undefined): string {
   if (!value) return "—";
@@ -483,6 +484,13 @@ export default async function ContractorDetailPage({
           jobRequests={jobRequestsData}
           pendingSubmissions={pendingSubmissionsData}
           activeRequestsCount={activeRequestsCount}
+        />
+
+        {/* Danger Zone */}
+        <DisconnectContractor
+          connectionId={connectionData.id}
+          homeId={homeId}
+          contractorName={contractorData.businessName || contractorData.name || "this contractor"}
         />
 
         <div className="h-12" />

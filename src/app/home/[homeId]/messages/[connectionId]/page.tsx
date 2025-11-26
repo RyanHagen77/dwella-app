@@ -3,6 +3,7 @@
  *
  * Real-time messaging interface for homeowner chatting with a contractor.
  * Shows message history and allows sending new messages.
+ * Read-only mode for archived (disconnected) connections.
  *
  * Location: app/home/[homeId]/messages/[connectionId]/page.tsx
  */
@@ -16,7 +17,7 @@ import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
-import { MessageThread } from "@/app/pro/messages/[connectionId]/_components/MessageThread";
+import { MessageThread } from "@/app/messages/_components/MessageThread";
 import ChatBreadcrumb from "@/components/ui/ChatBreadcrumb";
 
 export default async function HomeownerChatPage({
@@ -34,11 +35,13 @@ export default async function HomeownerChatPage({
   const userId = session.user.id;
 
   // Get connection details - verify homeowner owns this home and connection
+  // Include ARCHIVED status so we can show read-only view
   const connection = await prisma.connection.findFirst({
     where: {
       id: connectionId,
       homeId,
       homeownerId: userId,
+      status: { in: ["ACTIVE", "ARCHIVED"] },
     },
     include: {
       contractor: {
@@ -67,6 +70,8 @@ export default async function HomeownerChatPage({
   if (!connection || !connection.contractor) {
     notFound();
   }
+
+  const isArchived = connection.status === "ARCHIVED";
 
   // Get messages
   const messages = await prisma.message.findMany({
@@ -123,9 +128,40 @@ export default async function HomeownerChatPage({
         {/* Breadcrumb */}
         <ChatBreadcrumb
           homeId={homeId}
-          homeAddress={addrLine}         // already exists
-          otherUserName={otherUser.name} // already exists
+          homeAddress={addrLine}
+          otherUserName={otherUser.name}
         />
+
+        {/* Archived Banner */}
+        {isArchived && (
+          <div className="flex items-center gap-3 rounded-xl border border-gray-500/30 bg-gray-500/10 px-4 py-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={1.5}
+              stroke="currentColor"
+              className="w-5 h-5 text-gray-400 flex-shrink-0"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
+              />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm text-gray-300">
+                This conversation is archived. You can view past messages but cannot send new ones.
+              </p>
+            </div>
+            <Link
+              href={`/home/${homeId}/contractors`}
+              className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0"
+            >
+              Manage contractors →
+            </Link>
+          </div>
+        )}
 
         {/* Header w/ back arrow + contractor info */}
         <section className={glass}>
@@ -167,10 +203,17 @@ export default async function HomeownerChatPage({
               </div>
             )}
 
-            <div className="min-w-0">
-              <h1 className={`text-lg font-semibold ${heading} truncate`}>
-                {otherUser.name}
-              </h1>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <h1 className={`text-lg font-semibold ${heading} truncate`}>
+                  {otherUser.name}
+                </h1>
+                {isArchived && (
+                  <span className="inline-block rounded-full bg-gray-500/20 px-2 py-0.5 text-xs text-gray-400 flex-shrink-0">
+                    Archived
+                  </span>
+                )}
+              </div>
               {addrLine && (
                 <p className={`text-sm ${textMeta} truncate`}>{addrLine}</p>
               )}
@@ -180,11 +223,12 @@ export default async function HomeownerChatPage({
 
         {/* Messages thread */}
         <section
-          className="
+          className={`
             rounded-2xl border border-white/15
             bg-black/45 backdrop-blur-sm
             flex min-h-[60vh] flex-col overflow-hidden
-          "
+            ${isArchived ? "opacity-90" : ""}
+          `}
         >
           <div className="flex-1 min-h-[300px] overflow-hidden">
             <MessageThread
@@ -192,6 +236,7 @@ export default async function HomeownerChatPage({
               initialMessages={messages}
               currentUserId={userId}
               otherUser={otherUser}
+              readOnly={isArchived}
             />
           </div>
         </section>

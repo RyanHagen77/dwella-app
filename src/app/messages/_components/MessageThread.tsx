@@ -2,10 +2,10 @@
  * MESSAGE THREAD COMPONENT
  *
  * Real-time messaging interface with Pusher subscriptions.
- * Works for ALL pro types (contractor, realtor, inspector).
+ * Works for ALL user types (homeowner, contractor, realtor, inspector).
  * Handles messages display, sending, and marking as read.
  *
- * Location: app/(pro)/pro/messages/[connectionId]/_components/MessageThread.tsx
+ * Location: app/messages/_components/MessageThread.tsx
  */
 
 "use client";
@@ -43,6 +43,7 @@ type Props = {
     name: string;
     image: string | null;
   };
+  readOnly?: boolean;
 };
 
 export function MessageThread({
@@ -50,13 +51,16 @@ export function MessageThread({
   initialMessages,
   currentUserId,
   otherUser,
+  readOnly = false,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Subscribe to Pusher for real-time updates
+  // Subscribe to Pusher for real-time updates (only if not read-only)
   useEffect(() => {
+    if (readOnly) return;
+
     const channel = pusherClient.subscribe(`connection-${connectionId}`);
 
     channel.bind("new-messages", (data: { message: Message }) => {
@@ -74,7 +78,7 @@ export function MessageThread({
       channel.unbind_all();
       channel.unsubscribe();
     };
-  }, [connectionId]);
+  }, [connectionId, readOnly]);
 
   // Mark messages as read when component mounts or messages change
   useEffect(() => {
@@ -112,7 +116,9 @@ export function MessageThread({
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <p className="text-white/60 text-sm">
-                  No messages yet. Start the conversation!
+                  {readOnly
+                    ? "No messages in this conversation."
+                    : "No messages yet. Start the conversation!"}
                 </p>
               </div>
             </div>
@@ -130,8 +136,8 @@ export function MessageThread({
         </div>
       </div>
 
-      {/* Input */}
-      <MessageInput connectionId={connectionId} />
+      {/* Input - hidden in read-only mode */}
+      {!readOnly && <MessageInput connectionId={connectionId} />}
     </div>
   );
 }

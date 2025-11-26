@@ -9,36 +9,7 @@ import Link from "next/link";
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import { ContractorActions } from "./ContractorActions";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-
-type Connection = {
-  id: string;
-  createdAt: Date;
-  totalSpent: { toNumber: () => number } | null;
-  lastWorkDate: Date | null;
-  contractorId: string;
-  contractor: {
-    id: string;
-    name: string | null;
-    email: string;
-    image: string | null;
-    proProfile: {
-      businessName: string | null;
-    } | null;
-  } | null;
-};
-
-type WorkRecord = {
-  id: string;
-  contractorId: string | null;
-  cost: { toNumber: () => number } | null;
-};
-
-function formatDate(value: Date | string | null | undefined): string {
-  if (!value) return "—";
-  const d = typeof value === "string" ? new Date(value) : value;
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString();
-}
+import { ContractorsListClient } from "./ContractorsListClient";
 
 export default async function ContractorsPage({
   params,
@@ -60,49 +31,74 @@ export default async function ContractorsPage({
       city: true,
       state: true,
       zip: true,
-      connections: {
-        where: { status: "ACTIVE" },
-        orderBy: { updatedAt: "desc" },
-        select: {
-          id: true,
-          createdAt: true,
-          totalSpent: true,
-          lastWorkDate: true,
-          contractorId: true,
-          contractor: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              image: true,
-              proProfile: {
-                select: {
-                  businessName: true,
-                },
-              },
-            },
-          },
-        },
-      },
-      workRecords: {
-        where: {
-          isVerified: true,
-        },
-        select: {
-          id: true,
-          contractorId: true,
-          cost: true,
-        },
-      },
     },
   });
 
   if (!home) notFound();
 
-  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
+  // Fetch active connections
+  const activeConnectionsRaw = await prisma.connection.findMany({
+    where: { homeId, status: "ACTIVE", contractorId: { not: null } },
+    orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      createdAt: true,
+      archivedAt: true,
+      lastWorkDate: true,
+      contractorId: true,
+      contractor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          proProfile: {
+            select: {
+              businessName: true,
+            },
+          },
+        },
+      },
+    },
+  });
 
-  const connections = home.connections as Connection[];
-  const workRecords = home.workRecords as WorkRecord[];
+  // Fetch archived connections
+  const archivedConnectionsRaw = await prisma.connection.findMany({
+    where: { homeId, status: "ARCHIVED", contractorId: { not: null } },
+    orderBy: { archivedAt: "desc" },
+    select: {
+      id: true,
+      createdAt: true,
+      archivedAt: true,
+      lastWorkDate: true,
+      contractorId: true,
+      contractor: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          proProfile: {
+            select: {
+              businessName: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Fetch verified work records for stats
+  const workRecords = await prisma.workRecord.findMany({
+    where: { homeId, isVerified: true },
+    select: {
+      id: true,
+      contractorId: true,
+      cost: true,
+    },
+  });
+
+  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
   // Count verified work per contractor and sum costs
   const verifiedWorkByContractor = new Map<string, number>();
@@ -110,22 +106,46 @@ export default async function ContractorsPage({
 
   for (const record of workRecords) {
     if (record.contractorId) {
-      // Count jobs
       const count = verifiedWorkByContractor.get(record.contractorId) || 0;
       verifiedWorkByContractor.set(record.contractorId, count + 1);
 
-      // Sum costs
       const cost = record.cost ? Number(record.cost) : 0;
       const currentSpent = spentByContractor.get(record.contractorId) || 0;
       spentByContractor.set(record.contractorId, currentSpent + cost);
     }
   }
 
-  // Calculate stats
-  const totalContractors = connections.length;
+  // Transform connections for client component
+  const mapConnection = (conn: (typeof activeConnectionsRaw)[number]) => ({
+    id: conn.id,
+    createdAt: conn.createdAt.toISOString(),
+    archivedAt: conn.archivedAt?.toISOString() || null,
+    lastWorkDate: conn.lastWorkDate?.toISOString() || null,
+    contractorId: conn.contractorId || "",
+    contractor: conn.contractor
+      ? {
+          id: conn.contractor.id,
+          name: conn.contractor.name,
+          email: conn.contractor.email,
+          image: conn.contractor.image,
+          businessName: conn.contractor.proProfile?.businessName || null,
+        }
+      : null,
+    verifiedWorkCount: verifiedWorkByContractor.get(conn.contractorId || "") || 0,
+    totalSpent: spentByContractor.get(conn.contractorId || "") || 0,
+  });
+
+  const activeConnections = activeConnectionsRaw.map(mapConnection);
+  const archivedConnections = archivedConnectionsRaw.map(mapConnection);
+
+  // Calculate stats (based on active connections only)
+  const totalContractors = activeConnectionsRaw.length;
   const totalVerifiedJobs = workRecords.length;
-  const totalSpentAmount = Array.from(spentByContractor.values()).reduce((sum, amount) => sum + amount, 0);
-  const activeContractors = connections.filter(conn => conn.lastWorkDate).length;
+  const totalSpentAmount = Array.from(spentByContractor.values()).reduce(
+    (sum, amount) => sum + amount,
+    0
+  );
+  const activeContractors = activeConnectionsRaw.filter((conn) => conn.lastWorkDate).length;
 
   return (
     <main className="relative min-h-screen text-white">
@@ -172,9 +192,7 @@ export default async function ContractorsPage({
                 </svg>
               </Link>
               <div className="flex-1 min-w-0">
-                <h1 className={`text-2xl font-bold ${heading}`}>
-                  Your Trusted Pros
-                </h1>
+                <h1 className={`text-2xl font-bold ${heading}`}>Your Trusted Pros</h1>
                 <p className={`text-sm ${textMeta} mt-1`}>
                   {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"}
                 </p>
@@ -199,7 +217,7 @@ export default async function ContractorsPage({
         </section>
 
         {/* Contractors List */}
-        {connections.length === 0 ? (
+        {activeConnections.length === 0 && archivedConnections.length === 0 ? (
           <section className={glass}>
             <div className="py-12 text-center">
               <div className="text-5xl mb-4">👷</div>
@@ -207,23 +225,18 @@ export default async function ContractorsPage({
                 No connected contractors yet
               </h2>
               <p className="text-white/60 mb-6 max-w-md mx-auto">
-                Connect with pros who&apos;ve worked on your home to build your trusted network and get verified records.
+                Connect with pros who&apos;ve worked on your home to build your trusted network and
+                get verified records.
               </p>
-              <ContractorActions homeId={homeId} homeAddress={addrLine} showInviteButton />
+              <ContractorActions homeId={homeId} homeAddress={addrLine} />
             </div>
           </section>
         ) : (
-          <section className="space-y-4">
-            {connections.map((conn) => (
-              <ContractorRow
-                key={conn.id}
-                connection={conn}
-                homeId={homeId}
-                verifiedWorkCount={verifiedWorkByContractor.get(conn.contractorId) || 0}
-                totalSpent={spentByContractor.get(conn.contractorId) || 0}
-              />
-            ))}
-          </section>
+          <ContractorsListClient
+            homeId={homeId}
+            activeConnections={activeConnections}
+            archivedConnections={archivedConnections}
+          />
         )}
 
         <div className="h-12" />
@@ -254,95 +267,6 @@ function StatCard({
         }`}
       >
         {value}
-      </div>
-    </div>
-  );
-}
-
-function ContractorRow({
-  connection,
-  homeId,
-  verifiedWorkCount,
-  totalSpent,
-}: {
-  connection: Connection;
-  homeId: string;
-  verifiedWorkCount: number;
-  totalSpent: number;
-}) {
-  const contractor = connection.contractor;
-  if (!contractor) return null;
-
-  const displayName = contractor.proProfile?.businessName || contractor.name || contractor.email;
-  const initials = (displayName || "C")[0].toUpperCase();
-
-  return (
-    <div className={glass}>
-      {/* Main content - stacks on mobile, row on desktop */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        {/* Avatar + Info */}
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          {contractor.image ? (
-            <Image
-              src={contractor.image}
-              alt={displayName}
-              width={48}
-              height={48}
-              className="rounded-full object-cover flex-shrink-0 sm:w-14 sm:h-14"
-            />
-          ) : (
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400 font-bold text-lg sm:text-xl flex-shrink-0">
-              {initials}
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h3 className="text-base sm:text-lg font-semibold text-white truncate">{displayName}</h3>
-            {contractor.proProfile?.businessName && contractor.name && (
-              <p className="text-sm text-white/60 truncate">{contractor.name}</p>
-            )}
-            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs sm:text-sm text-white/50">
-              <span>Connected {formatDate(connection.createdAt)}</span>
-              {connection.lastWorkDate && (
-                <span>Last work {formatDate(connection.lastWorkDate)}</span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Stats + Actions - wrap on mobile */}
-        <div className="flex flex-wrap items-center gap-4 sm:gap-6 sm:flex-nowrap">
-          {/* Stats */}
-          <div className="flex gap-4 sm:gap-6">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-white">{verifiedWorkCount}</div>
-              <div className="text-xs text-white/50">Verified Jobs</div>
-            </div>
-            {totalSpent > 0 && (
-              <div className="text-center">
-                <div className="text-lg font-semibold text-green-400">
-                  ${totalSpent.toLocaleString()}
-                </div>
-                <div className="text-xs text-white/50">Total Spent</div>
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="flex gap-2 ml-auto">
-            <Link
-              href={`/home/${homeId}/messages/${connection.id}`}
-              className="px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition"
-            >
-              Message
-            </Link>
-            <Link
-              href={`/home/${homeId}/contractors/${connection.id}`}
-              className="px-3 py-2 text-sm rounded-lg bg-white/10 hover:bg-white/20 transition"
-            >
-              View →
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );

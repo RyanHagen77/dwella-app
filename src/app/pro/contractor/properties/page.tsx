@@ -1,3 +1,12 @@
+/**
+ * PRO PROPERTIES PAGE
+ *
+ * Shows all properties the contractor has worked on.
+ * Includes Active/Archived toggle for disconnected homeowners.
+ *
+ * Location: app/(pro)/pro/contractor/properties/page.tsx
+ */
+
 export const dynamic = "force-dynamic";
 
 import { getServerSession } from "next-auth";
@@ -18,10 +27,11 @@ export default async function PropertiesPage() {
 
   const userId = session.user.id as string;
 
-  // Get all connections for this contractor with full data
+  // Get all connections (both active and archived) for this contractor
   const connections = await prisma.connection.findMany({
     where: {
       contractorId: userId,
+      status: { in: ["ACTIVE", "ARCHIVED"] },
     },
     include: {
       homeowner: {
@@ -39,7 +49,7 @@ export default async function PropertiesPage() {
           state: true,
           zip: true,
           photos: true,
-          // Get opportunities
+          // Get opportunities (only relevant for active)
           warranties: {
             where: {
               expiresAt: {
@@ -113,41 +123,59 @@ export default async function PropertiesPage() {
     const home = conn.home;
     const records = workRecords.filter((r) => r.homeId === conn.homeId);
     const lastWork = records.length > 0 ? records[0] : null;
+    const isArchived = conn.status === "ARCHIVED";
 
     // Calculate relationship metrics
     const daysSinceLastWork = conn.lastWorkDate
-      ? Math.floor((now - new Date(conn.lastWorkDate).getTime()) / (1000 * 60 * 60 * 24))
+      ? Math.floor(
+          (now - new Date(conn.lastWorkDate).getTime()) / (1000 * 60 * 60 * 24)
+        )
       : null;
 
-    // Process opportunities
-    const expiringWarranties = home?.warranties?.map(w => ({
-      item: w.item,
-      expiresAt: w.expiresAt!.toISOString(),
-      daysUntil: Math.ceil((new Date(w.expiresAt!).getTime() - now) / (1000 * 60 * 60 * 24)),
-    })) || [];
+    // Process opportunities (only for active connections)
+    const expiringWarranties = isArchived
+      ? []
+      : home?.warranties?.map((w) => ({
+          item: w.item,
+          expiresAt: w.expiresAt!.toISOString(),
+          daysUntil: Math.ceil(
+            (new Date(w.expiresAt!).getTime() - now) / (1000 * 60 * 60 * 24)
+          ),
+        })) || [];
 
-    const upcomingReminders = home?.reminders?.map(r => ({
-      title: r.title,
-      dueAt: r.dueAt.toISOString(),
-      daysUntil: Math.ceil((new Date(r.dueAt).getTime() - now) / (1000 * 60 * 60 * 24)),
-    })) || [];
+    const upcomingReminders = isArchived
+      ? []
+      : home?.reminders?.map((r) => ({
+          title: r.title,
+          dueAt: r.dueAt.toISOString(),
+          daysUntil: Math.ceil(
+            (new Date(r.dueAt).getTime() - now) / (1000 * 60 * 60 * 24)
+          ),
+        })) || [];
 
-    const pendingRequests = home?.jobRequests?.map(req => ({
-      id: req.id,
-      title: req.title,
-      urgency: req.urgency,
-    })) || [];
+    // No pending requests for archived connections
+    const pendingRequests = isArchived
+      ? []
+      : home?.jobRequests?.map((req) => ({
+          id: req.id,
+          title: req.title,
+          urgency: req.urgency,
+        })) || [];
 
     return {
       id: conn.homeId,
+      connectionId: conn.id,
       address: home?.address ?? "Unknown Address",
       city: home?.city ?? "",
       state: home?.state ?? "",
       zip: home?.zip ?? "",
-      homeownerName: conn.homeowner?.name ?? conn.homeowner?.email ?? "Unknown",
+      homeownerName:
+        conn.homeowner?.name ?? conn.homeowner?.email ?? "Unknown",
       homeownerEmail: conn.homeowner?.email ?? "",
       homeownerImage: conn.homeowner?.image ?? null,
       connectionStatus: conn.status,
+      isArchived,
+      archivedAt: conn.archivedAt?.toISOString() || null,
       verifiedWorkCount: conn.verifiedWorkCount,
       totalSpent: Number(conn.totalSpent) || null,
       jobCount: records.length,
@@ -160,6 +188,10 @@ export default async function PropertiesPage() {
       pendingRequests,
     };
   });
+
+  // Separate active and archived
+  const activeProperties = properties.filter((p) => !p.isArchived);
+  const archivedProperties = properties.filter((p) => p.isArchived);
 
   return (
     <main className="relative min-h-screen text-white">
@@ -202,22 +234,23 @@ export default async function PropertiesPage() {
             </Link>
 
             <div className="min-w-0">
-              <h1 className={`text-2xl font-bold ${heading}`}>
-                Properties
-              </h1>
+              <h1 className={`text-2xl font-bold ${heading}`}>Properties</h1>
               <p className={`mt-1 text-sm ${textMeta}`}>
                 Homes you&apos;ve worked on and maintained.
               </p>
               <p className={`mt-1 text-xs ${textMeta}`}>
-                {properties.length} propert
-                {properties.length === 1 ? "y" : "ies"}
+                {activeProperties.length} active propert
+                {activeProperties.length === 1 ? "y" : "ies"}
               </p>
             </div>
           </div>
         </section>
 
         {/* Filter + grid UI (client component) */}
-        <PropertiesClient properties={properties} />
+        <PropertiesClient
+          activeProperties={activeProperties}
+          archivedProperties={archivedProperties}
+        />
       </div>
     </main>
   );

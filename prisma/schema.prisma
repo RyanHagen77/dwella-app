@@ -134,6 +134,8 @@ enum JobRequestUrgency {
   EMERGENCY
 }
 
+
+
 /**
  * =========================
  * Core models
