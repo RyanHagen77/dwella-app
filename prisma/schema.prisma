@@ -134,7 +134,13 @@ enum JobRequestUrgency {
   EMERGENCY
 }
 
-
+enum TransferStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  CANCELLED
+  EXPIRED
+}
 
 /**
  * =========================
@@ -170,9 +176,12 @@ model User {
   sessions Session[]
 
   // Ownership and access
-  homes      Home[]          @relation("HomeOwner")
-  ownerships HomeOwnership[]
-  access     HomeAccess[]
+  homes             Home[]          @relation("HomeOwner")
+  ownerships        HomeOwnership[]
+  access            HomeAccess[]
+  transfersSent     HomeTransfer[]  @relation("TransfersSent")
+  transfersReceived HomeTransfer[]  @relation("TransfersReceived")
+  previousHomes     Home[]          @relation("PreviousHomes")
 
   // Content authored
   records            Record[]   @relation("RecordCreator")
@@ -252,13 +261,17 @@ model Home {
   owner   User?   @relation("HomeOwner", fields: [ownerId], references: [id])
 
   // Lifecycle
-  ownerships  HomeOwnership[]
-  records     Record[]
-  reminders   Reminder[]
-  warranties  Warranty[]
-  attachments Attachment[]
-  access      HomeAccess[]
-  systems     HomeSystem[]
+  ownerships      HomeOwnership[]
+  records         Record[]
+  reminders       Reminder[]
+  warranties      Warranty[]
+  attachments     Attachment[]
+  access          HomeAccess[]
+  systems         HomeSystem[]
+  previousOwnerId String?
+  previousOwner   User?           @relation("PreviousHomes", fields: [previousOwnerId], references: [id], onDelete: SetNull)
+  transferredAt   DateTime?
+  transfers       HomeTransfer[]
 
   // Connections & collaboration
   connections Connection[]
@@ -907,6 +920,50 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@index([userId])
+}
+
+model HomeTransfer {
+  id String @id @default(cuid())
+
+  // The home being transferred
+  homeId String
+  home   Home   @relation(fields: [homeId], references: [id], onDelete: Cascade)
+
+  // Original owner initiating the transfer
+  fromUserId String
+  fromUser   User   @relation("TransfersSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+
+  // Recipient (may be null if they don't have account yet)
+  toUserId String?
+  toUser   User?   @relation("TransfersReceived", fields: [toUserId], references: [id], onDelete: SetNull)
+
+  // Recipient email for invitation
+  recipientEmail String
+
+  // Status and token
+  status TransferStatus @default(PENDING)
+  token  String         @unique @default(cuid())
+
+  // Optional message from sender
+  message String? @db.Text
+
+  // Transfer options
+  notifyContractors Boolean @default(true)
+  transferMessages  Boolean @default(true)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  expiresAt   DateTime
+  completedAt DateTime?
+
+  @@index([homeId])
+  @@index([fromUserId])
+  @@index([toUserId])
+  @@index([recipientEmail])
+  @@index([token])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model Session {

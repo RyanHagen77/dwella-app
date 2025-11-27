@@ -1,3 +1,8 @@
+// =============================================================================
+// app/home/page.tsx
+// =============================================================================
+// Redirects user to their most recent home, or shows pre-claim UI
+
 import "server-only";
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
@@ -28,8 +33,33 @@ export default async function HomeIndex() {
       select: { lastHomeId: true },
     });
 
-    let homeId = user?.lastHomeId ?? null;
+    let homeId: string | null = null;
 
+    // Check if lastHomeId is still accessible
+    if (user?.lastHomeId) {
+      const lastHome = await prisma.home.findFirst({
+        where: {
+          id: user.lastHomeId,
+          OR: [
+            { ownerId: userId },
+            { access: { some: { userId } } },
+          ],
+        },
+        select: { id: true },
+      });
+
+      if (lastHome) {
+        homeId = lastHome.id;
+      } else {
+        // Clear invalid lastHomeId
+        await prisma.user.update({
+          where: { id: userId },
+          data: { lastHomeId: null },
+        });
+      }
+    }
+
+    // If no valid lastHomeId, find first owned home
     if (!homeId) {
       const owned = await prisma.home.findFirst({
         where: { ownerId: userId },
@@ -38,6 +68,7 @@ export default async function HomeIndex() {
       homeId = owned?.id ?? null;
     }
 
+    // If no owned home, find first shared home
     if (!homeId) {
       const shared = await prisma.homeAccess.findFirst({
         where: { userId },

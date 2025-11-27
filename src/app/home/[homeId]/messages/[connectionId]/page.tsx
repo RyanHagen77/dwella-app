@@ -72,6 +72,7 @@ export default async function HomeownerChatPage({
   }
 
   const isArchived = connection.status === "ARCHIVED";
+  const contractorId = connection.contractor.id;
 
   // Get messages
   const messages = await prisma.message.findMany({
@@ -99,6 +100,13 @@ export default async function HomeownerChatPage({
     orderBy: { createdAt: "asc" },
     take: 100,
   });
+
+  // Mark messages as "own" if NOT from contractor (i.e., from any homeowner)
+  // This ensures transferred messages from previous owners still show on the homeowner side
+  const messagesWithOwnership = messages.map((msg) => ({
+    ...msg,
+    isOwn: msg.senderId !== contractorId,
+  }));
 
   const otherUser = {
     id: connection.contractor.id,
@@ -233,9 +241,10 @@ export default async function HomeownerChatPage({
           <div className="flex-1 min-h-[300px] overflow-hidden">
             <MessageThread
               connectionId={connectionId}
-              initialMessages={messages}
+              initialMessages={messagesWithOwnership}
               currentUserId={userId}
               otherUser={otherUser}
+              contractorId={contractorId}
               readOnly={isArchived}
             />
           </div>

@@ -1,4 +1,7 @@
+// =============================================================================
 // app/api/home/[homeId]/connections/[connectionId]/restore/route.ts
+// =============================================================================
+// POST: Restore an archived connection
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -20,6 +23,19 @@ export async function POST(
     }
 
     await requireHomeAccess(homeId, session.user.id);
+
+    // First check if user is the current home owner
+    const home = await prisma.home.findUnique({
+      where: { id: homeId },
+      select: { ownerId: true },
+    });
+
+    if (!home || home.ownerId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Only the homeowner can restore a connection" },
+        { status: 403 }
+      );
+    }
 
     const connection = await prisma.connection.findFirst({
       where: {
@@ -62,13 +78,6 @@ export async function POST(
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
 
-    if (connection.homeownerId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Only the homeowner can restore a connection" },
-        { status: 403 }
-      );
-    }
-
     await prisma.connection.update({
       where: { id: connectionId },
       data: {
@@ -88,7 +97,8 @@ export async function POST(
         .filter(Boolean)
         .join(", ");
 
-      const homeownerName = connection.homeowner.name || "A homeowner";
+      // Use current user's name since they're restoring the connection
+      const homeownerName = session.user.name || "A homeowner";
       const contractorName =
         connection.contractor.proProfile?.businessName ||
         connection.contractor.name ||

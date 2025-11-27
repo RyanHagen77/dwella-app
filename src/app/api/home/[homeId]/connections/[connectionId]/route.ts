@@ -1,4 +1,7 @@
+// =============================================================================
 // app/api/home/[homeId]/connections/[connectionId]/route.ts
+// =============================================================================
+// DELETE: Archive a connection (disconnect from contractor)
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -21,6 +24,19 @@ export async function DELETE(
 
     // Verify user has access to this home
     await requireHomeAccess(homeId, session.user.id);
+
+    // Check if user is the current home owner
+    const home = await prisma.home.findUnique({
+      where: { id: homeId },
+      select: { ownerId: true },
+    });
+
+    if (!home || home.ownerId !== session.user.id) {
+      return NextResponse.json(
+        { error: "Only the homeowner can disconnect from a contractor" },
+        { status: 403 }
+      );
+    }
 
     // Verify the connection exists and belongs to this home
     const connection = await prisma.connection.findFirst({
@@ -64,14 +80,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Connection not found" }, { status: 404 });
     }
 
-    // Only the homeowner can disconnect
-    if (connection.homeownerId !== session.user.id) {
-      return NextResponse.json(
-        { error: "Only the homeowner can disconnect from a contractor" },
-        { status: 403 }
-      );
-    }
-
     // Update connection status to ARCHIVED and cancel pending job requests
     await prisma.$transaction(async (tx) => {
       // Archive the connection
@@ -110,7 +118,8 @@ export async function DELETE(
         .filter(Boolean)
         .join(", ");
 
-      const homeownerName = connection.homeowner.name || "A homeowner";
+      // Use current user's name since they're doing the disconnect
+      const homeownerName = session.user.name || "A homeowner";
       const contractorName =
         connection.contractor.proProfile?.businessName ||
         connection.contractor.name ||

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { glass, ctaGhost, ctaPrimary, heading } from "@/lib/glass";
 import Image from "next/image";
 import { ShareAccessModal } from "@/app/home/_components/ShareAccessModal";
+import { TransfersSection } from "@/components/transfers/TransfersSection";
 
 type ProfileForm = {
   name: string;
@@ -279,6 +280,9 @@ export default function AccountPage() {
             Manage Access
           </button>
         </section>
+
+        {/* Home Transfers */}
+        <TransfersSection />
 
         {/* Danger Zone */}
         <section className={`${glass} border-red-500/30`}>

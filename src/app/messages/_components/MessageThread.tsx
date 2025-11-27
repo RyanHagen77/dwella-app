@@ -32,6 +32,7 @@ type Message = {
     url: string;
   }>;
   reads: Array<{ userId: string }>;
+  isOwn?: boolean; // Pre-calculated ownership flag
 };
 
 type Props = {
@@ -43,6 +44,7 @@ type Props = {
     name: string;
     image: string | null;
   };
+  contractorId?: string; // Used to determine ownership for new messages
   readOnly?: boolean;
 };
 
@@ -51,6 +53,7 @@ export function MessageThread({
   initialMessages,
   currentUserId,
   otherUser,
+  contractorId,
   readOnly = false,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -69,7 +72,14 @@ export function MessageThread({
         if (prev.some((m) => m.id === data.message.id)) {
           return prev;
         }
-        return [...prev, data.message];
+        // Calculate isOwn for new messages
+        const newMessage = {
+          ...data.message,
+          isOwn: contractorId
+            ? data.message.senderId !== contractorId
+            : data.message.senderId === currentUserId,
+        };
+        return [...prev, newMessage];
       });
       scrollToBottom();
     });
@@ -78,7 +88,7 @@ export function MessageThread({
       channel.unbind_all();
       channel.unsubscribe();
     };
-  }, [connectionId, readOnly]);
+  }, [connectionId, readOnly, contractorId, currentUserId]);
 
   // Mark messages as read when component mounts or messages change
   useEffect(() => {
@@ -104,6 +114,18 @@ export function MessageThread({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Determine if message is own - use pre-calculated flag or fall back to senderId check
+  const isMessageOwn = (message: Message) => {
+    if (message.isOwn !== undefined) {
+      return message.isOwn;
+    }
+    // Fallback for messages without isOwn flag
+    if (contractorId) {
+      return message.senderId !== contractorId;
+    }
+    return message.senderId === currentUserId;
+  };
+
   return (
     <div className="flex h-full flex-col">
       {/* Messages container */}
@@ -127,7 +149,7 @@ export function MessageThread({
               <MessageBubble
                 key={message.id}
                 message={message}
-                isOwn={message.senderId === currentUserId}
+                isOwn={isMessageOwn(message)}
                 otherUser={otherUser}
               />
             ))
