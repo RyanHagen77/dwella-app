@@ -1,7 +1,7 @@
 // =============================================================================
-// app/transfers/page.tsx
+// app/transfer/page.tsx
 // =============================================================================
-// Main transfers management page
+// Main transfer management page
 
 import { getServerSession } from "next-auth";
 import { redirect } from 'next/navigation';
@@ -13,7 +13,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Home Transfers | Dwella',
-  description: 'Manage home ownership transfers',
+  description: 'Manage home ownership transfer',
 };
 
 export default async function TransfersPage() {

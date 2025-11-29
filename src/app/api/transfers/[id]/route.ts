@@ -1,5 +1,5 @@
 // =============================================================================
-// app/api/transfers/[id]/route.ts
+// app/api/transfer/[id]/route.ts
 // =============================================================================
 // GET: Get transfer details by ID
 // DELETE: Cancel a pending transfer
@@ -14,7 +14,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-// GET /api/transfers/[id] - Get transfer details
+// GET /api/transfer/[id] - Get transfer details
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authConfig);
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/transfers/[id] - Cancel a pending transfer
+// DELETE /api/transfer/[id] - Cancel a pending transfer
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authConfig);

@@ -1,5 +1,5 @@
 // =============================================================================
-// app/api/transfers/accept/route.ts
+// app/api/transfer/accept/route.ts
 // =============================================================================
 // GET: Get transfer details by token (for accept page)
 // POST: Accept a transfer
@@ -10,7 +10,7 @@ import { authConfig } from '@/lib/auth';
 import { acceptTransfer, getTransferByToken } from '@/lib/transfers/transfer-service';
 import { acceptTransferSchema } from '@/lib/transfers/types';
 
-// GET /api/transfers/accept?token=xxx - Get transfer details by token
+// GET /api/transfer/accept?token=xxx - Get transfer details by token
 export async function GET(request: NextRequest) {
   try {
     const token = request.nextUrl.searchParams.get('token');
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/transfers/accept - Accept a transfer
+// POST /api/transfer/accept - Accept a transfer
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authConfig);

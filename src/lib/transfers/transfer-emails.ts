@@ -1,12 +1,31 @@
 // =============================================================================
-// lib/transfers/transfer-emails.ts
+// lib/transfer/transfer-emails.ts
 // =============================================================================
+// Email templates for home transfer notifications
 
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mydwella.com';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Dwella <noreply@mydwella.com>';
+
+// Clean and validate the FROM address (same as lib/email.ts)
+const getFromAddress = () => {
+  const raw = process.env.EMAIL_FROM || "hello@mydwellaapp.com";
+  const cleaned = raw.replace(/^["']|["']$/g, '').trim();
+
+  if (cleaned && !cleaned.includes('<')) {
+    return `Dwella <${cleaned}>`;
+  }
+
+  return cleaned || "MyDwella Team <hello@mydwellaapp.com>";
+};
+
+// Log configuration on first import
+console.log('[Transfer Emails] Configuration:', {
+  hasApiKey: !!process.env.RESEND_API_KEY,
+  appUrl: APP_URL,
+  fromEmail: getFromAddress(),
+});
 
 // Shared dark theme email styles
 const emailStyles = {
@@ -24,7 +43,6 @@ const emailStyles = {
     padding: 32px;
     max-width: 560px;
     margin: 0 auto;
-    backdrop-filter: blur(10px);
   `,
   heading: `
     color: #ffffff;
@@ -78,7 +96,7 @@ const emailStyles = {
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 12px;
     padding: 20px;
-    margin: 24px 0;
+    margin: 20px 0;
   `,
   homeName: `
     color: #ffffff;
@@ -143,9 +161,21 @@ export async function sendTransferInviteEmail(params: TransferInviteEmailParams)
     hasAccount,
   } = params;
 
+  console.log('[Transfer Email] Sending invite email:', {
+    to: recipientEmail,
+    from: getFromAddress(),
+    homeName,
+    hasAccount,
+  });
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+    return;
+  }
+
   const acceptUrl = `${APP_URL}/transfer/accept?token=${token}`;
   const loginUrl = `${APP_URL}/login?redirect=${encodeURIComponent(`/transfer/accept?token=${token}`)}`;
-  const signupUrl = `${APP_URL}/signup?redirect=${encodeURIComponent(`/transfer/accept?token=${token}`)}&email=${encodeURIComponent(recipientEmail)}`;
+  const signupUrl = `${APP_URL}/register?redirect=${encodeURIComponent(`/transfer/accept?token=${token}`)}&email=${encodeURIComponent(recipientEmail)}`;
 
   const expiresDate = expiresAt.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -182,21 +212,10 @@ export async function sendTransferInviteEmail(params: TransferInviteEmailParams)
     </div>
     ` : ''}
     
-    <p style="${emailStyles.text}">
-      By accepting this transfer, you'll receive:
-    </p>
-    <ul style="${emailStyles.text}">
-      <li>Full ownership and access to the home profile</li>
-      <li>All warranties, records, and documents</li>
-      <li>Connected contractor relationships</li>
-      <li>Maintenance reminders and history</li>
-    </ul>
-    
-    <hr style="${emailStyles.divider}">
-    
-    <div style="text-align: center; margin: 24px 0;">
+    <div style="margin: 24px 0;">
       ${hasAccount ? `
-        <a href="${acceptUrl}" style="${emailStyles.button}">Accept Transfer</a>
+        <p style="${emailStyles.meta}; margin-bottom: 16px;">Click below to review and accept this transfer:</p>
+        <a href="${acceptUrl}" style="${emailStyles.button}">Review Transfer</a>
       ` : `
         <p style="${emailStyles.meta}; margin-bottom: 16px;">Create an account or log in to accept this transfer:</p>
         <a href="${signupUrl}" style="${emailStyles.button}">Create Account & Accept</a>
@@ -220,12 +239,19 @@ export async function sendTransferInviteEmail(params: TransferInviteEmailParams)
 </html>
   `;
 
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: recipientEmail,
-    subject: `🏠 ${senderName} wants to transfer home ownership to you`,
-    html,
-  });
+  try {
+    const result = await resend.emails.send({
+      from: getFromAddress(),
+      to: recipientEmail,
+      subject: `🏠 ${senderName} wants to transfer home ownership to you`,
+      html,
+    });
+    console.log('[Transfer Email] Invite email sent successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('[Transfer Email] Failed to send invite email:', error);
+    throw error;
+  }
 }
 
 interface TransferAcceptedEmailParams {
@@ -249,6 +275,17 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     homeAddress,
   } = params;
 
+  console.log('[Transfer Email] Sending accepted emails:', {
+    previousOwner: previousOwnerEmail,
+    newOwner: newOwnerEmail,
+    homeName,
+  });
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+    return;
+  }
+
   // Email to previous owner
   const previousOwnerHtml = `
 <!DOCTYPE html>
@@ -261,10 +298,10 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
 <body style="${emailStyles.container}">
   <div style="${emailStyles.card}">
     <h1 style="${emailStyles.heading}">✅ Transfer Complete</h1>
-    <p style="${emailStyles.subheading}">Home ownership has been successfully transferred</p>
+    <p style="${emailStyles.subheading}">Your home has been successfully transferred</p>
     
     <p style="${emailStyles.text}">
-      ${newOwnerName || 'The recipient'} has accepted the transfer of your home.
+      <strong>${newOwnerName || 'The recipient'}</strong> has accepted the transfer of your home.
     </p>
     
     <div style="${emailStyles.homeCard}">
@@ -273,19 +310,15 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     </div>
     
     <p style="${emailStyles.text}">
-      This home has been removed from your Dwella account. All records, warranties, 
-      and connected contractors have been transferred to the new owner.
+      All records, warranties, and contractor connections have been transferred to the new owner.
+      You no longer have access to this home on Dwella.
     </p>
     
     <hr style="${emailStyles.divider}">
     
-    <div style="text-align: center;">
-      <a href="${APP_URL}/home" style="${emailStyles.button}">View Your Homes</a>
-    </div>
-    
     <p style="${emailStyles.footer}">
-      Thank you for using Dwella to manage your home.<br>
-      We're here if you need us for your other properties.
+      Thank you for using Dwella.<br>
+      We hope to see you again with your next home!
     </p>
   </div>
 </body>
@@ -304,7 +337,7 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
 <body style="${emailStyles.container}">
   <div style="${emailStyles.card}">
     <h1 style="${emailStyles.heading}">🎉 Welcome to Your New Home!</h1>
-    <p style="${emailStyles.subheading}">The transfer is complete</p>
+    <p style="${emailStyles.subheading}">The home transfer is complete</p>
     
     <p style="${emailStyles.text}">
       Congratulations! You are now the owner of this home on Dwella.
@@ -316,46 +349,215 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     </div>
     
     <p style="${emailStyles.text}">
-      You now have access to:
+      <strong>What's been transferred to you:</strong>
     </p>
     <ul style="${emailStyles.text}">
-      <li>Complete home profile and details</li>
-      <li>All warranties and their documentation</li>
-      <li>Maintenance records and history</li>
-      <li>Connected contractors and service providers</li>
-      <li>Photos and documents</li>
+      <li>All maintenance records and history</li>
+      <li>Warranties and their documentation</li>
+      <li>Contractor connections and message history</li>
+      <li>Photos and attachments</li>
     </ul>
     
-    <hr style="${emailStyles.divider}">
-    
-    <div style="text-align: center;">
+    <div style="margin: 24px 0;">
       <a href="${APP_URL}/home" style="${emailStyles.button}">View Your Home</a>
     </div>
     
+    <hr style="${emailStyles.divider}">
+    
     <p style="${emailStyles.footer}">
-      Welcome to Dwella! We're excited to help you<br>
-      manage and maintain your home.
+      Welcome to Dwella!<br>
+      Your home's digital record awaits.
     </p>
   </div>
 </body>
 </html>
   `;
 
-  // Send both emails
-  await Promise.all([
-    resend.emails.send({
-      from: FROM_EMAIL,
+  try {
+    const results = await Promise.all([
+      resend.emails.send({
+        from: getFromAddress(),
+        to: previousOwnerEmail,
+        subject: `✅ Home transfer complete - ${homeName}`,
+        html: previousOwnerHtml,
+      }),
+      resend.emails.send({
+        from: getFromAddress(),
+        to: newOwnerEmail,
+        subject: `🎉 Welcome to your new home - ${homeName}`,
+        html: newOwnerHtml,
+      }),
+    ]);
+    console.log('[Transfer Email] Accepted emails sent successfully:', results);
+    return results;
+  } catch (error) {
+    console.error('[Transfer Email] Failed to send accepted emails:', error);
+    throw error;
+  }
+}
+
+interface TransferDeclinedEmailParams {
+  previousOwnerEmail: string;
+  previousOwnerName?: string;
+  recipientEmail: string;
+  homeName: string;
+  homeAddress: string;
+}
+
+/**
+ * Send notification when transfer is declined
+ */
+export async function sendTransferDeclinedEmail(params: TransferDeclinedEmailParams) {
+  const {
+    previousOwnerEmail,
+    recipientEmail,
+    homeName,
+    homeAddress,
+  } = params;
+
+  console.log('[Transfer Email] Sending declined email:', {
+    to: previousOwnerEmail,
+    homeName,
+  });
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+    return;
+  }
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Transfer Declined</title>
+</head>
+<body style="${emailStyles.container}">
+  <div style="${emailStyles.card}">
+    <h1 style="${emailStyles.heading}">Transfer Declined</h1>
+    <p style="${emailStyles.subheading}">Your home transfer was not accepted</p>
+    
+    <p style="${emailStyles.text}">
+      <strong>${recipientEmail}</strong> has declined your transfer invitation for:
+    </p>
+    
+    <div style="${emailStyles.homeCard}">
+      <p style="${emailStyles.homeName}">${homeName}</p>
+      <p style="${emailStyles.homeAddress}">${homeAddress}</p>
+    </div>
+    
+    <p style="${emailStyles.text}">
+      You still have full ownership and access to this home.
+      You can initiate a new transfer at any time from your account settings.
+    </p>
+    
+    <div style="margin: 24px 0;">
+      <a href="${APP_URL}/account" style="${emailStyles.button}">Go to Account</a>
+    </div>
+    
+    <hr style="${emailStyles.divider}">
+    
+    <p style="${emailStyles.footer}">
+      This is an automated message from Dwella.
+    </p>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    const result = await resend.emails.send({
+      from: getFromAddress(),
       to: previousOwnerEmail,
-      subject: `✅ Home transfer complete - ${homeName}`,
-      html: previousOwnerHtml,
-    }),
-    resend.emails.send({
-      from: FROM_EMAIL,
-      to: newOwnerEmail,
-      subject: `🎉 Welcome to your new home - ${homeName}`,
-      html: newOwnerHtml,
-    }),
-  ]);
+      subject: `Transfer declined - ${homeName}`,
+      html,
+    });
+    console.log('[Transfer Email] Declined email sent successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('[Transfer Email] Failed to send declined email:', error);
+    throw error;
+  }
+}
+
+interface TransferCancelledEmailParams {
+  recipientEmail: string;
+  senderName: string;
+  homeName: string;
+  homeAddress: string;
+}
+
+/**
+ * Send notification when transfer is cancelled by sender
+ */
+export async function sendTransferCancelledEmail(params: TransferCancelledEmailParams) {
+  const {
+    recipientEmail,
+    senderName,
+    homeName,
+    homeAddress,
+  } = params;
+
+  console.log('[Transfer Email] Sending cancelled email:', {
+    to: recipientEmail,
+    homeName,
+  });
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+    return;
+  }
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home Transfer Cancelled</title>
+</head>
+<body style="${emailStyles.container}">
+  <div style="${emailStyles.card}">
+    <h1 style="${emailStyles.heading}">Transfer Cancelled</h1>
+    <p style="${emailStyles.subheading}">A home transfer invitation has been cancelled</p>
+    
+    <p style="${emailStyles.text}">
+      <strong>${senderName}</strong> has cancelled their transfer invitation for:
+    </p>
+    
+    <div style="${emailStyles.homeCard}">
+      <p style="${emailStyles.homeName}">${homeName}</p>
+      <p style="${emailStyles.homeAddress}">${homeAddress}</p>
+    </div>
+    
+    <p style="${emailStyles.text}">
+      If you were expecting this transfer, please contact ${senderName} directly.
+    </p>
+    
+    <hr style="${emailStyles.divider}">
+    
+    <p style="${emailStyles.footer}">
+      This is an automated message from Dwella.
+    </p>
+  </div>
+</body>
+</html>
+  `;
+
+  try {
+    const result = await resend.emails.send({
+      from: getFromAddress(),
+      to: recipientEmail,
+      subject: `Home transfer cancelled - ${homeName}`,
+      html,
+    });
+    console.log('[Transfer Email] Cancelled email sent successfully:', result);
+    return result;
+  } catch (error) {
+    console.error('[Transfer Email] Failed to send cancelled email:', error);
+    throw error;
+  }
 }
 
 interface ContractorNotificationParams {
@@ -369,23 +571,54 @@ interface ContractorNotificationParams {
 }
 
 /**
- * Notify contractors of ownership change
+ * Send notification to contractors when home ownership changes
  */
 export async function sendTransferNotificationToContractors(params: ContractorNotificationParams) {
-  const { contractors, homeName, homeAddress, newOwnerName } = params;
+  const {
+    contractors,
+    homeName,
+    homeAddress,
+    newOwnerName,
+  } = params;
 
-  const html = `
+  console.log('[Transfer Email] Sending contractor notifications:', {
+    contractorCount: contractors.length,
+    homeName,
+  });
+
+  if (!process.env.RESEND_API_KEY) {
+    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+    return;
+  }
+
+  if (contractors.length === 0) {
+    console.log('[Transfer Email] No contractors to notify');
+    return;
+  }
+
+  const results = await Promise.allSettled(
+    contractors.map(async (contractor) => {
+      const html = `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Home Ownership Update</title>
+  <title>Home Ownership Change</title>
 </head>
 <body style="${emailStyles.container}">
   <div style="${emailStyles.card}">
-    <h1 style="${emailStyles.heading}">🏠 Ownership Change Notice</h1>
+    <h1 style="${emailStyles.heading}">🏠 Home Ownership Update</h1>
     <p style="${emailStyles.subheading}">A home you're connected to has a new owner</p>
+    
+    <p style="${emailStyles.text}">
+      Hi ${contractor.businessName},
+    </p>
+    
+    <p style="${emailStyles.text}">
+      The ownership of a home you're connected to on Dwella has changed.
+      <strong>${newOwnerName}</strong> is now the owner of:
+    </p>
     
     <div style="${emailStyles.homeCard}">
       <p style="${emailStyles.homeName}">${homeName}</p>
@@ -393,95 +626,47 @@ export async function sendTransferNotificationToContractors(params: ContractorNo
     </div>
     
     <p style="${emailStyles.text}">
-      This home has been transferred to <strong>${newOwnerName}</strong>. 
-      Your connection to this property and your work history remain intact.
+      Your connection to this home remains active. The new owner can see your work history
+      and may reach out about future projects.
     </p>
     
-    <p style="${emailStyles.text}">
-      The new owner can view your previous work on this property and may reach out 
-      for future projects. No action is required on your part.
-    </p>
-    
-    <hr style="${emailStyles.divider}">
-    
-    <div style="text-align: center;">
+    <div style="margin: 24px 0;">
       <a href="${APP_URL}/pro/dashboard" style="${emailStyles.button}">View Dashboard</a>
     </div>
     
+    <hr style="${emailStyles.divider}">
+    
     <p style="${emailStyles.footer}">
-      This is an automated notification from Dwella.<br>
-      You're receiving this because you have an active connection to this property.
+      This is an automated message from Dwella.
     </p>
   </div>
 </body>
 </html>
-  `;
+      `;
 
-  // Send to all contractors (in parallel, but with some error handling)
-  await Promise.allSettled(
-    contractors.map((contractor) =>
-      resend.emails.send({
-        from: FROM_EMAIL,
+      return resend.emails.send({
+        from: getFromAddress(),
         to: contractor.email,
-        subject: `🏠 Ownership change at ${homeAddress}`,
+        subject: `Home ownership update - ${homeName}`,
         html,
-      })
-    )
+      });
+    })
   );
-}
 
-interface TransferCancelledEmailParams {
-  recipientEmail: string;
-  senderName: string;
-  homeName: string;
-  homeAddress: string;
-}
+  const successful = results.filter(r => r.status === 'fulfilled').length;
+  const failed = results.filter(r => r.status === 'rejected').length;
 
-/**
- * Notify recipient that transfer was cancelled
- */
-export async function sendTransferCancelledEmail(params: TransferCancelledEmailParams) {
-  const { recipientEmail, senderName, homeName, homeAddress } = params;
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transfer Cancelled</title>
-</head>
-<body style="${emailStyles.container}">
-  <div style="${emailStyles.card}">
-    <h1 style="${emailStyles.heading}">Transfer Cancelled</h1>
-    <p style="${emailStyles.subheading}">A pending transfer has been cancelled</p>
-    
-    <p style="${emailStyles.text}">
-      <strong>${senderName}</strong> has cancelled the transfer of:
-    </p>
-    
-    <div style="${emailStyles.homeCard}">
-      <p style="${emailStyles.homeName}">${homeName}</p>
-      <p style="${emailStyles.homeAddress}">${homeAddress}</p>
-    </div>
-    
-    <p style="${emailStyles.text}">
-      No action is required on your part. If you have questions, please contact 
-      the homeowner directly.
-    </p>
-    
-    <p style="${emailStyles.footer}">
-      This is an automated notification from Dwella.
-    </p>
-  </div>
-</body>
-</html>
-  `;
-
-  await resend.emails.send({
-    from: FROM_EMAIL,
-    to: recipientEmail,
-    subject: `Home transfer cancelled - ${homeName}`,
-    html,
+  console.log('[Transfer Email] Contractor notifications complete:', {
+    successful,
+    failed,
+    total: contractors.length,
   });
+
+  if (failed > 0) {
+    console.error('[Transfer Email] Some contractor notifications failed:',
+      results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason)
+    );
+  }
+
+  return results;
 }

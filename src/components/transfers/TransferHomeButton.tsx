@@ -1,5 +1,5 @@
 // =============================================================================
-// components/transfers/TransferHomeButton.tsx
+// components/transfer/TransferHomeButton.tsx
 // =============================================================================
 // Button to open the transfer modal from home settings
 

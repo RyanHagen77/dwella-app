@@ -1,7 +1,7 @@
 // =============================================================================
-// components/transfers/AcceptTransferContent.tsx
+// components/transfer/AcceptTransferContent.tsx
 // =============================================================================
-// Client component for accepting/declining transfers
+// Client component for accepting/declining transfer
 
 'use client';
 

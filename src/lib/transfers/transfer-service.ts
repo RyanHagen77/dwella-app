@@ -1,10 +1,10 @@
 // =============================================================================
-// lib/transfers/transfer-service.ts
+// lib/transfer/transfer-service.ts
 // =============================================================================
 
 import { prisma } from '@/lib/prisma';
 import { TransferStatus } from '@prisma/client';
-import { sendTransferInviteEmail, sendTransferAcceptedEmail, sendTransferNotificationToContractors, sendTransferCancelledEmail } from './transfer-emails';
+import { sendTransferInviteEmail, sendTransferAcceptedEmail, sendTransferDeclinedEmail, sendTransferNotificationToContractors, sendTransferCancelledEmail } from './transfer-emails';
 import type { InitiateTransferInput, TransferWithDetails } from './types';
 
 // Include relations for transfer queries
@@ -258,7 +258,7 @@ export async function acceptTransfer(
     });
 
     // 6. Transfer all connections to the new owner
-    // This transfers message history, threads, quotes, and job requests to the new owner
+    // This transfer message history, threads, quotes, and job requests to the new owner
     await tx.connection.updateMany({
       where: {
         homeId: transfer.homeId,
@@ -402,7 +402,14 @@ export async function declineTransfer(
     include: transferInclude,
   });
 
-  // TODO: Optionally send email to original owner about declined transfer
+  // Send email to original owner about declined transfer
+  await sendTransferDeclinedEmail({
+    previousOwnerEmail: transfer.fromUser.email,
+    previousOwnerName: transfer.fromUser.name || undefined,
+    recipientEmail: transfer.recipientEmail,
+    homeName: getHomeDisplayName(transfer.home),
+    homeAddress: getHomeFullAddress(transfer.home),
+  });
 
   return result as TransferWithDetails;
 }
@@ -424,7 +431,7 @@ export async function cancelTransfer(
   }
 
   if (transfer.fromUserId !== userId) {
-    throw new Error('You can only cancel transfers you initiated');
+    throw new Error('You can only cancel transfer you initiated');
   }
 
   if (transfer.status !== TransferStatus.PENDING) {
@@ -481,7 +488,7 @@ export async function getTransferByToken(token: string): Promise<TransferWithDet
 }
 
 /**
- * Get all transfers for a user (sent and received)
+ * Get all transfer for a user (sent and received)
  */
 export async function getUserTransfers(userId: string) {
   const user = await prisma.user.findUnique({
@@ -515,7 +522,7 @@ export async function getUserTransfers(userId: string) {
 }
 
 /**
- * Get pending transfers for a home
+ * Get pending transfer for a home
  */
 export async function getHomePendingTransfer(homeId: string, userId: string) {
   const home = await prisma.home.findFirst({
@@ -541,7 +548,7 @@ export async function getHomePendingTransfer(homeId: string, userId: string) {
 }
 
 /**
- * Expire old pending transfers (run as a cron job)
+ * Expire old pending transfer (run as a cron job)
  */
 export async function expireOldTransfers(): Promise<number> {
   const result = await prisma.homeTransfer.updateMany({

@@ -1,7 +1,7 @@
 // =============================================================================
-// components/transfers/TransfersList.tsx
+// components/transfer/TransfersList.tsx
 // =============================================================================
-// Component showing all pending and past transfers
+// Component showing all pending and past transfer
 
 'use client';
 
@@ -53,7 +53,7 @@ export function TransfersList() {
           setReceivedTransfers(data.received || []);
         }
       } catch (err) {
-        console.error('Failed to fetch transfers:', err);
+        console.error('Failed to fetch transfer:', err);
       } finally {
         setIsLoading(false);
       }
@@ -226,7 +226,7 @@ function TransferCard({ transfer, type, onAction }: TransferCardProps) {
   };
 
   const handleViewTransfer = () => {
-    // For received pending transfers, go to accept page
+    // For received pending transfer, go to accept page
     if (type === 'received' && isPending && !isExpired) {
       router.push(`/transfer/accept?token=${transfer.token}`);
     }

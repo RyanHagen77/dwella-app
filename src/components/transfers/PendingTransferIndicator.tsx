@@ -1,7 +1,7 @@
 // =============================================================================
-// components/transfers/PendingTransferIndicator.tsx
+// components/transfer/PendingTransferIndicator.tsx
 // =============================================================================
-// Small indicator for nav/dashboard showing pending transfers
+// Small indicator for nav/dashboard showing pending transfer
 
 'use client';
 

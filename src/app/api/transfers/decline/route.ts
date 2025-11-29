@@ -1,5 +1,5 @@
 // =============================================================================
-// app/api/transfers/decline/route.ts
+// app/api/transfer/decline/route.ts
 // =============================================================================
 // POST: Decline a transfer invitation
 
@@ -8,7 +8,7 @@ import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
 import { declineTransfer } from '@/lib/transfers/transfer-service';
 
-// POST /api/transfers/decline - Decline a transfer
+// POST /api/transfer/decline - Decline a transfer
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authConfig);

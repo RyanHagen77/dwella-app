@@ -1,7 +1,7 @@
 // =============================================================================
-// components/transfers/TransfersSection.tsx
+// components/transfer/TransfersSection.tsx
 // =============================================================================
-// Section in Account Settings for managing home transfers
+// Section in Account Settings for managing home transfer
 
 'use client';
 
@@ -67,7 +67,7 @@ export function TransfersSection() {
     setMounted(true);
   }, []);
 
-  // Fetch homes and transfers
+  // Fetch homes and transfer
   useEffect(() => {
     async function fetchData() {
       try {
@@ -91,7 +91,7 @@ export function TransfersSection() {
           setSentTransfers(transfersData.sent || []);
           setReceivedTransfers(transfersData.received || []);
 
-          // Track which homes have pending transfers
+          // Track which homes have pending transfer
           const pendingIds = new Set<string>();
           (transfersData.sent || []).forEach((t: Transfer) => {
             if (t.status === 'PENDING' && new Date() < new Date(t.expiresAt)) {
@@ -123,7 +123,7 @@ export function TransfersSection() {
 
   const handleTransferComplete = () => {
     setTransferModalOpen(false);
-    // Refresh transfers
+    // Refresh transfer
     fetch('/api/transfers')
       .then(res => res.json())
       .then(data => {

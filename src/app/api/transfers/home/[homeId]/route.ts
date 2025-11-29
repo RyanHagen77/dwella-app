@@ -1,5 +1,5 @@
 // =============================================================================
-// app/api/transfers/home/[homeId]/route.ts
+// app/api/transfer/home/[homeId]/route.ts
 // =============================================================================
 // GET: Get pending transfer for a specific home (if any)
 
@@ -12,7 +12,7 @@ interface RouteParams {
   params: Promise<{ homeId: string }>;
 }
 
-// GET /api/transfers/home/[homeId] - Get pending transfer for a specific home
+// GET /api/transfer/home/[homeId] - Get pending transfer for a specific home
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authConfig);

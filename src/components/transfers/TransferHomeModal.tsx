@@ -1,5 +1,5 @@
 // =============================================================================
-// components/transfers/TransferHomeModal.tsx
+// components/transfer/TransferHomeModal.tsx
 // =============================================================================
 // Modal for initiating a home ownership transfer
 

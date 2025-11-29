@@ -1,5 +1,5 @@
 // =============================================================================
-// components/transfers/PendingTransferBanner.tsx
+// components/transfer/PendingTransferBanner.tsx
 // =============================================================================
 // Banner shown on home detail page when there's a pending transfer
 

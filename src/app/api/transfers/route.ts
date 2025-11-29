@@ -1,7 +1,7 @@
 // =============================================================================
-// app/api/transfers/route.ts
+// app/api/transfer/route.ts
 // =============================================================================
-// GET: List all transfers for current user
+// GET: List all transfer for current user
 // POST: Create a new transfer
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,7 +10,7 @@ import { authConfig } from '@/lib/auth';
 import { initiateTransfer, getUserTransfers } from '@/lib/transfers/transfer-service';
 import { initiateTransferSchema } from '@/lib/transfers/types';
 
-// GET /api/transfers - Get all transfers for current user
+// GET /api/transfer - Get all transfer for current user
 export async function GET() {
   try {
     const session = await getServerSession(authConfig);
@@ -29,15 +29,15 @@ export async function GET() {
       ...transfers,
     });
   } catch (error) {
-    console.error('Error fetching transfers:', error);
+    console.error('Error fetching transfer:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to fetch transfers' },
+      { success: false, error: 'Failed to fetch transfer' },
       { status: 500 }
     );
   }
 }
 
-// POST /api/transfers - Initiate a new transfer
+// POST /api/transfer - Initiate a new transfer
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authConfig);

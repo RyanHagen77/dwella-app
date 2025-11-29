@@ -1,7 +1,7 @@
 // =============================================================================
 // hooks/useTransfers.ts
 // =============================================================================
-// React hook for managing transfers
+// React hook for managing transfer
 
 'use client';
 
@@ -32,7 +32,7 @@ export function useTransfers(): UseTransfersReturn {
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to fetch transfers');
+        throw new Error(data.error || 'Failed to fetch transfer');
       }
 
       setSentTransfers(data.sent || []);
