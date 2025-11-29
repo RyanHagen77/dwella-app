@@ -210,7 +210,7 @@ function TransferCard({ transfer, type, onAction }: TransferCardProps) {
 
     setIsCancelling(true);
     try {
-      const response = await fetch(`/api/transfers/${transfer.id}`, {
+      const response = await fetch(`/api/transfer/${transfer.id}`, {
         method: 'DELETE',
       });
       const data = await response.json();

@@ -73,7 +73,7 @@ export function TransfersSection() {
       try {
         const [homesRes, transfersRes] = await Promise.all([
           fetch('/api/user/homes'),
-          fetch('/api/transfers'),
+          fetch('/api/transfer'),
         ]);
 
         if (homesRes.ok) {
@@ -124,7 +124,7 @@ export function TransfersSection() {
   const handleTransferComplete = () => {
     setTransferModalOpen(false);
     // Refresh transfer
-    fetch('/api/transfers')
+    fetch('/api/transfer')
       .then(res => res.json())
       .then(data => {
         setSentTransfers(data.sent || []);

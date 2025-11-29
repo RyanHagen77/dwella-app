@@ -317,7 +317,7 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     <hr style="${emailStyles.divider}">
     
     <p style="${emailStyles.footer}">
-      Thank you for using Dwella.<br>
+      Thank you for using MyDwella.<br>
       We hope to see you again with your next home!
     </p>
   </div>
@@ -365,7 +365,7 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     <hr style="${emailStyles.divider}">
     
     <p style="${emailStyles.footer}">
-      Welcome to Dwella!<br>
+      Welcome to MyDwella!<br>
       Your home's digital record awaits.
     </p>
   </div>
