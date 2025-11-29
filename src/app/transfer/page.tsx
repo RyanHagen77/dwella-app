@@ -6,13 +6,13 @@
 import { getServerSession } from "next-auth";
 import { redirect } from 'next/navigation';
 import { authConfig } from '@/lib/auth';
-import { TransfersList } from '@/components/transfers/TransfersList';
+import { TransfersList } from '@/components/transfer/TransfersList';
 import { glass, heading, textMeta } from '@/lib/glass';
 import { ArrowLeft, Send } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Home Transfers | Dwella',
+  title: 'Home Transfers | MyDwella',
   description: 'Manage home ownership transfer',
 };
 
@@ -20,7 +20,7 @@ export default async function TransfersPage() {
   const session = await getServerSession(authConfig);
 
   if (!session?.user) {
-    redirect('/login?redirect=/transfers');
+    redirect('/login?redirect=/transfer');
   }
 
   return (

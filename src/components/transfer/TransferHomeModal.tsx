@@ -61,7 +61,7 @@ export function TransferHomeModal({ isOpen, onClose, home }: TransferHomeModalPr
     setError(null);
 
     try {
-      const response = await fetch('/api/transfers', {
+      const response = await fetch('/api/transfer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

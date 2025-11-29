@@ -5,7 +5,7 @@ import AdminTopBar from "./_components/AdminTopBar";
 import AdminSidebar from "./_components/AdminSidebar";
 import { glass, glassTight, heading, textMeta, ctaGhost, ctaPrimary } from "@/lib/glass";
 import { loadJSON, saveJSON } from "@/lib/storage";
-import { UserModal } from "../../components/admin/UserModal";
+import { UserModal } from "@/components/admin/UserModal";
 
 /* ---------- Types ---------- */
 export type Role = "superadmin" | "admin" | "support" | "read_only";
@@ -28,7 +28,7 @@ function iso(daysOffset = 0) { const d = new Date(); d.setDate(d.getDate() + day
 
 /* ---------- Seed ---------- */
 const SEED_USERS: AdminUser[] = [
-  { id: "u1", name: "Ava Lane",  email: "ava@dwella.com",      kind: "admin",      role: "superadmin", status: "active",    createdAt: iso(-90), lastActive: iso(-1) },
+  { id: "u1", name: "Ava Lane",  email: "ava@mydwella.com",      kind: "admin",      role: "superadmin", status: "active",    createdAt: iso(-90), lastActive: iso(-1) },
   { id: "u2", name: "Ben Carter",email: "benc@brokerage.com",     kind: "realtor",    role: "read_only",  status: "active",    createdAt: iso(-60), lastActive: iso(-2) },
   { id: "u3", name: "ChillRight HVAC", email: "ops@chillright.com", kind: "contractor", role: "read_only", status: "active",    createdAt: iso(-45), lastActive: iso(-3) },
   { id: "u4", name: "Dana Patel",email: "dana@home.com",          kind: "homeowner",  role: "read_only",  status: "active",    createdAt: iso(-30) },
@@ -199,7 +199,7 @@ export default function AdminPage() {
 
       <UserModal
         open={editOpen}
-        onClose={() => setEditOpen(false)}
+        onCloseAction={() => setEditOpen(false)}
         value={editing}
         onSubmit={(v) => { upsertUser(v); setEditOpen(false); }}
       />

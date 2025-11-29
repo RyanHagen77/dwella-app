@@ -37,5 +37,5 @@ export default function RealtorTopBar() {
     { href: "/pro/realtor/profile", label: "Account" },
   ];
 
-  return <GlobalHeader links={links} srBrand="Dwella Realtor" logoAlt="Dwella" />;
+  return <GlobalHeader links={links} srBrand="MyDwella Realtor" logoAlt="MyDwella" />;
 }

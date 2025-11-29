@@ -10,7 +10,7 @@ import { useRouter } from 'next/navigation';
 import { Send, Clock, X, Loader2, AlertTriangle } from 'lucide-react';
 import { glass, textMeta } from '@/lib/glass';
 import { cn } from '@/lib/utils';
-import type { TransferWithDetails } from '@/lib/transfers/types';
+import type { TransferWithDetails } from '@/lib/transfer/types';
 
 interface PendingTransferBannerProps {
   transfer: TransferWithDetails;
@@ -25,7 +25,7 @@ export function PendingTransferBanner({ transfer }: PendingTransferBannerProps) 
 
     setIsCancelling(true);
     try {
-      const response = await fetch(`/api/transfers/${transfer.id}`, {
+      const response = await fetch(`/api/transfer/${transfer.id}`, {
         method: 'DELETE',
       });
       const data = await response.json();

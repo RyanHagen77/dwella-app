@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig} from '@/lib/auth';
-import { cancelTransfer } from '@/lib/transfers/transfer-service';
+import { cancelTransfer } from '@/lib/transfer/transfer-service';
 import { prisma } from '@/lib/prisma';
 
 interface RouteParams {

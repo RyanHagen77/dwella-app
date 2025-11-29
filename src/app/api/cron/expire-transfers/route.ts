@@ -5,7 +5,7 @@
 // Schedule: Every hour (configured in vercel.json)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { expireOldTransfers } from '@/lib/transfers/transfer-service';
+import { expireOldTransfers } from '@/lib/transfer/transfer-service';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;

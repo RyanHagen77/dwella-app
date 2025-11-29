@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { glass, ctaGhost, ctaPrimary, heading } from "@/lib/glass";
 import Image from "next/image";
 import { ShareAccessModal } from "@/app/home/_components/ShareAccessModal";
-import { TransfersSection } from "@/components/transfers/TransfersSection";
+import { TransfersSection } from "@/components/transfer/TransfersSection";
 
 type ProfileForm = {
   name: string;

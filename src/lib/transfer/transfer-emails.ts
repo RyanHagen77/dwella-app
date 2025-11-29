@@ -311,7 +311,7 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     
     <p style="${emailStyles.text}">
       All records, warranties, and contractor connections have been transferred to the new owner.
-      You no longer have access to this home on Dwella.
+      You no longer have access to this home on MyDwella.
     </p>
     
     <hr style="${emailStyles.divider}">
@@ -340,7 +340,7 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     <p style="${emailStyles.subheading}">The home transfer is complete</p>
     
     <p style="${emailStyles.text}">
-      Congratulations! You are now the owner of this home on Dwella.
+      Congratulations! You are now the owner of this home on MyDwella.
     </p>
     
     <div style="${emailStyles.homeCard}">

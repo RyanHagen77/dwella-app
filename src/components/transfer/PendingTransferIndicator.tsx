@@ -19,7 +19,7 @@ export function PendingTransferIndicator() {
 
   return (
     <Link
-      href="/transfers"
+      href="/transfer"
       className={cn(
         "flex items-center gap-2 px-3 py-1.5 rounded-lg",
         "bg-blue-500/20 border border-blue-500/30",

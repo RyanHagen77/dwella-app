@@ -144,7 +144,7 @@ export function TransfersSection() {
     if (!confirm('Are you sure you want to cancel this transfer?')) return;
 
     try {
-      const res = await fetch(`/api/transfers/${transferId}`, { method: 'DELETE' });
+      const res = await fetch(`/api/transfer/${transferId}`, { method: 'DELETE' });
       if (res.ok) {
         handleTransferComplete();
       }
@@ -183,7 +183,7 @@ export function TransfersSection() {
                 {pendingReceived.map((transfer) => (
                   <div
                     key={transfer.id}
-                    onClick={() => router.push(`/transfers/accept?token=${transfer.token}`)}
+                    onClick={() => router.push(`/transfer/accept?token=${transfer.token}`)}
                     className="flex items-center justify-between gap-3 p-3 rounded-lg bg-black/20 border border-white/10 cursor-pointer hover:bg-white/5"
                   >
                     <div className="flex-1 min-w-0">

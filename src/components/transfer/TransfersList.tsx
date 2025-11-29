@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { glass, glassTight, heading, textMeta } from '@/lib/glass';
 import { cn } from '@/lib/utils';
-import type { TransferWithDetails } from '@/lib/transfers/types';
+import type { TransferWithDetails } from '@/lib/transfer/types';
 
 // Helper to format home display name
 function getHomeDisplayName(home: { address: string; city: string }) {
@@ -45,7 +45,7 @@ export function TransfersList() {
   useEffect(() => {
     async function fetchTransfers() {
       try {
-        const response = await fetch('/api/transfers');
+        const response = await fetch('/api/transfer');
         const data = await response.json();
 
         if (data.success) {

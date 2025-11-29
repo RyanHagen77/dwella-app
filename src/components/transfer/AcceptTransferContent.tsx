@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { glass, glassTight, heading, textMeta } from '@/lib/glass';
 import { cn } from '@/lib/utils';
-import type { TransferWithDetails } from '@/lib/transfers/types';
+import type { TransferWithDetails } from '@/lib/transfer/types';
 
 // Helper to format home display name
 function getHomeDisplayName(home: { address: string; city: string }) {
@@ -53,7 +53,7 @@ export function AcceptTransferContent({ token, userId }: AcceptTransferContentPr
   useEffect(() => {
     async function fetchTransfer() {
       try {
-        const response = await fetch(`/api/transfers/accept?token=${token}`);
+        const response = await fetch(`/api/transfer/accept?token=${token}`);
         const data = await response.json();
 
         if (!data.success) {
@@ -77,7 +77,7 @@ export function AcceptTransferContent({ token, userId }: AcceptTransferContentPr
     setError(null);
 
     try {
-      const response = await fetch('/api/transfers/accept', {
+      const response = await fetch('/api/transfer/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
@@ -102,7 +102,7 @@ export function AcceptTransferContent({ token, userId }: AcceptTransferContentPr
     setError(null);
 
     try {
-      const response = await fetch('/api/transfers/decline', {
+      const response = await fetch('/api/transfer/decline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),

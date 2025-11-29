@@ -66,7 +66,7 @@ export function AcceptTransferContent({ token, userEmail }: AcceptTransferConten
   useEffect(() => {
     async function fetchTransfer() {
       try {
-        const response = await fetch(`/api/transfers/accept?token=${token}`);
+        const response = await fetch(`/api/transfer/accept?token=${token}`);
         const data = await response.json();
 
         if (!data.success) {
@@ -90,7 +90,7 @@ export function AcceptTransferContent({ token, userEmail }: AcceptTransferConten
     setError(null);
 
     try {
-      const response = await fetch('/api/transfers/accept', {
+      const response = await fetch('/api/transfer/accept', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
@@ -117,7 +117,7 @@ export function AcceptTransferContent({ token, userEmail }: AcceptTransferConten
     setError(null);
 
     try {
-      const response = await fetch('/api/transfers/decline', {
+      const response = await fetch('/api/transfer/decline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),

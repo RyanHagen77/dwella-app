@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
-import { declineTransfer } from '@/lib/transfers/transfer-service';
+import { declineTransfer } from '@/lib/transfer/transfer-service';
 
 // POST /api/transfer/decline - Decline a transfer
 export async function POST(request: NextRequest) {

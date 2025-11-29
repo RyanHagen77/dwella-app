@@ -6,7 +6,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { TransferWithDetails } from '@/lib/transfers/types';
+import type { TransferWithDetails } from '@/lib/transfer/types';
 
 interface UseTransfersReturn {
   sentTransfers: TransferWithDetails[];
@@ -28,7 +28,7 @@ export function useTransfers(): UseTransfersReturn {
     setError(null);
 
     try {
-      const response = await fetch('/api/transfers');
+      const response = await fetch('/api/transfer');
       const data = await response.json();
 
       if (!data.success) {

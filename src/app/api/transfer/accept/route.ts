@@ -1,32 +1,39 @@
 // =============================================================================
-// app/api/transfer/route.ts
+// app/api/transfer/accept/route.ts
 // =============================================================================
-// GET: List all transfer for current user
-// POST: Create a new transfer
+// GET: Get transfer details by token (for accept page)
+// POST: Accept a transfer
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
-import { initiateTransfer, getUserTransfers } from '@/lib/transfers/transfer-service';
-import { initiateTransferSchema } from '@/lib/transfers/types';
+import { acceptTransfer, getTransferByToken } from '@/lib/transfer/transfer-service';
+import { acceptTransferSchema } from '@/lib/transfer/types';
 
-// GET /api/transfer - Get all transfer for current user
-export async function GET() {
+// GET /api/transfer/accept?token=xxx - Get transfer details by token
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authConfig);
+    const token = request.nextUrl.searchParams.get('token');
 
-    if (!session?.user?.id) {
+    if (!token) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
+        { success: false, error: 'Token is required' },
+        { status: 400 }
       );
     }
 
-    const transfers = await getUserTransfers(session.user.id);
+    const transfer = await getTransferByToken(token);
+
+    if (!transfer) {
+      return NextResponse.json(
+        { success: false, error: 'Transfer not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      ...transfers,
+      transfer,
     });
   } catch (error) {
     console.error('Error fetching transfer:', error);
@@ -37,14 +44,14 @@ export async function GET() {
   }
 }
 
-// POST /api/transfer - Initiate a new transfer
+// POST /api/transfer/accept - Accept a transfer
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authConfig);
 
     if (!session?.user?.id) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
+        { success: false, error: 'Please log in to accept this transfer' },
         { status: 401 }
       );
     }
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Validate input
-    const validationResult = initiateTransferSchema.safeParse(body);
+    const validationResult = acceptTransferSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
         {
@@ -63,15 +70,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const transfer = await initiateTransfer(session.user.id, validationResult.data);
+    const transfer = await acceptTransfer(session.user.id, validationResult.data.token);
 
     return NextResponse.json({
       success: true,
       transfer,
     });
   } catch (error) {
-    console.error('Error initiating transfer:', error);
-    const message = error instanceof Error ? error.message : 'Failed to initiate transfer';
+    console.error('Error accepting transfer:', error);
+    const message = error instanceof Error ? error.message : 'Failed to accept transfer';
     return NextResponse.json(
       { success: false, error: message },
       { status: 400 }

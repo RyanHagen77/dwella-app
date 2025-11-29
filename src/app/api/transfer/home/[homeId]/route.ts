@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authConfig } from '@/lib/auth';
-import { getHomePendingTransfer } from '@/lib/transfers/transfer-service';
+import { getHomePendingTransfer } from '@/lib/transfer/transfer-service';
 
 interface RouteParams {
   params: Promise<{ homeId: string }>;
