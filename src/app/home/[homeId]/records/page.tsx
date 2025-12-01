@@ -26,7 +26,7 @@ export default async function RecordsPage({
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Get home info for header
+  // Get stats info for header
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: {

@@ -1,4 +1,4 @@
-// app/home/[homeId]/records/[recordId]/_components/RecordActions.tsx
+// app/stats/[homeId]/records/[recordId]/_components/RecordActions.tsx
 "use client";
 
 import { useState } from "react";

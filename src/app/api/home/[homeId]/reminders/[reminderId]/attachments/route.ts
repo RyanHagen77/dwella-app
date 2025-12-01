@@ -1,4 +1,4 @@
-// src/app/api/home/[homeId]/reminders/[reminderId]/attachments/route.ts
+// src/app/api/stats/[homeId]/reminders/[reminderId]/attachments/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";

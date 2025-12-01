@@ -219,7 +219,7 @@ export function DocumentWorkClient({ connectedHomes }: DocumentWorkClientProps) 
         </section>
       )}
 
-      {/* Form - Only show if there are connected homes */}
+      {/* Form - Only show if there are connected stats */}
       {connectedHomes.length > 0 && (
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Property Selection */}

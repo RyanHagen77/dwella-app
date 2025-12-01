@@ -300,7 +300,7 @@ function HomeownerHero({ router }: { router: ReturnType<typeof useRouter> }) {
             emoji: "✅",
             title: "Contractor-Verified Records",
             description:
-              "Your HVAC guy, plumber, and electrician add work directly to your home's record. Photos, receipts, warranties—all verified by the pros who did it.",
+              "Your HVAC guy, plumber, and electrician add work directly to your stats's record. Photos, receipts, warranties—all verified by the pros who did it.",
           },
           {
             emoji: "📈",

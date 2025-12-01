@@ -2,7 +2,7 @@
  * PENDING INVITATIONS BADGE
  *
  * Shows total pending invitations for the current user.
- * - Homeowners: Invitations across ALL homes they own
+ * - Homeowners: Invitations across ALL stats they own
  * - Contractors: Invitations received
  * Polls API every 30 seconds.
  *

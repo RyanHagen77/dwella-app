@@ -1,4 +1,4 @@
-// app/api/home/claim/route.ts
+// app/api/stats/claim/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
 
     const normalizedAddress = normalizeAddress(data);
 
-    // Check if home already exists
+    // Check if stats already exists
     let home = await prisma.home.findFirst({
       where: { normalizedAddress },
     });
@@ -51,12 +51,12 @@ export async function POST(req: Request) {
 
       if (existingAccess) {
         return NextResponse.json(
-          { error: "You already have access to this home", id: home.id },
+          { error: "You already have access to this stats", id: home.id },
           { status: 400 }
         );
       }
 
-      // Check if home has an owner
+      // Check if stats has an owner
       const existingOwner = await prisma.homeAccess.findFirst({
         where: {
           homeId: home.id,
@@ -66,12 +66,12 @@ export async function POST(req: Request) {
 
       if (existingOwner) {
         return NextResponse.json(
-          { error: "This home is already claimed by another user" },
+          { error: "This stats is already claimed by another user" },
           { status: 400 }
         );
       }
 
-      // Grant access to existing home
+      // Grant access to existing stats
       await prisma.homeAccess.create({
         data: {
           homeId: home.id,
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ id: home.id });
     }
 
-    // Create new home
+    // Create new stats
     home = await prisma.home.create({
       data: {
         address: data.address,
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ id: home.id });
   } catch (error) {
-    console.error("Error claiming home:", error);
+    console.error("Error claiming stats:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -116,7 +116,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { error: "Failed to claim home" },
+      { error: "Failed to claim stats" },
       { status: 500 }
     );
   }

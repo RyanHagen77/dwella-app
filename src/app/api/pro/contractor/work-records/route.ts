@@ -22,7 +22,7 @@ const createWorkRecordSchema = z.object({
 
 /**
  * POST /api/pro/contractor/work-records
- * Allows contractors to document completed work for connected homes
+ * Allows contractors to document completed work for connected stats
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = createWorkRecordSchema.parse(body);
 
-    // Verify contractor has access to this home
+    // Verify contractor has access to this stats
     const connection = await prisma.connection.findFirst({
       where: {
         contractorId: session.user.id,
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // Get home details for address snapshot
+    // Get stats details for address snapshot
     const home = await prisma.home.findUnique({
       where: { id: data.homeId },
       select: {

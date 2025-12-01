@@ -1,4 +1,4 @@
-// src/app/home/_components/index.ts
+// src/app/stats/_components/index.ts
 
 // Home context / picker
 export { default as HomeContextBar } from "./HomeContextBar";

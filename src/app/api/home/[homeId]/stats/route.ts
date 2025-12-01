@@ -1,8 +1,8 @@
 /**
  * UPDATE HOME STATS
  *
- * PATCH /api/home/[homeId]/stats
- * Updates home statistics (health score, value, beds, baths, sqft, year built)
+ * PATCH /api/stats/[homeId]/stats
+ * Updates stats statistics (health score, value, beds, baths, sqft, year built)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -33,7 +33,7 @@ export async function PATCH(
     const body = await request.json();
     const { healthScore, estValue, beds, baths, sqft, yearBuilt } = body;
 
-    // Get current home to preserve other meta data
+    // Get current stats to preserve other meta data
     const currentHome = await prisma.home.findUnique({
       where: { id: homeId },
       select: { meta: true },
@@ -65,9 +65,9 @@ export async function PATCH(
 
     return NextResponse.json({ home: updatedHome });
   } catch (error) {
-    console.error("Error updating home stats:", error);
+    console.error("Error updating stats stats:", error);
     return NextResponse.json(
-      { error: "Failed to update home stats" },
+      { error: "Failed to update stats stats" },
       { status: 500 }
     );
   }

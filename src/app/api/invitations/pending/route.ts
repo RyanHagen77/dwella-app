@@ -6,7 +6,7 @@
  * GET - Returns pending invitation count for the current user
  *
  * Works for:
- * - Homeowners: Counts invitations across all homes they own
+ * - Homeowners: Counts invitations across all stats they own
  * - Contractors: Counts invitations sent TO them
  *
  * Returns:
@@ -56,7 +56,7 @@ export async function GET(): Promise<NextResponse> {
       return NextResponse.json({ total: totalPending });
     }
 
-    // HOMEOWNERS: Count invitations across all their homes
+    // HOMEOWNERS: Count invitations across all their stats
     const homes = await prisma.home.findMany({
       where: { ownerId: userId },
       select: { id: true },

@@ -25,6 +25,8 @@ export const ctaPrimary =
   "shadow-[0_8px_24px_rgba(243,90,31,.25)] " +
   `${focusRing}`;
 
+export const ctaDanger = "inline-flex items-center gap-2 rounded-lg border border-red-500/50 bg-red-500/20 px-4 py-2 text-sm font-medium text-red-200 transition-colors hover:bg-red-500/30";
+
 export const ctaGhost =
   "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 " +
   "text-sm font-medium text-white border border-white/40 bg-white/10 hover:bg-white/20 " +

@@ -6,7 +6,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 
 export const metadata = {
   title: "MyDwella",
-  description: "Your home's digital record",
+  description: "Your stats's digital record",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

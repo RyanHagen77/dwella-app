@@ -13,7 +13,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Home Transfers | MyDwella',
-  description: 'Manage home ownership transfer',
+  description: 'Manage stats ownership transfer',
 };
 
 export default async function TransfersPage() {

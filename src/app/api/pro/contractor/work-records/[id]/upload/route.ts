@@ -119,7 +119,7 @@ export async function POST(
         const extension = file.name.split(".").pop();
         const timestamp = Date.now();
 
-        // S3 key structure: homes/{homeId}/document-completed-work-submissions-records-records/{workRecordId}/{category}/{timestamp}-{fileId}.{ext}
+        // S3 key structure: stats/{homeId}/document-completed-work-submissions-records-records/{workRecordId}/{category}/{timestamp}-{fileId}.{ext}
         const key = `homes/${workRecord.homeId}/work-records/${workRecordId}/${file.category}/${timestamp}-${fileId}.${extension}`;
 
         const command = new PutObjectCommand({

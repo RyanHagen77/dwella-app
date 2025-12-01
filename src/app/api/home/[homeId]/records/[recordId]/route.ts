@@ -16,10 +16,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check home access
+    // Check stats access
     await requireHomeAccess(homeId, session.user.id);
 
-    // Verify record belongs to this home
+    // Verify record belongs to this stats
     const existingRecord = await prisma.record.findUnique({
       where: { id: recordId },
       select: { homeId: true },
@@ -68,10 +68,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check home access
+    // Check stats access
     await requireHomeAccess(homeId, session.user.id);
 
-    // Verify record belongs to this home
+    // Verify record belongs to this stats
     const existingRecord = await prisma.record.findUnique({
       where: { id: recordId },
       select: { homeId: true },

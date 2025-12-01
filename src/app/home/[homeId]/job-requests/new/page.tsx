@@ -1,4 +1,4 @@
-// app/home/[homeId]/job-requests/new/page.tsx
+// app/stats/[homeId]/job-requests/new/page.tsx
 export const dynamic = "force-dynamic";
 
 import { getServerSession } from "next-auth";
@@ -27,7 +27,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Get home details
+  // Get stats details
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: {

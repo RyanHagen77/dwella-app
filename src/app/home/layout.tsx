@@ -1,3 +1,8 @@
+// =============================================================================
+// app/home/layout.tsx
+// =============================================================================
+// Redirects user to their most recent stats, or shows pre-claim UI
+
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";

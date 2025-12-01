@@ -1,4 +1,4 @@
-// app/api/invitations/pro-to-home/route.ts
+// app/api/invitations/pro-to-stats/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -103,7 +103,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "This property is not in MyHomeDox yet. The homeowner must add/claim the home first.",
+            "This property is not in MyHomeDox yet. The homeowner must add/claim the stats first.",
         },
         { status: 400 }
       );
@@ -119,12 +119,12 @@ export async function POST(req: Request) {
 
   if (!homeId) {
     return NextResponse.json(
-      { error: "Failed to resolve home for this invitation" },
+      { error: "Failed to resolve stats for this invitation" },
       { status: 400 }
     );
   }
 
-  // ---- BLOCK DUPLICATES: Check if this pro has a blocking invitation for this home ----
+  // ---- BLOCK DUPLICATES: Check if this pro has a blocking invitation for this stats ----
   const blockingInvitation = await prisma.invitation.findFirst({
     where: {
       homeId,
@@ -151,7 +151,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // ---- BLOCK DUPLICATES: Check if this pro has ANY ACTIVE connection for this home ----
+  // ---- BLOCK DUPLICATES: Check if this pro has ANY ACTIVE connection for this stats ----
   const anyConnection = await prisma.connection.findFirst({
     where: {
       homeId,

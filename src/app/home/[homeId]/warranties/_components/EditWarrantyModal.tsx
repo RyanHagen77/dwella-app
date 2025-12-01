@@ -1,4 +1,4 @@
-// app/home/[homeId]/warranties/_components/EditWarrantyModal.tsx
+// app/stats/[homeId]/warranties/_components/EditWarrantyModal.tsx
 "use client";
 
 import { useEffect, useState } from "react";

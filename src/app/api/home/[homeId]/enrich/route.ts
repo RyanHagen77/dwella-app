@@ -1,4 +1,4 @@
-// src/app/api/home/[homeId]/enrich/route.ts
+// src/app/api/stats/[homeId]/enrich/route.ts
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";

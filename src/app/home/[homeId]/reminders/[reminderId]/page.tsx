@@ -37,7 +37,7 @@ export default async function ReminderDetailPage({
 
   if (!reminder || reminder.homeId !== homeId) notFound();
 
-  // Get home info for breadcrumb
+  // Get stats info for breadcrumb
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: {

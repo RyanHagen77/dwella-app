@@ -1,249 +1,370 @@
-"use client";
+/**
+ * ADMIN DASHBOARD OVERVIEW
+ *
+ * Main admin landing page with key metrics,
+ * alerts for pending items, and recent activity feed.
+ *
+ * Location: app/admin/page.tsx
+ */
 
-import { useEffect, useMemo, useState } from "react";
-import AdminTopBar from "./_components/AdminTopBar";
-import AdminSidebar from "./_components/AdminSidebar";
-import { glass, glassTight, heading, textMeta, ctaGhost, ctaPrimary } from "@/lib/glass";
-import { loadJSON, saveJSON } from "@/lib/storage";
-import { UserModal } from "@/components/admin/UserModal";
+import { prisma } from "@/lib/prisma";
+import { glass, glassTight, heading, textMeta, ctaGhost } from "@/lib/glass";
+import {
+  Users,
+  Home,
+  ArrowLeftRight,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
+import Link from "next/link";
 
-/* ---------- Types ---------- */
-export type Role = "superadmin" | "admin" | "support" | "read_only";
-export type UserKind = "homeowner" | "realtor" | "contractor" | "inspector" | "admin";
+async function getStats() {
+  const [
+    totalUsers,
+    totalHomes,
+    totalTransfers,
+    pendingTransfers,
+    pendingPros,
+    activeConnections,
+    recentUsers,
+    recentActivity,
+  ] = await Promise.all([
+    prisma.user.count(),
+    prisma.home.count(),
+    prisma.homeTransfer.count(),
+    prisma.homeTransfer.count({ where: { status: "PENDING" } }),
+    prisma.user.count({ where: { role: "PRO", proStatus: "PENDING" } }),
+    prisma.connection.count({ where: { status: "ACTIVE" } }),
+    prisma.user.count({
+      where: {
+        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
+    }),
+    getRecentActivity(),
+  ]);
 
-export type AdminUser = {
-  id: string;
-  name: string;
-  email: string;
-  kind: UserKind;
-  role: Role;               // admin staff roles (non-admin users default to read_only)
-  status: "active" | "suspended";
-  createdAt: string;
-  lastActive?: string;
-};
+  return {
+    totalUsers,
+    totalHomes,
+    totalTransfers,
+    pendingTransfers,
+    pendingPros,
+    activeConnections,
+    recentUsers,
+    recentActivity,
+  };
+}
 
-type AdminCounts = { users: number; properties: number; vendors: number; requests: number; reports: number; };
+async function getRecentActivity() {
+  const [newUsers, newTransfers, newConnections] = await Promise.all([
+    prisma.user.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+    }),
+    prisma.homeTransfer.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        home: { select: { address: true } },
+        fromUser: { select: { name: true } },
+      },
+    }),
+    prisma.connection.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        homeowner: { select: { name: true } },
+        contractor: { select: { name: true } },
+      },
+    }),
+  ]);
 
-function iso(daysOffset = 0) { const d = new Date(); d.setDate(d.getDate() + daysOffset); return d.toISOString(); }
+  type ActivityItem = {
+    id: string;
+    type: "user" | "transfer" | "connection";
+    description: string;
+    timestamp: Date;
+    status?: string;
+  };
 
-/* ---------- Seed ---------- */
-const SEED_USERS: AdminUser[] = [
-  { id: "u1", name: "Ava Lane",  email: "ava@mydwella.com",      kind: "admin",      role: "superadmin", status: "active",    createdAt: iso(-90), lastActive: iso(-1) },
-  { id: "u2", name: "Ben Carter",email: "benc@brokerage.com",     kind: "realtor",    role: "read_only",  status: "active",    createdAt: iso(-60), lastActive: iso(-2) },
-  { id: "u3", name: "ChillRight HVAC", email: "ops@chillright.com", kind: "contractor", role: "read_only", status: "active",    createdAt: iso(-45), lastActive: iso(-3) },
-  { id: "u4", name: "Dana Patel",email: "dana@home.com",          kind: "homeowner",  role: "read_only",  status: "active",    createdAt: iso(-30) },
-  { id: "u5", name: "Evan Ruiz", email: "evan@inspectsure.com",   kind: "inspector",  role: "read_only",  status: "suspended", createdAt: iso(-25) },
-];
+  const activities: ActivityItem[] = [
+    ...newUsers.map((u) => ({
+      id: `user-${u.id}`,
+      type: "user" as const,
+      description: `${u.name || u.email} joined as ${u.role.toLowerCase()}`,
+      timestamp: u.createdAt,
+    })),
+    ...newTransfers.map((t) => ({
+      id: `transfer-${t.id}`,
+      type: "transfer" as const,
+      description: `Transfer initiated for ${t.home.address}`,
+      timestamp: t.createdAt,
+      status: t.status,
+    })),
+    ...newConnections.map((c) => ({
+      id: `connection-${c.id}`,
+      type: "connection" as const,
+      description: `${c.homeowner?.name || "Homeowner"} connected with ${c.contractor?.name || "Contractor"}`,      timestamp: c.createdAt,
+      status: c.status,
+    })),
+  ];
 
-/* ---------- Page ---------- */
-export default function AdminPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [mounted, setMounted] = useState(false);
+  return activities
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+    .slice(0, 10);
+}
 
-  // Filters
-  const [q, setQ] = useState("");
-  const [role, setRole] = useState<Role | "all">("all");
-  const [kind, setKind] = useState<UserKind | "all">("all");
-  const [status, setStatus] = useState<"all" | "active" | "suspended">("all");
-
-  // Modal
-  const [editOpen, setEditOpen] = useState(false);
-  const [editing, setEditing] = useState<AdminUser | null>(null);
-
-  useEffect(() => {
-    const cached = loadJSON<AdminUser[] | null>("admin_users", null);
-    if (cached?.length) setUsers(cached);
-    else { saveJSON("admin_users", SEED_USERS); setUsers(SEED_USERS); }
-    setMounted(true);
-  }, []);
-  useEffect(() => { if (mounted) saveJSON("admin_users", users); }, [mounted, users]);
-
-  const counts: AdminCounts = useMemo(() => ({
-    users: users.length,
-    properties: 128,                  // demo stub
-    vendors: users.filter(u => u.kind === "contractor").length,
-    requests: 14 + users.filter(u => u.kind === "realtor").length, // demo stub
-    reports: 37,                      // demo stub
-  }), [users]);
-
-  const filtered = useMemo(() => {
-    const ql = q.trim().toLowerCase();
-    return users.filter(u => {
-      const matchesQ = !ql || u.name.toLowerCase().includes(ql) || u.email.toLowerCase().includes(ql);
-      const matchesRole = role === "all" ? true : u.role === role;
-      const matchesKind = kind === "all" ? true : u.kind === kind;
-      const matchesStatus = status === "all" ? true : u.status === status;
-      return matchesQ && matchesRole && matchesKind && matchesStatus;
-    });
-  }, [users, q, role, kind, status]);
-
-  function upsertUser(next: AdminUser) {
-    setUsers(prev => {
-      const i = prev.findIndex(u => u.id === next.id);
-      if (i === -1) return [next, ...prev];
-      const copy = prev.slice(); copy[i] = next; return copy;
-    });
-  }
-  function createUser() {
-    setEditing({ id: `u${Date.now()}`, name: "", email: "", kind: "homeowner", role: "read_only", status: "active", createdAt: new Date().toISOString() });
-    setEditOpen(true);
-  }
-  function editUser(u: AdminUser) { setEditing(u); setEditOpen(true); }
-  function toggleStatus(u: AdminUser) { upsertUser({ ...u, status: u.status === "active" ? "suspended" : "active" }); }
+export default async function AdminDashboard() {
+  const stats = await getStats();
 
   return (
-    <main className="relative min-h-screen text-white">
-      {/* Fixed background */}
-      <div className="fixed inset-0 -z-50">
-        <img src="/myhomedox_home3.webp" alt="" className="h-full w-full object-cover md:object-[50%_35%] lg:object-[50%_30%]" />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-      </div>
-
-      <AdminTopBar />
-
-      <div className="mx-auto max-w-7xl px-6 pb-10">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
-          <AdminSidebar />
-
-          {/* Main */}
-          <div className="space-y-6 pt-6 lg:pt-8">
-            {/* Overview cards */}
-            <section className="grid grid-cols-2 gap-3 md:grid-cols-5">
-              <Stat label="Users" value={counts.users} />
-              <Stat label="Properties" value={counts.properties} />
-              <Stat label="Vendors" value={counts.vendors} />
-              <Stat label="Requests" value={counts.requests} />
-              <Stat label="Reports" value={counts.reports} />
-            </section>
-
-            {/* Users */}
-            <section className={glass} aria-labelledby="users-heading">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <h2 id="users-heading" className={`text-lg font-medium ${heading}`}>Users</h2>
-                <div className="flex flex-wrap items-center gap-2">
-                  <button className={ctaPrimary} onClick={createUser}>New User</button>
-                  <a className={ctaGhost} href="/admin/export">Export CSV</a>
-                </div>
-              </div>
-
-              {/* Filters */}
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <input
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Search by name or email…"
-                  className="h-9 w-full max-w-xs rounded-lg border border-white/20 bg-black/30 px-3 text-sm text-white placeholder:text-white/50 focus:ring-2 focus:ring-white/60"
-                />
-                <Select label="Role"   value={role}   onChange={v => setRole(v as Role | "all")} options={["all","superadmin","admin","support","read_only"]} />
-                <Select label="Type"   value={kind}   onChange={v => setKind(v as UserKind | "all")} options={["all","homeowner","realtor","contractor","inspector","admin"]} />
-                <Select label="Status" value={status} onChange={v => setStatus(v as any)} options={["all","active","suspended"]} />
-              </div>
-
-              {/* Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[720px] border-collapse text-sm">
-                  <thead>
-                    <tr className="text-left text-white/80">
-                      <th className="border-b border-white/10 py-2 pr-3">Name</th>
-                      <th className="border-b border-white/10 py-2 pr-3">Email</th>
-                      <th className="border-b border-white/10 py-2 pr-3">Type</th>
-                      <th className="border-b border-white/10 py-2 pr-3">Role</th>
-                      <th className="border-b border-white/10 py-2 pr-3">Status</th>
-                      <th className="border-b border-white/10 py-2 pr-3">Created</th>
-                      <th className="border-b border-white/10 py-2 pr-3">Last Active</th>
-                      <th className="border-b border-white/10 py-2 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.length === 0 ? (
-                      <tr><td colSpan={8} className="py-8 text-center text-white/70">No users match your filters.</td></tr>
-                    ) : filtered.map(u => (
-                      <tr key={u.id} className="hover:bg-white/5">
-                        <td className="py-2 pr-3 text-white">{u.name}</td>
-                        <td className="py-2 pr-3 text-white/90">{u.email}</td>
-                        <td className="py-2 pr-3">{cap(u.kind)}</td>
-                        <td className="py-2 pr-3">{cap(u.role)}</td>
-                        <td className="py-2 pr-3">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${
-                            u.status === "active"
-                              ? "border border-green-400/40 bg-green-500/10 text-green-100"
-                              : "border border-red-400/40 bg-red-500/10 text-red-100"
-                          }`}>{cap(u.status)}</span>
-                        </td>
-                        <td className="py-2 pr-3">{new Date(u.createdAt).toLocaleDateString()}</td>
-                        <td className="py-2 pr-3">{u.lastActive ? new Date(u.lastActive).toLocaleDateString() : "—"}</td>
-                        <td className="py-2 text-right">
-                          <div className="inline-flex items-center gap-2">
-                            <button className={ctaGhost} onClick={() => editUser(u)}>Edit</button>
-                            <button className={ctaGhost} onClick={() => toggleStatus(u)}>
-                              {u.status === "active" ? "Suspend" : "Activate"}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            {/* Stubs (follow Users pattern to implement) */}
-            <SectionStub title="Properties" />
-            <SectionStub title="Vendors" />
-            <SectionStub title="Requests" />
-            <SectionStub title="Reports" />
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className={`text-2xl font-bold ${heading}`}>Dashboard</h1>
+          <p className={`mt-1 ${textMeta}`}>
+            Welcome back. Here&apos;s what&apos;s happening with Dwella.
+          </p>
         </div>
       </div>
 
-      <UserModal
-        open={editOpen}
-        onCloseAction={() => setEditOpen(false)}
-        value={editing}
-        onSubmit={(v) => { upsertUser(v); setEditOpen(false); }}
-      />
-    </main>
-  );
-}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <StatCard
+          label="Total Users"
+          value={stats.totalUsers}
+          change={`+${stats.recentUsers} this week`}
+          icon={Users}
+          href="/admin/users"
+        />
+        <StatCard
+          label="Homes"
+          value={stats.totalHomes}
+          icon={Home}
+          href="/admin/homes"
+        />
+        <StatCard
+          label="Active Connections"
+          value={stats.activeConnections}
+          icon={TrendingUp}
+          href="/admin/connections"
+        />
+        <StatCard
+          label="Total Transfers"
+          value={stats.totalTransfers}
+          icon={ArrowLeftRight}
+          href="/admin/transfers"
+        />
+      </div>
 
-/* ---------- Bits ---------- */
-function Stat({ label, value }: { label: string; value: number | string }) {
-  return (
-    <div className={glassTight} role="group" aria-label={label}>
-      <div className={`text-sm ${textMeta}`}>{label}</div>
-      <div className="mt-1 text-xl font-semibold text-white">{value}</div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {stats.pendingPros > 0 && (
+          <AlertCard
+            title="Pending Pro Applications"
+            count={stats.pendingPros}
+            description="Contractors waiting for review"
+            href="/admin/contractors?status=pending"
+            variant="warning"
+          />
+        )}
+        {stats.pendingTransfers > 0 && (
+          <AlertCard
+            title="Pending Transfers"
+            count={stats.pendingTransfers}
+            description="Home transfers awaiting action"
+            href="/admin/transfers?status=pending"
+            variant="info"
+          />
+        )}
+      </div>
+
+      <section className={glass}>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className={`text-lg font-semibold ${heading}`}>Recent Activity</h2>
+          <span className={`text-sm ${textMeta}`}>Last 10 events</span>
+        </div>
+
+        <div className="space-y-3">
+          {stats.recentActivity.length === 0 ? (
+            <p className={textMeta}>No recent activity</p>
+          ) : (
+            stats.recentActivity.map((activity) => (
+              <ActivityItem key={activity.id} activity={activity} />
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className={glass}>
+        <h2 className={`mb-4 text-lg font-semibold ${heading}`}>Quick Actions</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <QuickLink href="/admin/users?role=HOMEOWNER" label="View Homeowners" icon={Users} />
+          <QuickLink href="/admin/contractors" label="Manage Contractors" icon={TrendingUp} />
+          <QuickLink href="/admin/transfers?status=PENDING" label="Review Transfers" icon={ArrowLeftRight} />
+          <QuickLink href="/admin/system" label="System Health" icon={AlertCircle} />
+        </div>
+      </section>
     </div>
   );
 }
-function Select({ label, value, onChange, options }: {
-  label: string; value: string; onChange: (v: string) => void; options: string[];
+
+function StatCard({
+  label,
+  value,
+  change,
+  icon: Icon,
+  href,
+}: {
+  label: string;
+  value: number;
+  change?: string;
+  icon: React.ElementType;
+  href: string;
 }) {
   return (
-    <label className="inline-flex items-center gap-2">
-      <span className={`text-xs ${textMeta}`}>{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 rounded-lg border border-white/20 bg-white/10 px-2 text-sm text-white/90 backdrop-blur focus:ring-2 focus:ring-white/40"
-      >
-        {options.map(o => <option key={o} value={o}>{cap(o)}</option>)}
-      </select>
-    </label>
+    <Link href={href} className={`${glassTight} group transition-all hover:bg-white/15`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className={`text-sm ${textMeta}`}>{label}</p>
+          <p className="mt-1 text-2xl font-bold text-white">{value.toLocaleString()}</p>
+          {change && <p className="mt-1 text-xs text-emerald-400">{change}</p>}
+        </div>
+        <div className="rounded-lg bg-white/10 p-2 transition-colors group-hover:bg-white/20">
+          <Icon size={20} className="text-white/70" />
+        </div>
+      </div>
+    </Link>
   );
 }
-function SectionStub({ title }: { title: string }) {
+
+function AlertCard({
+  title,
+  count,
+  description,
+  href,
+  variant,
+}: {
+  title: string;
+  count: number;
+  description: string;
+  href: string;
+  variant: "warning" | "info" | "danger";
+}) {
+  const colors = {
+    warning: "border-amber-500/30 bg-amber-500/10",
+    info: "border-blue-500/30 bg-blue-500/10",
+    danger: "border-red-500/30 bg-red-500/10",
+  };
+
+  const textColors = {
+    warning: "text-amber-400",
+    info: "text-blue-400",
+    danger: "text-red-400",
+  };
+
   return (
-    <section className={glass}>
-      <div className="mb-2 flex items-center justify-between">
-        <h2 className={`text-lg font-medium ${heading}`}>{title}</h2>
-        <a className={ctaGhost} href="#">{/* wire later */}Open</a>
+    <Link
+      href={href}
+      className={`flex items-center gap-4 rounded-xl border p-4 transition-all hover:bg-white/5 ${colors[variant]}`}
+    >
+      <div className={`text-3xl font-bold ${textColors[variant]}`}>{count}</div>
+      <div>
+        <p className="font-medium text-white">{title}</p>
+        <p className={`text-sm ${textMeta}`}>{description}</p>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        <div className={glassTight}>Coming soon</div>
-        <div className={glassTight}>Coming soon</div>
-      </div>
-    </section>
+      <Clock size={20} className={`ml-auto ${textColors[variant]}`} />
+    </Link>
   );
 }
-function cap(s: string) { return s.charAt(0).toUpperCase() + s.slice(1).replace("_"," "); }
+
+function ActivityItem({
+  activity,
+}: {
+  activity: {
+    id: string;
+    type: "user" | "transfer" | "connection";
+    description: string;
+    timestamp: Date;
+    status?: string;
+  };
+}) {
+  const icons = {
+    user: Users,
+    transfer: ArrowLeftRight,
+    connection: TrendingUp,
+  };
+
+  const Icon = icons[activity.type];
+
+const StatusIconComponent = activity.status
+  ? activity.status === "ACCEPTED" || activity.status === "ACTIVE"
+    ? CheckCircle2
+    : activity.status === "DECLINED" || activity.status === "REJECTED"
+      ? XCircle
+      : Clock
+  : null;
+
+  return (
+    <div className="flex items-center gap-3 rounded-lg bg-white/5 px-3 py-2">
+      <div className="rounded-full bg-white/10 p-2">
+        <Icon size={14} className="text-white/70" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="truncate text-sm text-white">{activity.description}</p>
+        <p className={`text-xs ${textMeta}`}>{formatRelativeTime(activity.timestamp)}</p>
+      </div>
+      {StatusIconComponent && (
+        <StatusIconComponent
+          size={16}
+          className={
+            activity.status === "ACCEPTED" || activity.status === "ACTIVE"
+              ? "text-emerald-400"
+              : activity.status === "DECLINED" || activity.status === "REJECTED"
+                ? "text-red-400"
+                : "text-amber-400"
+          }
+        />
+      )}
+    </div>
+  );
+}
+
+function QuickLink({
+  href,
+  label,
+  icon: Icon,
+}: {
+  href: string;
+  label: string;
+  icon: React.ElementType;
+}) {
+  return (
+    <Link href={href} className={`${ctaGhost} flex items-center gap-2 justify-center`}>
+      <Icon size={16} />
+      {label}
+    </Link>
+  );
+}
+
+function formatRelativeTime(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+}

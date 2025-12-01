@@ -161,7 +161,7 @@ export function RemindersPageClient({
             <p className="mb-4 text-white/70">
               {hasActiveFilters
                 ? "No reminders match your filters."
-                : "No reminders yet for this home."}
+                : "No reminders yet for this stats."}
             </p>
 
             {hasActiveFilters ? (

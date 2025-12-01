@@ -44,19 +44,19 @@ export function HomePicker({
         const data = await res.json();
         setHomes(data.homes || []);
       } catch (err) {
-        console.error("Failed to fetch homes", err);
+        console.error("Failed to fetch stats", err);
       }
     }
     void fetchHomes();
   }, []);
 
-  // Fetch per-home stats when dropdown opens
+  // Fetch per-stats stats when dropdown opens
   React.useEffect(() => {
     if (!open || homes.length === 0) return;
 
     async function fetchHomeStats() {
       try {
-        // Fetch stats for each home
+        // Fetch stats for each stats
         const statsPromises = homes.map(async (home) => {
           const [messagesRes, invitesRes, workRes] = await Promise.all([
             fetch(`/api/home/${home.id}/messages/unread`),
@@ -85,7 +85,7 @@ export function HomePicker({
         const stats = await Promise.all(statsPromises);
         setHomeStats(stats);
       } catch (err) {
-        console.error("Failed to fetch home stats", err);
+        console.error("Failed to fetch stats stats", err);
       }
     }
 
@@ -115,7 +115,7 @@ export function HomePicker({
         body: JSON.stringify({ homeId }),
       });
     } catch (err) {
-      console.error("Failed to update last home", err);
+      console.error("Failed to update last stats", err);
     }
 
     if (typeof window !== "undefined") {
@@ -220,7 +220,7 @@ export function HomePicker({
                           )}
                         </div>
 
-                        {/* Per-home badges */}
+                        {/* Per-stats badges */}
                         {hasActivity && (
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             {stats.unreadMessages > 0 && (

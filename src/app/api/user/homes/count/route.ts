@@ -1,4 +1,4 @@
-// src/app/api/user/homes/count/route.ts
+// src/app/api/user/stats/count/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   try {
-    // Count homes where user is owner or has access
+    // Count stats where user is owner or has access
     const count = await prisma.home.count({
       where: {
         OR: [
@@ -30,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json({ count });
   } catch (error) {
-    console.error("Failed to get home count:", error);
+    console.error("Failed to get stats count:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

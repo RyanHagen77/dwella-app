@@ -1,7 +1,7 @@
 // =============================================================================
 // components/transfer/TransferHomeButton.tsx
 // =============================================================================
-// Button to open the transfer modal from home settings
+// Button to open the transfer modal from stats settings
 
 'use client';
 

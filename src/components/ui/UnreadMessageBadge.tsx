@@ -2,7 +2,7 @@
  * UNREAD MESSAGE BADGE
  *
  * Shows total unread messages for the current user.
- * - Homeowners: Across ALL homes they own
+ * - Homeowners: Across ALL stats they own
  * - Contractors: Across ALL connections
  * Polls API every 30 seconds.
  *

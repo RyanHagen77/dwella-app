@@ -1,10 +1,10 @@
 /**
  * HOMEOWNER REQUESTED JOBS API
  *
- * GET /api/home/[homeId]/job-requests - List job requests for this home
- * POST /api/home/[homeId]/job-requests - Create new job request
+ * GET /api/stats/[homeId]/job-requests - List job requests for this stats
+ * POST /api/stats/[homeId]/job-requests - Create new job request
  *
- * Location: app/api/home/[homeId]/job-requests/route.ts
+ * Location: app/api/stats/[homeId]/job-requests/route.ts
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 
 type RouteParams = { homeId: string };
 
-// GET - List job requests for this home
+// GET - List job requests for this stats
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
@@ -151,7 +151,7 @@ export async function POST(
       );
     }
 
-    // Verify home belongs to user
+    // Verify stats belongs to user
     const home = await prisma.home.findFirst({
       where: {
         id: homeId,

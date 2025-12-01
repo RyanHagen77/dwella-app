@@ -1,4 +1,4 @@
-// app/home/_components/ConnectionsModal.tsx
+// app/stats/_components/ConnectionsModal.tsx
 "use client";
 
 import Link from "next/link";

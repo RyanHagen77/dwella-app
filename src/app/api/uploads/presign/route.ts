@@ -91,7 +91,7 @@ export async function POST(req: Request) {
         }
       }
     } else {
-      // Homeowner flow - verify home access
+      // Homeowner flow - verify stats access
       await requireHomeAccess(homeId, session.user.id);
 
       // Verify job request if provided

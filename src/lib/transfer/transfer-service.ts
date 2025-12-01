@@ -38,7 +38,7 @@ const transferInclude = {
   },
 };
 
-// Helper to format home display name
+// Helper to format stats display name
 function getHomeDisplayName(home: { address: string; city: string; state: string }) {
   return `${home.address}, ${home.city}`;
 }
@@ -49,7 +49,7 @@ function getHomeFullAddress(home: { address: string; addressLine2?: string | nul
 }
 
 /**
- * Initiate a home ownership transfer
+ * Initiate a stats ownership transfer
  */
 export async function initiateTransfer(
   userId: string,
@@ -57,7 +57,7 @@ export async function initiateTransfer(
 ): Promise<TransferWithDetails> {
   const { homeId, recipientEmail, message, notifyContractors, transferMessages, expiresInDays } = input;
 
-  // Verify the user owns this home
+  // Verify the user owns this stats
   const home = await prisma.home.findFirst({
     where: {
       id: homeId,
@@ -66,10 +66,10 @@ export async function initiateTransfer(
   });
 
   if (!home) {
-    throw new Error('Home not found or you do not own this home');
+    throw new Error('Home not found or you do not own this stats');
   }
 
-  // Check for existing pending transfer for this home
+  // Check for existing pending transfer for this stats
   const existingTransfer = await prisma.homeTransfer.findFirst({
     where: {
       homeId,
@@ -78,7 +78,7 @@ export async function initiateTransfer(
   });
 
   if (existingTransfer) {
-    throw new Error('There is already a pending transfer for this home. Please cancel it first.');
+    throw new Error('There is already a pending transfer for this stats. Please cancel it first.');
   }
 
   // Check if recipient email is the same as owner
@@ -88,7 +88,7 @@ export async function initiateTransfer(
   });
 
   if (owner?.email?.toLowerCase() === recipientEmail.toLowerCase()) {
-    throw new Error('You cannot transfer a home to yourself');
+    throw new Error('You cannot transfer a stats to yourself');
   }
 
   // Check if recipient already has an account
@@ -133,7 +133,7 @@ export async function initiateTransfer(
 }
 
 /**
- * Accept a home transfer
+ * Accept a stats transfer
  */
 export async function acceptTransfer(
   userId: string,
@@ -207,7 +207,7 @@ export async function acceptTransfer(
 
   // Perform the transfer in a transaction
   const result = await prisma.$transaction(async (tx) => {
-    // 1. Update the home ownership
+    // 1. Update the stats ownership
     await tx.home.update({
       where: { id: transfer.homeId },
       data: {
@@ -228,7 +228,7 @@ export async function acceptTransfer(
       include: transferInclude,
     });
 
-    // 3. End ALL active HomeOwnership records for the previous owner on this home
+    // 3. End ALL active HomeOwnership records for the previous owner on this stats
     await tx.homeOwnership.updateMany({
       where: {
         homeId: transfer.homeId,
@@ -249,7 +249,7 @@ export async function acceptTransfer(
       },
     });
 
-    // 5. Remove any HomeAccess records for the old owner (they no longer need shared access to their old home)
+    // 5. Remove any HomeAccess records for the old owner (they no longer need shared access to their old stats)
     await tx.homeAccess.deleteMany({
       where: {
         homeId: transfer.homeId,
@@ -271,7 +271,7 @@ export async function acceptTransfer(
 
     // 7. Handle message history based on transferMessages preference
     if (!transfer.transferMessages) {
-      // Get all connection IDs for this home
+      // Get all connection IDs for this stats
       const connections = await tx.connection.findMany({
         where: { homeId: transfer.homeId },
         select: { id: true },
@@ -306,7 +306,7 @@ export async function acceptTransfer(
       },
     });
 
-    // 9. Clear lastHomeId for the old owner if it points to this home
+    // 9. Clear lastHomeId for the old owner if it points to this stats
     await tx.user.updateMany({
       where: {
         id: transfer.fromUserId,
@@ -317,7 +317,7 @@ export async function acceptTransfer(
       },
     });
 
-    // 10. Set lastHomeId for the new owner to this home
+    // 10. Set lastHomeId for the new owner to this stats
     await tx.user.update({
       where: { id: userId },
       data: { lastHomeId: transfer.homeId },
@@ -363,7 +363,7 @@ export async function acceptTransfer(
 }
 
 /**
- * Decline a home transfer
+ * Decline a stats transfer
  */
 export async function declineTransfer(
   userId: string,
@@ -522,7 +522,7 @@ export async function getUserTransfers(userId: string) {
 }
 
 /**
- * Get pending transfer for a home
+ * Get pending transfer for a stats
  */
 export async function getHomePendingTransfer(homeId: string, userId: string) {
   const home = await prisma.home.findFirst({

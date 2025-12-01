@@ -1,4 +1,4 @@
-// app/api/home/[homeId]/document-completed-work-submissions/[workId]/approve/route.ts
+// app/api/stats/[homeId]/document-completed-work-submissions/[workId]/approve/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -47,7 +47,7 @@ export async function POST(
 
   if (workRecord.homeId !== homeId) {
     return NextResponse.json(
-      { error: "Work record does not belong to this home" },
+      { error: "Work record does not belong to this stats" },
       { status: 400 }
     );
   }
@@ -94,7 +94,7 @@ export async function POST(
       },
       data: {
         recordId: finalRecord.id,
-        // Optional: if you want them visible to all home members by default
+        // Optional: if you want them visible to all stats members by default
         // visibility: "HOME",
       },
     });

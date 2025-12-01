@@ -45,7 +45,7 @@ export default function RealtorAccountPage() {
     setLogo(data.pro.logo ?? "");
     // demo extra fields
     setBio(
-      "Experienced listing agent focused on disclosure-ready homes and smooth closings. Ask me about Homefax."
+      "Experienced listing agent focused on disclosure-ready stats and smooth closings. Ask me about Homefax."
     );
     setNotifEmail(true);
     setNotifRequests(true);

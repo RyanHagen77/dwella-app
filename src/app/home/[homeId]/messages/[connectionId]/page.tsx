@@ -5,7 +5,7 @@
  * Shows message history and allows sending new messages.
  * Read-only mode for archived (disconnected) connections.
  *
- * Location: app/home/[homeId]/messages/[connectionId]/page.tsx
+ * Location: app/stats/[homeId]/messages/[connectionId]/page.tsx
  */
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function HomeownerChatPage({
   const { homeId, connectionId } = await params;
   const userId = session.user.id;
 
-  // Get connection details - verify homeowner owns this home and connection
+  // Get connection details - verify homeowner owns this stats and connection
   // Include ARCHIVED status so we can show read-only view
   const connection = await prisma.connection.findFirst({
     where: {

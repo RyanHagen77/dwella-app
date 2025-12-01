@@ -10,8 +10,8 @@ module.exports = {
     // Add ALL _components directories:
     "./src/app/_components/**/*.{js,ts,jsx,tsx,mdx}",
     "./app/_components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/home/_components/**/*.{js,ts,jsx,tsx,mdx}",  // ← ADD THIS
-    "./app/home/_components/**/*.{js,ts,jsx,tsx,mdx}",      // ← ADD THIS
+    "./src/app/stats/_components/**/*.{js,ts,jsx,tsx,mdx}",  // ← ADD THIS
+    "./app/stats/_components/**/*.{js,ts,jsx,tsx,mdx}",      // ← ADD THIS
     // Or use a wildcard to catch all _components:
     "./app/**/_components/**/*.{js,ts,jsx,tsx,mdx}",        // ← BETTER: catches all
     "./src/app/**/_components/**/*.{js,ts,jsx,tsx,mdx}",    // ← BETTER: catches all

@@ -1,4 +1,4 @@
-// src/app/api/home/status/route.ts
+// src/app/api/stats/status/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";

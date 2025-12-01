@@ -1,9 +1,9 @@
 /**
  * HOMEOWNER WARRANTY DETAIL PAGE
  *
- * Shows a single warranty for a specific home.
+ * Shows a single warranty for a specific stats.
  *
- * Location: app/home/[homeId]/warranties/[warrantyId]/page.tsx
+ * Location: app/stats/[homeId]/warranties/[warrantyId]/page.tsx
  */
 
 export const dynamic = "force-dynamic";

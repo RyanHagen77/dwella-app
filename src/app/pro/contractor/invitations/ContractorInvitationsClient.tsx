@@ -17,8 +17,8 @@ import {
 } from "@/lib/glass";
 
 /** Shapes matching what page.tsx includes.
- *  - receivedInvitations include inviter + home
- *  - sentInvitations include home only
+ *  - receivedInvitations include inviter + stats
+ *  - sentInvitations include stats only
  */
 type HomeLite = {
   id: string;

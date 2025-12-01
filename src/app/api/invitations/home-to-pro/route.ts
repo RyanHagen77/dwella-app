@@ -1,4 +1,4 @@
-// app/api/invitations/home-to-pro/route.ts
+// app/api/invitations/stats-to-pro/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       ? message.trim()
       : null;
 
-  // caller really has access to this home
+  // caller really has access to this stats
   await requireHomeAccess(homeId, session.user.id);
 
   // cannot invite yourself
@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // ---- BLOCK DUPLICATES: Check if this pro has a blocking invitation for this home ----
+  // ---- BLOCK DUPLICATES: Check if this pro has a blocking invitation for this stats ----
   const blockingInvitation = await prisma.invitation.findFirst({
     where: {
       homeId,
@@ -121,7 +121,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // ---- BLOCK DUPLICATES: Check if this pro has ANY ACTIVE connection for this home ----
+  // ---- BLOCK DUPLICATES: Check if this pro has ANY ACTIVE connection for this stats ----
   const anyConnection = await prisma.connection.findFirst({
     where: {
       homeId,

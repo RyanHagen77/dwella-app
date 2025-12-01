@@ -16,10 +16,10 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check home access
+    // Check stats access
     await requireHomeAccess(homeId, session.user.id);
 
-    // Verify reminder belongs to this home
+    // Verify reminder belongs to this stats
     const existingReminder = await prisma.reminder.findUnique({
       where: { id: reminderId },
       select: { homeId: true },
@@ -77,10 +77,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check home access
+    // Check stats access
     await requireHomeAccess(homeId, session.user.id);
 
-    // Verify reminder belongs to this home
+    // Verify reminder belongs to this stats
     const existingReminder = await prisma.reminder.findUnique({
       where: { id: reminderId },
       select: { homeId: true },

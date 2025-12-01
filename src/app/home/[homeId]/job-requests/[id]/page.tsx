@@ -4,7 +4,7 @@
  * View single job request, accept quotes, cancel request
  * WITH PHOTO GALLERY
  *
- * Location: app/home/[homeId]/job-requests/[workId]/page.tsx
+ * Location: app/stats/[homeId]/job-requests/[workId]/page.tsx
  */
 
 export const dynamic = "force-dynamic";

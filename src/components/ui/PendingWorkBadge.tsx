@@ -2,7 +2,7 @@
  * PENDING WORK BADGE
  *
  * Shows total pending document-completed-work-submissions items for the current user.
- * - Homeowners: Work items across ALL homes they own
+ * - Homeowners: Work items across ALL stats they own
  * - Contractors: Work requests received
  * Polls API every 30 seconds.
  *

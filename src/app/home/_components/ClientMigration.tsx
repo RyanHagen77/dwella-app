@@ -1,4 +1,4 @@
-// src/app/home/[homeId]/_components/ClientMigration.tsx
+// src/app/stats/[homeId]/_components/ClientMigration.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -20,9 +20,9 @@ export default function ClientMigration({ homeId }: { homeId: string }) {
         if (migrated) { setDone(true); return; }
 
         // Pull demo data from localStorage
-        const records: AnyRec[] = JSON.parse(localStorage.getItem("home:records") ?? "[]");
-        const reminders: AnyRec[] = JSON.parse(localStorage.getItem("home:reminders") ?? "[]");
-        const warranties: AnyRec[] = JSON.parse(localStorage.getItem("home:warranties") ?? "[]");
+        const records: AnyRec[] = JSON.parse(localStorage.getItem("stats:records") ?? "[]");
+        const reminders: AnyRec[] = JSON.parse(localStorage.getItem("stats:reminders") ?? "[]");
+        const warranties: AnyRec[] = JSON.parse(localStorage.getItem("stats:warranties") ?? "[]");
 
         const payload = { records, reminders, warranties };
         const res = await fetch(`/api/home/${homeId}/migrate-local`, {
@@ -32,9 +32,9 @@ export default function ClientMigration({ homeId }: { homeId: string }) {
         });
         if (res.ok) {
           // Clear the demo data for this app so we never double-import
-          localStorage.removeItem("home:records");
-          localStorage.removeItem("home:reminders");
-          localStorage.removeItem("home:warranties");
+          localStorage.removeItem("stats:records");
+          localStorage.removeItem("stats:reminders");
+          localStorage.removeItem("stats:warranties");
           setDone(true);
         }
       } catch (_) {

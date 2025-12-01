@@ -71,7 +71,7 @@ export function ClaimHomeModal({
 
       if (!res.ok) {
         // Show error in modal instead of just toast
-        setError(j.error || "Could not claim home.");
+        setError(j.error || "Could not claim stats.");
         return;
       }
 
@@ -83,7 +83,7 @@ export function ClaimHomeModal({
     window.location.href = `/home/${j.id}`;
     } catch (err) {
       const error = err as Error;
-      setError(error.message || "Error claiming home");
+      setError(error.message || "Error claiming stats");
     } finally {
       setSubmitting(false);
     }

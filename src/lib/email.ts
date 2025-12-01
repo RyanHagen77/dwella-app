@@ -229,7 +229,7 @@ export async function sendInvitationEmail({
                     <p style="margin: 0; font-size: 16px; color: rgba(255, 255, 255, 0.75); line-height: 1.5;">
                       <strong style="color: #ffffff;">${companyName}</strong> has invited you to join Dwella${
     role === "HOMEOWNER"
-      ? " to manage your home maintenance"
+      ? " to manage your stats maintenance"
       : " as a contractor"
   }.
                     </p>

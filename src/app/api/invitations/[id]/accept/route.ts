@@ -90,12 +90,12 @@ export async function POST(
 
   if (!invitation.homeId || !invitation.home) {
     return NextResponse.json(
-      { error: "Invitation has no home associated" },
+      { error: "Invitation has no stats associated" },
       { status: 400 }
     );
   }
 
-  // ---- VALIDATE: Verified address must match the invitation's home ----
+  // ---- VALIDATE: Verified address must match the invitation's stats ----
   const normalizedVerified = `${verifiedAddress.address}${verifiedAddress.city}${verifiedAddress.state}${verifiedAddress.zip}`
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");

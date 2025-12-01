@@ -83,7 +83,7 @@ export default async function ContractorDetailPage({
 
   const contractor = connection.contractor;
 
-  // Work records for this home + contractor
+  // Work records for this stats + contractor
   const workRecords = await prisma.workRecord.findMany({
     where: {
       homeId,

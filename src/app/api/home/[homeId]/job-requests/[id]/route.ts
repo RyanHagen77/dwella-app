@@ -1,11 +1,11 @@
 /**
  * INDIVIDUAL JOB REQUEST API (HOMEOWNER)
  *
- * GET /api/home/[homeId]/job-requests/[workId] - Get single job request
- * PATCH /api/home/[homeId]/job-requests/[workId] - Update job request (accept quote, cancel, etc.)
- * DELETE /api/home/[homeId]/job-requests/[workId] - Delete/cancel job request
+ * GET /api/stats/[homeId]/job-requests/[workId] - Get single job request
+ * PATCH /api/stats/[homeId]/job-requests/[workId] - Update job request (accept quote, cancel, etc.)
+ * DELETE /api/stats/[homeId]/job-requests/[workId] - Delete/cancel job request
  *
- * Location: app/api/home/[homeId]/job-requests/[workId]/route.ts
+ * Location: app/api/stats/[homeId]/job-requests/[workId]/route.ts
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -105,7 +105,7 @@ export async function GET(
       );
     }
 
-    // Verify this job request belongs to this home
+    // Verify this job request belongs to this stats
     if (jobRequest.homeId !== homeId) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

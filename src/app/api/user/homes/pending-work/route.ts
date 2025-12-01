@@ -1,4 +1,4 @@
-// app/api/user/homes/pending-document-completed-work-submissions-records/route.ts
+// app/api/user/stats/pending-document-completed-work-submissions-records/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export const runtime = "nodejs";
 
 /**
- * GET /api/user/homes/pending-document-completed-work-submissions-records?homeId=xyz
+ * GET /api/user/stats/pending-document-completed-work-submissions-records?homeId=xyz
  * Fetches all unverified document-completed-work-submissions-records at user's properties
  */
 export async function GET(req: Request) {
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
     orderBy: [{ workDate: "desc" }, { createdAt: "desc" }],
   });
 
-  // Group by home for easier display
+  // Group by stats for easier display
   const groupedByHome = pendingWork.reduce(
     (acc, work) => {
       const homeId = work.homeId;

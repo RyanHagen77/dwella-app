@@ -1,4 +1,4 @@
-// app/home/[homeId]/invitations/InviteProModal.tsx
+// app/stats/[homeId]/invitations/InviteProModal.tsx
 "use client";
 
 import { useState } from "react";

@@ -1,7 +1,7 @@
 /**
  * PENDING COMPLETED WORK SUBMISSIONS COUNT (HOMEOWNER)
  *
- * GET /api/home/[homeId]/completed-work-submissions/pending
+ * GET /api/stats/[homeId]/completed-work-submissions/pending
  * Returns count of work submissions needing homeowner review
  *
  * Used by homeowner dashboard badge

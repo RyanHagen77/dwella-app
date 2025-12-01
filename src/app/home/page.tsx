@@ -1,7 +1,7 @@
 // =============================================================================
 // app/home/page.tsx
 // =============================================================================
-// Redirects user to their most recent home, or shows pre-claim UI
+// Redirects user to their most recent stats, or shows pre-claim UI
 
 import "server-only";
 import { redirect } from "next/navigation";
@@ -59,7 +59,7 @@ export default async function HomeIndex() {
       }
     }
 
-    // If no valid lastHomeId, find first owned home
+    // If no valid lastHomeId, find first owned stats
     if (!homeId) {
       const owned = await prisma.home.findFirst({
         where: { ownerId: userId },
@@ -68,7 +68,7 @@ export default async function HomeIndex() {
       homeId = owned?.id ?? null;
     }
 
-    // If no owned home, find first shared home
+    // If no owned stats, find first shared stats
     if (!homeId) {
       const shared = await prisma.homeAccess.findFirst({
         where: { userId },
@@ -80,6 +80,6 @@ export default async function HomeIndex() {
     if (homeId) return redirect(`/home/${homeId}`);
   }
 
-  // Not logged in or no claimed home → show pre-claim UI
+  // Not logged in or no claimed stats → show pre-claim UI
   return <HomePreClaim />;
 }

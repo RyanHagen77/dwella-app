@@ -45,7 +45,7 @@ export function ShareAccessModal({
       return;
     }
     const token = uid();
-    // Include homeId if provided so the link opens the right home/report
+    // Include homeId if provided so the link opens the right stats/report
     const params = new URLSearchParams({ token });
     if (homeId) params.set("home", homeId);
     const link = `${location.origin}/report?${params.toString()}`;

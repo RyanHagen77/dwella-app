@@ -1,4 +1,4 @@
-// src/app/api/user/homes/route.ts
+// src/app/api/user/stats/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -12,7 +12,7 @@ export async function GET() {
   }
 
   try {
-    // Get all homes where user is owner or has access
+    // Get all stats where user is owner or has access
     const homes = await prisma.home.findMany({
       where: {
         OR: [
@@ -49,7 +49,7 @@ export async function GET() {
 
     return NextResponse.json({ homes });
   } catch (error) {
-    console.error("Failed to get homes:", error);
+    console.error("Failed to get stats:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

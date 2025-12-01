@@ -1,4 +1,4 @@
-// app/home/[homeId]/invitations/page.tsx
+// app/stats/[homeId]/invitations/page.tsx
 export const dynamic = "force-dynamic";
 
 import { getServerSession } from "next-auth";
@@ -23,7 +23,7 @@ export default async function HomeInvitationsPage({
 
   const userId = session.user.id;
 
-  // Check access to this home
+  // Check access to this stats
   await requireHomeAccess(homeId, userId);
 
   // Get user email (used for "received" invitations)
@@ -53,7 +53,7 @@ export default async function HomeInvitationsPage({
       }${home.zip ? ` ${home.zip}` : ""}`
     : "";
 
-  // Invitations *to* this homeowner for this home
+  // Invitations *to* this homeowner for this stats
   const receivedInvitations = await prisma.invitation.findMany({
     where: {
       invitedEmail: user.email,
@@ -90,7 +90,7 @@ export default async function HomeInvitationsPage({
     orderBy: { createdAt: "desc" },
   });
 
-  // Invitations *sent by* this homeowner for this home
+  // Invitations *sent by* this homeowner for this stats
   const sentInvitations = await prisma.invitation.findMany({
     where: {
       homeId,

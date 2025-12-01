@@ -1,10 +1,10 @@
 /**
  * COMPLETED WORK SUBMISSIONS LIST (HOMEOWNER)
  *
- * GET /api/home/[homeId]/completed-work-submissions
- * List work submissions for this home
+ * GET /api/stats/[homeId]/completed-work-submissions
+ * List work submissions for this stats
  *
- * Location: app/api/home/[homeId]/completed-work-submissions/route.ts
+ * Location: app/api/stats/[homeId]/completed-work-submissions/route.ts
  */
 
 import { NextRequest, NextResponse } from "next/server";

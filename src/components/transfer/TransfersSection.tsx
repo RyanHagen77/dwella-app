@@ -1,7 +1,7 @@
 // =============================================================================
 // components/transfer/TransfersSection.tsx
 // =============================================================================
-// Section in Account Settings for managing home transfer
+// Section in Account Settings for managing stats transfer
 
 'use client';
 
@@ -67,7 +67,7 @@ export function TransfersSection() {
     setMounted(true);
   }, []);
 
-  // Fetch homes and transfer
+  // Fetch stats and transfer
   useEffect(() => {
     async function fetchData() {
       try {
@@ -80,7 +80,7 @@ export function TransfersSection() {
           const homesData = await homesRes.json();
           const homesList = homesData.homes || [];
           setHomes(homesList);
-          // Set first home as default if none selected
+          // Set first stats as default if none selected
           if (homesList.length > 0) {
             setSelectedHome(prev => prev ?? homesList[0]);
           }
@@ -91,7 +91,7 @@ export function TransfersSection() {
           setSentTransfers(transfersData.sent || []);
           setReceivedTransfers(transfersData.received || []);
 
-          // Track which homes have pending transfer
+          // Track which stats have pending transfer
           const pendingIds = new Set<string>();
           (transfersData.sent || []).forEach((t: Transfer) => {
             if (t.status === 'PENDING' && new Date() < new Date(t.expiresAt)) {
@@ -261,7 +261,7 @@ export function TransfersSection() {
                     <div className="flex items-center gap-2 min-w-0">
                       <Home className="w-4 h-4 text-white/50 flex-shrink-0" />
                       <span className="truncate text-sm">
-                        {selectedHome ? formatAddress(selectedHome) : 'Select a home'}
+                        {selectedHome ? formatAddress(selectedHome) : 'Select a stats'}
                       </span>
                     </div>
                     <ChevronDown className={`w-4 h-4 text-white/50 transition-transform ${homePickerOpen ? 'rotate-180' : ''}`} />

@@ -1,16 +1,16 @@
 /**
  * PER-HOME UNREAD MESSAGES COUNT
  *
- * Endpoint: /api/home/[homeId]/messages/unread
+ * Endpoint: /api/stats/[homeId]/messages/unread
  *
- * GET - Returns unread message count for a specific home
+ * GET - Returns unread message count for a specific stats
  *
  * Returns:
  * {
- *   total: 3,  // unread messages for THIS home only
+ *   total: 3,  // unread messages for THIS stats only
  * }
  *
- * Location: app/api/home/[homeId]/messages/unread/route.ts
+ * Location: app/api/stats/[homeId]/messages/unread/route.ts
  */
 
 import { NextResponse } from "next/server";
@@ -32,7 +32,7 @@ export async function GET(
     const { homeId } = await params;
     const userId = session.user.id;
 
-    // Verify user owns this home
+    // Verify user owns this stats
     const home = await prisma.home.findFirst({
       where: {
         id: homeId,
@@ -44,7 +44,7 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Get all active connections for THIS home
+    // Get all active connections for THIS stats
     const connections = await prisma.connection.findMany({
       where: {
         homeId,
@@ -61,7 +61,7 @@ export async function GET(
       return NextResponse.json({ total: 0 });
     }
 
-    // Count total unread messages for this home
+    // Count total unread messages for this stats
     const totalUnread = await prisma.message.count({
       where: {
         connectionId: { in: connectionIds },
@@ -76,7 +76,7 @@ export async function GET(
 
     return NextResponse.json({ total: totalUnread });
   } catch (error) {
-    console.error("Error fetching per-home unread count:", error);
+    console.error("Error fetching per-stats unread count:", error);
     return NextResponse.json(
       { error: "Failed to fetch unread count" },
       { status: 500 }

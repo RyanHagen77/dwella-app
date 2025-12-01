@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify homeowner owns the home
+    // Verify homeowner owns the stats
     const home = await prisma.home.findFirst({
       where: {
         id: homeId,

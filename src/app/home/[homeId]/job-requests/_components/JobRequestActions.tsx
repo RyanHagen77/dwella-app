@@ -1,4 +1,4 @@
-// app/home/[homeId]/job-requests/_components/JobRequestActions.tsx
+// app/stats/[homeId]/job-requests/_components/JobRequestActions.tsx
 "use client";
 
 import { useState } from "react";

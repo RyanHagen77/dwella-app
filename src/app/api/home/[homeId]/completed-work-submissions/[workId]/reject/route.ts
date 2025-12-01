@@ -1,4 +1,4 @@
-// app/api/home/[homeId]/document-completed-work-submissions/[workId]/reject/route.ts
+// app/api/stats/[homeId]/document-completed-work-submissions/[workId]/reject/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -39,7 +39,7 @@ export async function POST(
 
   if (workRecord.homeId !== homeId) {
     return NextResponse.json(
-      { error: "Work record does not belong to this home" },
+      { error: "Work record does not belong to this stats" },
       { status: 400 }
     );
   }

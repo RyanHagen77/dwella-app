@@ -1,7 +1,7 @@
 /**
  * HOMEOWNER PENDING JOB REQUESTS COUNT
  *
- * GET /api/home/[homeId]/job-requests/pending
+ * GET /api/stats/[homeId]/job-requests/pending
  * Returns count of job requests awaiting contractor response
  *
  * Used by homeowner dashboard badge

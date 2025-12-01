@@ -36,12 +36,12 @@ export async function GET(
       },
     });
 
-    // Check home access (for homeowners) OR contractor access
+    // Check stats access (for homeowners) OR contractor access
     if (!isContractor) {
       try {
         await requireHomeAccess(homeId, session.user.id);
       } catch (error) {
-        console.error("[Attachment] Access denied to home:", homeId, error);
+        console.error("[Attachment] Access denied to stats:", homeId, error);
         return NextResponse.json({ error: "Access denied" }, { status: 403 });
       }
     }

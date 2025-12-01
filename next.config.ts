@@ -2,7 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
 
-  // Keep clean URLs like /home instead of /home/
+  // Keep clean URLs like /stats instead of /stats/
   trailingSlash: false,
 
   // Disable built-in image optimization — all assets come from /public

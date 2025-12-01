@@ -14,7 +14,7 @@ export async function PATCH(
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Verify warranty belongs to this home
+  // Verify warranty belongs to this stats
   const existingWarranty = await prisma.warranty.findUnique({
     where: { id: warrantyId },
     select: { homeId: true },

@@ -2,7 +2,7 @@
  * PENDING WORK SUBMISSIONS COUNT - ALL HOMES
  *
  * GET /api/pending-work-submissions
- * Returns total count of pending work submissions across all homes the user owns
+ * Returns total count of pending work submissions across all stats the user owns
  *
  * Location: app/api/pending-completed-work-submissions/route.ts
  */

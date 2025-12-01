@@ -100,7 +100,7 @@ export default function HomePageSample() {
   function requireClaim(e?: React.SyntheticEvent) {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    alert("Claim your first home to use this feature.");
+    alert("Claim your first stats to use this feature.");
     setClaimOpen(true);
   }
 

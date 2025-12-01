@@ -1,7 +1,7 @@
 // =============================================================================
 // components/transfer/PendingTransferBanner.tsx
 // =============================================================================
-// Banner shown on home detail page when there's a pending transfer
+// Banner shown on stats detail page when there's a pending transfer
 
 'use client';
 

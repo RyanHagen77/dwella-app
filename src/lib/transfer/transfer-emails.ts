@@ -1,7 +1,7 @@
 // =============================================================================
 // lib/transfer/transfer-emails.ts
 // =============================================================================
-// Email templates for home transfer notifications
+// Email templates for stats transfer notifications
 
 import { Resend } from 'resend';
 
@@ -571,7 +571,7 @@ interface ContractorNotificationParams {
 }
 
 /**
- * Send notification to contractors when home ownership changes
+ * Send notification to contractors when stats ownership changes
  */
 export async function sendTransferNotificationToContractors(params: ContractorNotificationParams) {
   const {

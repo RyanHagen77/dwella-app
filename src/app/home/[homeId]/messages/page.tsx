@@ -1,11 +1,11 @@
 /**
  * HOMEOWNER MESSAGES INBOX PAGE
  *
- * Shows all conversations with contractors for THIS specific home.
+ * Shows all conversations with contractors for THIS specific stats.
  * Lists connections with unread counts and last message preview.
  * Includes archived conversations (read-only) for disconnected contractors.
  *
- * Location: app/home/[homeId]/messages/page.tsx
+ * Location: app/stats/[homeId]/messages/page.tsx
  */
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,7 @@ export default async function HomeMessagesPage({
   const { homeId } = await params;
   const userId = session.user.id;
 
-  // Verify user owns this home
+  // Verify user owns this stats
   const home = await prisma.home.findFirst({
     where: {
       id: homeId,
@@ -46,7 +46,7 @@ export default async function HomeMessagesPage({
     redirect("/");
   }
 
-  // Get all connections (both active and archived) for THIS home
+  // Get all connections (both active and archived) for THIS stats
   const connections = await prisma.connection.findMany({
     where: {
       homeId,

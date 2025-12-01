@@ -1,5 +1,5 @@
 // =============================================================================
-// app/api/home/[homeId]/connections/[connectionId]/restore/route.ts
+// app/api/stats/[homeId]/connections/[connectionId]/restore/route.ts
 // =============================================================================
 // POST: Restore an archived connection
 
@@ -24,7 +24,7 @@ export async function POST(
 
     await requireHomeAccess(homeId, session.user.id);
 
-    // First check if user is the current home owner
+    // First check if user is the current stats owner
     const home = await prisma.home.findUnique({
       where: { id: homeId },
       select: { ownerId: true },

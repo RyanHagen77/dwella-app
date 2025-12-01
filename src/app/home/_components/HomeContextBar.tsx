@@ -30,20 +30,20 @@ function HomeContextBarInner() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
 
-  // derive current home from URL when on /home/[workId]
+  // derive current stats from URL when on /stats/[workId]
   useEffect(() => {
     const match = pathname?.match(/\/home\/([^/]+)/);
     if (match) {
       setCurrentHomeId(match[1]);
       window.localStorage.setItem("lastHomeId", match[1]);
     } else {
-      // non-home pages: use last visited if available
+      // non-stats pages: use last visited if available
       const last = window.localStorage.getItem("lastHomeId");
       if (last) setCurrentHomeId(last);
     }
   }, [pathname]);
 
-  // fetch homes once
+  // fetch stats once
   useEffect(() => {
     async function loadHomes() {
       try {
@@ -52,7 +52,7 @@ function HomeContextBarInner() {
         const data = await res.json();
         setHomes(data.homes || []);
       } catch (err) {
-        console.error("Failed to fetch homes", err);
+        console.error("Failed to fetch stats", err);
       }
     }
     loadHomes();
@@ -72,10 +72,10 @@ function HomeContextBarInner() {
         body: JSON.stringify({ homeId }),
       });
     } catch (err) {
-      console.error("Failed to update last home", err);
+      console.error("Failed to update last stats", err);
     }
 
-    // only push when we’re not already on that home
+    // only push when we’re not already on that stats
     if (!pathname?.startsWith(`/home/${homeId}`)) {
       router.push(`/home/${homeId}`);
     }
@@ -97,7 +97,7 @@ function HomeContextBarInner() {
               <HomeTraceHouseIcon className="h-4 w-4" />
             </span>
             <span className="flex-1 truncate text-left">
-              {currentHome ? formatAddress(currentHome) : "Select a home"}
+              {currentHome ? formatAddress(currentHome) : "Select a stats"}
             </span>
             <svg
               xmlns="http://www.w3.org/2000/svg"

@@ -1,7 +1,7 @@
 // =============================================================================
 // components/transfer/TransferHomeModal.tsx
 // =============================================================================
-// Modal for initiating a home ownership transfer
+// Modal for initiating a stats ownership transfer
 
 'use client';
 

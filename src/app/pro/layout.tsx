@@ -21,7 +21,7 @@ export default async function ProLayout({
 
   return (
     <div className="min-h-screen text-white">
-      {/* Global pro header (no home adding) */}
+      {/* Global pro header (no stats adding) */}
       <GlobalProHeader />
 
       {/* Pro-specific nav pills */}

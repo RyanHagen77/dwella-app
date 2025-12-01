@@ -1,5 +1,5 @@
 // =============================================================================
-// app/api/home/[homeId]/connections/[connectionId]/route.ts
+// app/api/stats/[homeId]/connections/[connectionId]/route.ts
 // =============================================================================
 // DELETE: Archive a connection (disconnect from contractor)
 
@@ -22,10 +22,10 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify user has access to this home
+    // Verify user has access to this stats
     await requireHomeAccess(homeId, session.user.id);
 
-    // Check if user is the current home owner
+    // Check if user is the current stats owner
     const home = await prisma.home.findUnique({
       where: { id: homeId },
       select: { ownerId: true },
@@ -38,7 +38,7 @@ export async function DELETE(
       );
     }
 
-    // Verify the connection exists and belongs to this home
+    // Verify the connection exists and belongs to this stats
     const connection = await prisma.connection.findFirst({
       where: {
         id: connectionId,
@@ -92,7 +92,7 @@ export async function DELETE(
         },
       });
 
-      // Cancel any pending job requests with this contractor for this home
+      // Cancel any pending job requests with this contractor for this stats
       await tx.jobRequest.updateMany({
         where: {
           homeId: homeId,

@@ -59,14 +59,14 @@ export function GlobalHeader({
   const userInitial =
     session?.user?.name?.[0] ?? session?.user?.email?.[0] ?? "U";
 
-  // Extract current homeId from pathname if on a home page
+  // Extract current homeId from pathname if on a stats page
   const currentHomeId = useMemo(() => {
     const match = pathname.match(/^\/home\/([^\/]+)/);
     return match ? match[1] : null;
   }, [pathname]);
 
-  // Logo link - go to current home if on home page, otherwise /home
-  const logoHref = currentHomeId ? `/home/${currentHomeId}` : "/home";
+  // Logo link - go to current stats if on stats page, otherwise /stats
+  const logoHref = currentHomeId ? `/home/${currentHomeId}` : "/stats";
 
   return (
     <>
@@ -352,7 +352,7 @@ export function GlobalHeader({
         <div className="mx-auto h-px max-w-7xl bg-white/15" />
       </div>
 
-      {/* Claim-home modal */}
+      {/* Claim-stats modal */}
       <ClaimHomeModal
         open={claimOpen}
         onCloseAction={() => setClaimOpen(false)}

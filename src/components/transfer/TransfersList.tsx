@@ -23,7 +23,7 @@ import { glass, glassTight, heading, textMeta } from '@/lib/glass';
 import { cn } from '@/lib/utils';
 import type { TransferWithDetails } from '@/lib/transfer/types';
 
-// Helper to format home display name
+// Helper to format stats display name
 function getHomeDisplayName(home: { address: string; city: string }) {
   return `${home.address}, ${home.city}`;
 }

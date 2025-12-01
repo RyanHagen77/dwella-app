@@ -1,4 +1,4 @@
-// src/app/api/user/last-home/route.ts
+// src/app/api/user/last-stats/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "homeId is required" }, { status: 400 });
     }
 
-    // Verify user has access to this home
+    // Verify user has access to this stats
     const home = await prisma.home.findFirst({
       where: {
         id: homeId,
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Failed to update last home:", error);
+    console.error("Failed to update last stats:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

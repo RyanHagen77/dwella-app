@@ -1,4 +1,4 @@
-// app/api/home/[homeId]/invitations/route.ts
+// app/api/stats/[homeId]/invitations/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -18,10 +18,10 @@ export async function GET(
   const { homeId } = await params; // ✅ Add await
   const userEmail = session.user.email.toLowerCase();
 
-  // Ensure user has access to this home
+  // Ensure user has access to this stats
   await requireHomeAccess(homeId, session.user.id);
 
-  // Get invitations SENT from this home by this user
+  // Get invitations SENT from this stats by this user
   const sentInvitations = await prisma.invitation.findMany({
     where: {
       homeId,
@@ -30,7 +30,7 @@ export async function GET(
     orderBy: { createdAt: "desc" },
   });
 
-  // Get invitations RECEIVED for this home (where user's email is invited)
+  // Get invitations RECEIVED for this stats (where user's email is invited)
   const receivedInvitations = await prisma.invitation.findMany({
     where: {
       homeId,
