@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ctaPrimary, ctaGhost } from "@/lib/glass";
 import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
-import { InviteProModal } from "@/app/home/[homeId]/invitations/InviteProModal";
+import { InviteProModal } from "@/app/home/[homeId]/invitations/_components/InviteProModal";
 
 type HomeActionsProps = {
   homeId: string;

@@ -12,9 +12,9 @@ import HomeInvitationsClient from "./HomeInvitationsClient";
 export default async function HomeInvitationsPage({
   params,
 }: {
-  params: Promise<{ homeId: string }>;
+  params: { homeId: string };
 }) {
-  const { homeId } = await params;
+  const { homeId } = params;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) {
@@ -23,7 +23,6 @@ export default async function HomeInvitationsPage({
 
   const userId = session.user.id;
 
-  // Check access to this stats
   await requireHomeAccess(homeId, userId);
 
   // Get user email (used for "received" invitations)
@@ -53,7 +52,7 @@ export default async function HomeInvitationsPage({
       }${home.zip ? ` ${home.zip}` : ""}`
     : "";
 
-  // Invitations *to* this homeowner for this stats
+  // Invitations *to* this homeowner for this home
   const receivedInvitations = await prisma.invitation.findMany({
     where: {
       invitedEmail: user.email,
@@ -90,12 +89,11 @@ export default async function HomeInvitationsPage({
     orderBy: { createdAt: "desc" },
   });
 
-  // Invitations *sent by* this homeowner for this stats
+  // Invitations *sent by* this homeowner for this home
   const sentInvitations = await prisma.invitation.findMany({
     where: {
       homeId,
-      // invitedBy is a string (user id), not a relation filter
-      invitedBy: userId,
+      invitedBy: userId, // string user id
     },
     include: {
       home: {
@@ -113,7 +111,7 @@ export default async function HomeInvitationsPage({
 
   return (
     <main className="relative min-h-screen text-white">
-      {/* Background to match the rest of the app */}
+      {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image
           src="/myhomedox_home3.webp"
@@ -128,11 +126,11 @@ export default async function HomeInvitationsPage({
       </div>
 
       <HomeInvitationsClient
-          homeId={homeId}
-          homeAddress={homeAddress}
-          receivedInvitations={receivedInvitations}
-          sentInvitations={sentInvitations}
-        />
+        homeId={homeId}
+        homeAddress={homeAddress}
+        receivedInvitations={receivedInvitations}
+        sentInvitations={sentInvitations}
+      />
     </main>
   );
 }

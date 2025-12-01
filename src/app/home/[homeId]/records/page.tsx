@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import { RecordsPageClient } from "@/app/home/[homeId]/records/[recordId]/RecordsPageClient";
+import { RecordsPageClient } from "@/app/home/[homeId]/records/RecordsPageClient";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 

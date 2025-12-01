@@ -7,11 +7,11 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import { RemindersPageClient } from "./_components/RemindersPageClient";
+import { RemindersPageClient } from "./RemindersPageClient";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
-import type { ReminderItem } from "./_components/RemindersPageClient";
+import type { ReminderItem } from "./RemindersPageClient";
 
 export default async function RemindersPage({
   params,

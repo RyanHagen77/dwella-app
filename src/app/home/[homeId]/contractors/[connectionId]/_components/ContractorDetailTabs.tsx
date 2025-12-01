@@ -1,6 +1,4 @@
-"use client";
-
-import { useState } from "react";
+// app/home/[homeId]/contractors/[connectionId]/_components/ContractorDetailTabs.tsx
 import Link from "next/link";
 import { glass, textMeta } from "@/lib/glass";
 
@@ -53,7 +51,7 @@ type PendingSubmission = {
 
 type Tab = "work-history" | "requests" | "pending";
 
-export function ContractorDetailClient({
+export function ContractorDetailTabs({
   homeId,
   connectionId,
   workRecords,
@@ -61,6 +59,7 @@ export function ContractorDetailClient({
   pendingSubmissions,
   activeRequestsCount,
   pendingApprovalsCount,
+  activeTab,
 }: {
   homeId: string;
   connectionId: string;
@@ -69,18 +68,18 @@ export function ContractorDetailClient({
   pendingSubmissions: PendingSubmission[];
   activeRequestsCount: number;
   pendingApprovalsCount?: number;
+  activeTab: Tab;
 }) {
-  const [activeTab, setActiveTab] = useState<Tab>("work-history");
-
   const pendingCount = pendingApprovalsCount ?? pendingSubmissions.length;
+  const baseHref = `/home/${homeId}/contractors/${connectionId}`;
 
   return (
     <>
       {/* Tabs */}
       <section className={glass}>
         <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setActiveTab("work-history")}
+          <Link
+            href={`${baseHref}?tab=work-history`}
             className={`rounded-full border px-4 py-2 text-sm transition ${
               activeTab === "work-history"
                 ? "border-white/40 bg-white/15 text-white"
@@ -89,10 +88,10 @@ export function ContractorDetailClient({
           >
             Work History
             {workRecords.length > 0 && ` (${workRecords.length})`}
-          </button>
+          </Link>
 
-          <button
-            onClick={() => setActiveTab("requests")}
+          <Link
+            href={`${baseHref}?tab=requests`}
             className={`rounded-full border px-4 py-2 text-sm transition ${
               activeTab === "requests"
                 ? "border-white/40 bg-white/15 text-white"
@@ -101,10 +100,10 @@ export function ContractorDetailClient({
           >
             Job Requests
             {activeRequestsCount > 0 && ` (${activeRequestsCount})`}
-          </button>
+          </Link>
 
-          <button
-            onClick={() => setActiveTab("pending")}
+          <Link
+            href={`${baseHref}?tab=pending`}
             className={`rounded-full border px-4 py-2 text-sm transition ${
               activeTab === "pending"
                 ? "border-white/40 bg-white/15 text-white"
@@ -113,7 +112,7 @@ export function ContractorDetailClient({
           >
             Pending Approvals
             {pendingCount > 0 && ` (${pendingCount})`}
-          </button>
+          </Link>
         </div>
       </section>
 
@@ -166,8 +165,11 @@ function WorkHistoryTab({
       );
     }
 
-    // Show "Pending Approval" for statuses that need homeowner review
-    if (["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED"].includes(status)) {
+    if (
+      ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED"].includes(
+        status
+      )
+    ) {
       return (
         <span className="inline-block rounded-full border border-orange-500/30 bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-300">
           Pending Approval
@@ -193,19 +195,24 @@ function WorkHistoryTab({
     );
   };
 
-  const isPendingApproval = (status: string, isVerified: boolean) => {
-    return !isVerified && ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED"].includes(status);
-  };
+  const isPendingApproval = (status: string, isVerified: boolean) =>
+    !isVerified &&
+    ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED"].includes(
+      status
+    );
 
   return (
     <div className="space-y-4">
       {workRecords.map((record) => {
-        const needsApproval = isPendingApproval(record.status, record.isVerified);
+        const needsApproval = isPendingApproval(
+          record.status,
+          record.isVerified
+        );
 
-        // Verified records with finalRecordId link to record detail, others to approvals page
-        const href = record.isVerified && record.finalRecordId
-          ? `/home/${homeId}/records/${record.finalRecordId}`
-          : `/home/${homeId}/completed-work-submissions`;
+        const href =
+          record.isVerified && record.finalRecordId
+            ? `/home/${homeId}/records/${record.finalRecordId}`
+            : `/home/${homeId}/completed-work-submissions`;
 
         return (
           <Link
@@ -217,22 +224,22 @@ function WorkHistoryTab({
                 : "border border-white/10 bg-white/5 hover:bg-white/10"
             }`}
           >
-            <div className="flex items-start justify-between gap-4 mb-3">
+            <div className="mb-3 flex items-start justify-between gap-4">
               <div className="flex-1">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
                   <h3 className="text-lg font-semibold text-white">
                     {record.workType}
                   </h3>
                   {getStatusBadge(record.status, record.isVerified)}
                 </div>
                 {record.description && (
-                  <p className="text-sm text-white/70 line-clamp-2">
+                  <p className="line-clamp-2 text-sm text-white/70">
                     {record.description}
                   </p>
                 )}
               </div>
               {record.cost !== null && (
-                <div className="text-right flex-shrink-0">
+                <div className="flex-shrink-0 text-right">
                   <p className="text-lg font-semibold text-green-400">
                     ${record.cost.toLocaleString()}
                   </p>
@@ -296,8 +303,10 @@ function JobRequestsTab({
       PENDING: "bg-orange-500/20 text-orange-300 border-orange-500/30",
       QUOTED: "bg-blue-500/20 text-blue-300 border-blue-500/30",
       ACCEPTED: "bg-green-500/20 text-green-300 border-green-500/30",
-      IN_PROGRESS: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-      COMPLETED: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+      IN_PROGRESS:
+        "bg-purple-500/20 text-purple-300 border-purple-500/30",
+      COMPLETED:
+        "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
       DECLINED: "bg-red-500/20 text-red-300 border-red-500/30",
       CANCELLED: "bg-gray-500/20 text-gray-300 border-gray-500/30",
     };
@@ -342,12 +351,14 @@ function JobRequestsTab({
         >
           <div className="mb-4">
             <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-semibold text-white">{job.title}</h3>
+              <h3 className="text-lg font-semibold text-white">
+                {job.title}
+              </h3>
               {getStatusBadge(job.status)}
               {getUrgencyBadge(job.urgency)}
             </div>
 
-            <p className="text-sm text-white/70 line-clamp-2">
+            <p className="line-clamp-2 text-sm text-white/70">
               {job.description}
             </p>
 
@@ -356,11 +367,14 @@ function JobRequestsTab({
               {job.desiredDate && (
                 <span>
                   Desired:{" "}
-                  {new Date(job.desiredDate).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
+                  {new Date(job.desiredDate).toLocaleDateString(
+                    "en-US",
+                    {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }
+                  )}
                 </span>
               )}
               <span>
@@ -453,9 +467,9 @@ function PendingApprovalsTab({
           href={`/home/${homeId}/completed-work-submissions`}
           className="block rounded-xl border border-orange-500/30 bg-orange-500/5 p-6 transition-colors hover:bg-orange-500/10"
         >
-          <div className="flex items-start justify-between gap-4 mb-3">
+          <div className="mb-3 flex items-start justify-between gap-4">
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="mb-2 flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-white">
                   {submission.workType}
                 </h3>
@@ -464,7 +478,7 @@ function PendingApprovalsTab({
                 </span>
               </div>
               {submission.description && (
-                <p className="text-sm text-white/70 line-clamp-2">
+                <p className="line-clamp-2 text-sm text-white/70">
                   {submission.description}
                 </p>
               )}
@@ -496,7 +510,7 @@ function PendingApprovalsTab({
             </span>
           </div>
 
-          <div className="mt-4 pt-4 border-t border-white/10">
+          <div className="mt-4 border-t border-white/10 pt-4">
             <p className="text-sm text-orange-300">
               👉 Click to review and approve this work
             </p>

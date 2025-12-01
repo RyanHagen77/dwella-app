@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ctaGhost } from "@/lib/glass";
-import { EditRecordModal } from "./EditRecordModal";
+import { EditRecordModal } from "@/app/home/[homeId]/records/_components/EditRecordModal";
 
 type RecordData = {
   id: string;

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ctaPrimary } from "@/lib/glass";
-import { InviteProModal } from "@/app/home/[homeId]/invitations/InviteProModal";
+import { InviteProModal } from "@/app/home/[homeId]/invitations/_components/InviteProModal";
 
 type ContractorActionsProps = {
   homeId: string;

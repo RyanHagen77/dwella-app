@@ -6,18 +6,18 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
-import { RecordActions } from "./_components/RecordActions";
+import { RecordActions } from "./RecordActions";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
 type PageProps = {
-  params: Promise<{
+  params: {
     homeId: string;
     recordId: string;
-  }>;
+  };
 };
 
 export default async function RecordDetailPage({ params }: PageProps) {
-  const { homeId, recordId } = await params;
+  const { homeId, recordId } = params;
   const session = await getServerSession(authConfig);
 
   if (!session?.user?.id) notFound();
@@ -32,7 +32,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
           filename: true,
           url: true,
           mimeType: true,
-          size: true,
+          size: true, // likely BigInt in DB
           createdAt: true,
         },
       },
@@ -57,7 +57,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
     home.city ? `, ${home.city}` : ""
   }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
-  // Serialize for client component
+  // Normalize for client (RecordActions)
   const serializedRecord = {
     id: record.id,
     title: record.title,
@@ -68,17 +68,20 @@ export default async function RecordDetailPage({ params }: PageProps) {
     note: record.note,
   };
 
-  const imageAttachments = record.attachments.filter((a) =>
+  // Normalize attachment sizes (BigInt -> number | null)
+  const attachments = record.attachments.map((a) => ({
+    ...a,
+    size: a.size == null ? null : Number(a.size),
+  }));
+
+  const imageAttachments = attachments.filter((a) =>
     a.mimeType?.startsWith("image/")
   );
-  const docAttachments = record.attachments.filter(
+  const docAttachments = attachments.filter(
     (a) => !a.mimeType?.startsWith("image/")
   );
 
-  const hasMeta =
-    (record.date && record.date instanceof Date) ||
-    typeof record.date === "string" ||
-    record.vendor;
+  const hasMeta = !!record.date || !!record.vendor;
 
   const dateLabel = record.date
     ? new Date(record.date).toLocaleDateString("en-US", {
@@ -104,20 +107,23 @@ export default async function RecordDetailPage({ params }: PageProps) {
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         {/* Breadcrumb */}
         <Breadcrumb
           items={[
             { label: addrLine, href: `/home/${homeId}` },
-            { label: "Maintenance & Repairs", href: `/home/${homeId}/records` },
-            { label: record.title }, // current page
+            {
+              label: "Maintenance & Repairs",
+              href: `/home/${homeId}/records`,
+            },
+            { label: record.title },
           ]}
         />
 
         {/* Header */}
         <section className={glass}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="mb-2 flex items-center gap-3">
                 <Link
                   href={`/home/${homeId}/records`}
@@ -139,9 +145,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
                     />
                   </svg>
                 </Link>
-                <h1
-                  className={`truncate text-2xl font-bold ${heading}`}
-                >
+                <h1 className={`truncate text-2xl font-bold ${heading}`}>
                   {record.title}
                 </h1>
               </div>
@@ -163,7 +167,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
               )}
             </div>
 
-            {/* Actions */}
+            {/* Actions (client) */}
             <RecordActions
               recordId={recordId}
               homeId={homeId}
@@ -192,9 +196,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
               {record.vendor && (
                 <div>
                   <p className={`text-sm ${textMeta}`}>Vendor</p>
-                  <p className="font-medium text-white">
-                    {record.vendor}
-                  </p>
+                  <p className="font-medium text-white">{record.vendor}</p>
                 </div>
               )}
               {record.cost != null && (
@@ -230,18 +232,16 @@ export default async function RecordDetailPage({ params }: PageProps) {
         </section>
 
         {/* Attachments */}
-        {record.attachments.length > 0 && (
+        {attachments.length > 0 && (
           <section className={glass}>
             <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
-              Attachments ({record.attachments.length})
+              Attachments ({attachments.length})
             </h2>
 
             {/* Photos */}
             {imageAttachments.length > 0 && (
               <div className="mb-6">
-                <h3
-                  className={`mb-3 text-sm font-medium ${textMeta}`}
-                >
+                <h3 className={`mb-3 text-sm font-medium ${textMeta}`}>
                   Photos
                 </h3>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -290,14 +290,16 @@ export default async function RecordDetailPage({ params }: PageProps) {
             {/* Documents */}
             {docAttachments.length > 0 && (
               <div>
-                <h3
-                  className={`mb-3 text-sm font-medium ${textMeta}`}
-                >
+                <h3 className={`mb-3 text-sm font-medium ${textMeta}`}>
                   Documents
                 </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {docAttachments.map((attachment) => {
                     const href = `/api/home/${homeId}/attachments/${attachment.id}`;
+                    const sizeKb =
+                      attachment.size != null
+                        ? (attachment.size / 1024).toFixed(1)
+                        : null;
 
                     return (
                       <a
@@ -320,10 +322,8 @@ export default async function RecordDetailPage({ params }: PageProps) {
                             {attachment.filename}
                           </p>
                           <p className="text-xs text-white/60">
-                            {(
-                              Number(attachment.size) / 1024
-                            ).toFixed(1)}{" "}
-                            KB
+                            {attachment.mimeType}
+                            {sizeKb ? ` • ${sizeKb} KB` : ""}
                           </p>
                         </div>
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { glass, ctaPrimary, heading } from "@/lib/glass";
-import { InviteProModal } from "@/app/home/[homeId]/invitations/InviteProModal";
+import { InviteProModal } from "@/app/home/[homeId]/invitations/_components/InviteProModal";
 
 type ConnectionWithContractor = {
   id: string;

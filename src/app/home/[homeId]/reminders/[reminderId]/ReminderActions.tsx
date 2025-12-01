@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ctaGhost } from "@/lib/glass";
-import { EditReminderModal } from "../../_components/EditReminderModal";
+import { EditReminderModal } from "../_components/EditReminderModal";
 
 type ReminderData = {
   id: string;

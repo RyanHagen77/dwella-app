@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { glass, glassTight, ctaGhost } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
-import { EditWarrantyModal } from "./EditWarrantyModal";
+import { EditWarrantyModal } from "./_components/EditWarrantyModal";
 
 export type WarrantyItem = {
   id: string;

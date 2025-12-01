@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { glass, ctaGhost } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
-import { EditReminderModal } from "./EditReminderModal";
+import { EditReminderModal } from "./_components/EditReminderModal";
 
 export type ReminderItem = {
   id: string;

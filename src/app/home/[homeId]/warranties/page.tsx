@@ -7,7 +7,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import { WarrantiesPageClient } from "./_components/WarrantiesPageClient";
+import { WarrantiesPageClient } from "./WarrantiesPageClient";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
 export default async function WarrantiesPage({

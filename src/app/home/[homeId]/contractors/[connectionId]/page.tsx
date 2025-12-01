@@ -1,3 +1,4 @@
+// app/home/[homeId]/contractors/[connectionId]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -8,8 +9,13 @@ import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import { ContractorDetailClient } from "./ContractorDetailClient";
+import { ContractorDetailTabs } from "./_components/ContractorDetailTabs";
 import { DisconnectContractor } from "./DisconnectContractor";
+
+type PageProps = {
+  params: { homeId: string; connectionId: string };
+  searchParams: { tab?: string };
+};
 
 function formatDate(value: Date | string | null | undefined): string {
   if (!value) return "—";
@@ -24,17 +30,15 @@ function formatDate(value: Date | string | null | undefined): string {
 
 export default async function ContractorDetailPage({
   params,
-}: {
-  params: Promise<{ homeId: string; connectionId: string }>;
-}) {
-  const { homeId, connectionId } = await params;
+  searchParams,
+}: PageProps) {
+  const { homeId, connectionId } = params;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Connection with related data
   const connection = await prisma.connection.findFirst({
     where: {
       id: connectionId,
@@ -83,7 +87,6 @@ export default async function ContractorDetailPage({
 
   const contractor = connection.contractor;
 
-  // Work records for this stats + contractor
   const workRecords = await prisma.workRecord.findMany({
     where: {
       homeId,
@@ -111,7 +114,6 @@ export default async function ContractorDetailPage({
     },
   });
 
-  // Job requests between homeowner + contractor
   const jobRequests = await prisma.jobRequest.findMany({
     where: {
       homeId,
@@ -146,7 +148,6 @@ export default async function ContractorDetailPage({
     },
   });
 
-  // Pending work submissions from contractor awaiting homeowner review
   const pendingWorkSubmissions = await prisma.workSubmission.findMany({
     where: {
       homeId,
@@ -176,7 +177,6 @@ export default async function ContractorDetailPage({
     home.city ? `, ${home.city}` : ""
   }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
-  // Stats - calculate totalSpent from verified work records
   const verifiedRecords = workRecords.filter((r) => r.isVerified);
   const verifiedJobsCount = verifiedRecords.length;
   const totalJobsCount = workRecords.length;
@@ -189,7 +189,6 @@ export default async function ContractorDetailPage({
     ["PENDING", "QUOTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status)
   ).length;
 
-  // Display data
   const contractorData = {
     id: contractor.id,
     name: contractor.name,
@@ -256,8 +255,6 @@ export default async function ContractorDetailPage({
       : null,
   }));
 
-  // ---- Pending submissions: workSubmissions + documented_pending workRecords ----
-
   const pendingFromSubmissions = pendingWorkSubmissions.map((sub) => ({
     id: sub.id,
     workType: sub.workType,
@@ -270,11 +267,8 @@ export default async function ContractorDetailPage({
     ),
   }));
 
-  // Treat documented_pending / documented_unverified work records as pending submissions too
   const pendingFromRecords = workRecordsData
-    .filter((r) =>
-      ["DOCUMENTED_UNVERIFIED"].includes(r.status)
-    )
+    .filter((r) => ["DOCUMENTED_UNVERIFIED"].includes(r.status))
     .map((r) => ({
       id: r.id,
       workType: r.workType,
@@ -291,6 +285,10 @@ export default async function ContractorDetailPage({
   ];
 
   const pendingSubmissionsCount = pendingSubmissionsData.length;
+
+  const tab = searchParams.tab;
+  const activeTab: "work-history" | "requests" | "pending" =
+    tab === "requests" ? "requests" : tab === "pending" ? "pending" : "work-history";
 
   return (
     <main className="relative min-h-screen text-white">
@@ -314,14 +312,19 @@ export default async function ContractorDetailPage({
           items={[
             { label: addrLine, href: `/home/${homeId}` },
             { label: "Contractors", href: `/home/${homeId}/contractors` },
-            { label: contractorData.businessName || contractorData.name || "Contractor" },
+            {
+              label:
+                contractorData.businessName ||
+                contractorData.name ||
+                "Contractor",
+            },
           ]}
         />
 
         {/* Header */}
         <section className={glass}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-1 min-w-0 items-center gap-4">
+            <div className="flex min-w-0 flex-1 items-center gap-4">
               <Link
                 href={`/home/${homeId}/contractors`}
                 className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
@@ -343,7 +346,6 @@ export default async function ContractorDetailPage({
                 </svg>
               </Link>
 
-              {/* Avatar */}
               {contractorData.image ? (
                 <Image
                   src={contractorData.image}
@@ -366,7 +368,6 @@ export default async function ContractorDetailPage({
                 </div>
               )}
 
-              {/* Name + meta */}
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className={`truncate text-2xl font-bold ${heading}`}>
@@ -404,7 +405,6 @@ export default async function ContractorDetailPage({
                   </p>
                 )}
 
-                {/* Phone + email inline */}
                 <div className="flex flex-wrap items-center gap-3 text-sm">
                   {contractorData.phone && (
                     <a
@@ -427,7 +427,7 @@ export default async function ContractorDetailPage({
                       href={contractorData.website}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-white/60 hover:text-white/90 underline-offset-2 hover:underline"
+                      className="text-white/60 underline-offset-2 hover:text-white/90 hover:underline"
                     >
                       Website
                     </a>
@@ -440,7 +440,6 @@ export default async function ContractorDetailPage({
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex flex-shrink-0 gap-2">
               <Link
                 href={`/home/${homeId}/messages/${connectionData.id}`}
@@ -476,21 +475,26 @@ export default async function ContractorDetailPage({
           />
         </section>
 
-        {/* Tabs: work history / requests / pending submissions */}
-        <ContractorDetailClient
+        {/* Tabs + content */}
+        <ContractorDetailTabs
           homeId={homeId}
           connectionId={connectionData.id}
           workRecords={workRecordsData}
           jobRequests={jobRequestsData}
           pendingSubmissions={pendingSubmissionsData}
           activeRequestsCount={activeRequestsCount}
+          pendingApprovalsCount={pendingSubmissionsCount}
+          activeTab={activeTab}
         />
 
-        {/* Danger Zone */}
         <DisconnectContractor
           connectionId={connectionData.id}
           homeId={homeId}
-          contractorName={contractorData.businessName || contractorData.name || "this contractor"}
+          contractorName={
+            contractorData.businessName ||
+            contractorData.name ||
+            "this contractor"
+          }
         />
 
         <div className="h-12" />

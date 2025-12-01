@@ -7,23 +7,22 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import { ReminderActions } from "./_components/ReminderActions";
+import { ReminderActions } from "./ReminderActions";
 import Breadcrumb from "@/components/ui/Breadcrumb";
-
 
 export default async function ReminderDetailPage({
   params,
 }: {
-  params: Promise<{ homeId: string; reminderId: string }>;
+  params: { homeId: string; reminderId: string };
 }) {
-  const { homeId, reminderId } = await params;
+  const { homeId, reminderId } = params;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Get the reminder
+  // Get the reminder + attachments
   const reminder = await prisma.reminder.findUnique({
     where: { id: reminderId },
     select: {
@@ -32,6 +31,14 @@ export default async function ReminderDetailPage({
       dueAt: true,
       note: true,
       homeId: true,
+      attachments: {
+        select: {
+          id: true,
+          filename: true,
+          mimeType: true,
+          size: true, // BigInt in DB
+        },
+      },
     },
   });
 
@@ -63,17 +70,23 @@ export default async function ReminderDetailPage({
   );
   const isDueSoon = !isOverdue && daysUntilDue <= 7;
 
+  // Map attachments with bigint -> number
+  const attachments = reminder.attachments.map((att) => ({
+    ...att,
+    size: att.size == null ? null : Number(att.size),
+  }));
+
   return (
     <main className="relative min-h-screen text-white">
       <Bg />
 
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         {/* Breadcrumb */}
         <Breadcrumb
           items={[
             { label: addrLine, href: `/home/${homeId}` },
             { label: "Reminders", href: `/home/${homeId}/reminders` },
-            { label: reminder.title }, // current page
+            { label: reminder.title },
           ]}
         />
 
@@ -103,9 +116,7 @@ export default async function ReminderDetailPage({
               </Link>
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <h1
-                    className={`truncate text-2xl font-bold ${heading}`}
-                  >
+                  <h1 className={`truncate text-2xl font-bold ${heading}`}>
                     {reminder.title}
                   </h1>
                   {isOverdue && (
@@ -149,7 +160,7 @@ export default async function ReminderDetailPage({
             </div>
 
             <ReminderActions
-              reminderId={reminderId}
+              reminderId={reminder.id}
               homeId={homeId}
               reminder={{
                 id: reminder.id,
@@ -163,12 +174,10 @@ export default async function ReminderDetailPage({
 
         {/* Main content */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left column - Details */}
+          {/* Left column - Details + Attachments */}
           <div className="lg:col-span-2">
             <section className={glass}>
-              <h2 className={`mb-4 text-lg font-medium ${heading}`}>
-                Details
-              </h2>
+              <h2 className={`mb-4 text-lg font-medium ${heading}`}>Details</h2>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <DetailField
                   label="Due Date"
@@ -201,6 +210,46 @@ export default async function ReminderDetailPage({
                   </p>
                 </div>
               )}
+
+              {/* Attachments */}
+              <div className="mt-4 border-t border-white/10 pt-4">
+                <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">
+                  Attachments
+                </div>
+
+                {attachments.length === 0 ? (
+                  <p className="text-sm text-white/60">No attachments.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {attachments.map((att) => (
+                      <div
+                        key={att.id}
+                        className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm text-white">
+                            {att.filename}
+                          </p>
+                          <p className="text-xs text-white/60">
+                            {att.mimeType}
+                            {att.size != null
+                              ? ` • ${(att.size / 1024).toFixed(1)} KB`
+                              : ""}
+                          </p>
+                        </div>
+
+                        <Link
+                          href={`/api/home/${homeId}/attachments/${att.id}`}
+                          target="_blank"
+                          className="inline-flex items-center rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/15"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </section>
           </div>
 
