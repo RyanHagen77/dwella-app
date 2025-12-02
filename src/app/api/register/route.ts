@@ -54,11 +54,53 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: strengthError }, { status: 400 });
     }
 
-    // Check if existing user
-    const exists = await prisma.user.findUnique({
+    // --- EXISTING USER HANDLING ---
+    const existingUser = await prisma.user.findUnique({
       where: { email: normalizedEmail },
+      select: {
+        id: true,
+        emailVerified: true,
+      },
     });
-    if (exists) {
+
+    if (existingUser) {
+      // If user exists but is NOT verified, just resend verification instead of blocking
+      if (!existingUser.emailVerified) {
+        // Clear any old tokens
+        await prisma.emailVerificationToken.deleteMany({
+          where: { userId: existingUser.id },
+        });
+
+        const verifyToken = crypto.randomBytes(32).toString("hex");
+
+        await prisma.emailVerificationToken.create({
+          data: {
+            token: verifyToken,
+            userId: existingUser.id,
+            expiresAt: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
+          },
+        });
+
+        // Fire-and-forget send
+        sendEmailVerificationEmail({
+          to: normalizedEmail,
+          token: verifyToken,
+        }).catch((err) => {
+          console.error("Error resending verification email:", err);
+        });
+
+        return NextResponse.json(
+          {
+            ok: true,
+            email: normalizedEmail,
+            requiresEmailVerification: true,
+            // optional: message: "Verification email resent",
+          },
+          { status: 200 }
+        );
+      }
+
+      // Verified user already exists → normal "email in use"
       return NextResponse.json(
         { error: "Email already in use" },
         { status: 409 }
@@ -125,7 +167,7 @@ export async function POST(req: Request) {
         email: normalizedEmail,
         passwordHash,
         role: userRole,
-        // emailVerified: null
+        // emailVerified: null  (default)
         proStatus: userRole === "PRO" ? "PENDING" : null,
       },
       select: {
@@ -178,7 +220,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // --- EMAIL VERIFICATION FLOW ---
+    // --- EMAIL VERIFICATION FLOW FOR NEW USER ---
     await prisma.emailVerificationToken.deleteMany({
       where: { userId: user.id },
     });

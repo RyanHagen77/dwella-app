@@ -121,18 +121,19 @@ function RegisterForm() {
         }),
       });
 
+      const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        setMsg(j.error || "Failed to register");
+        setMsg(data.error || "Failed to register");
         setLoading(false);
         return;
       }
 
-      const data = await res.json().catch(() => ({}));
-      const email = data.email ?? form.email;
+      const email = (data.email as string | undefined) ?? form.email;
 
-      // 👉 Go to "check your email" page instead of straight to login
+      // ⬅️ THIS IS THE IMPORTANT PART
       router.push(`/login/check-email?email=${encodeURIComponent(email)}`);
+
     } catch {
       setMsg("Registration failed");
       setLoading(false);
