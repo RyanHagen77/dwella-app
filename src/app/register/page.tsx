@@ -34,7 +34,7 @@ function validatePasswordStrengthClient(password: string, email?: string): strin
   }
 
   const lower = password.toLowerCase();
-  const weakFragments = ["password", "qwerty", "123456", "mydwella"];
+  const weakFragments = ["password", "qwerty", "123456", "dwella"];
 
   if (weakFragments.some((frag) => lower.includes(frag))) {
     return "Password is too easy to guess. Please choose something more unique.";
@@ -65,6 +65,7 @@ function RegisterForm() {
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   // Fetch invitation details
   useEffect(() => {
@@ -103,6 +104,11 @@ function RegisterForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMsg(null);
+
+    if (!acceptedTerms) {
+      setMsg("You must agree to the Terms & Conditions and Privacy Policy to create an account.");
+      return;
+    }
 
     const strengthError = validatePasswordStrengthClient(form.password, form.email);
     if (strengthError) {
@@ -228,40 +234,74 @@ function RegisterForm() {
           </div>
 
           {/* Password */}
-          <div className="relative">
+          <div>
             <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
               Password <span className="text-red-400">*</span>
             </label>
 
-            <input
-              className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 pr-12 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
-              placeholder="Minimum 10 characters"
-              type={showPassword ? "text" : "password"}
-              value={form.password}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, password: e.target.value }))
-              }
-              required
-              minLength={10}
-            />
+            <div className="relative">
+              <input
+                className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 pr-12 text-sm text-white placeholder:text-white/40 focus:ring-2 focus:ring-[#33C17D]/70"
+                placeholder="Minimum 10 characters"
+                type={showPassword ? "text" : "password"}
+                value={form.password}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, password: e.target.value }))
+                }
+                required
+                minLength={10}
+              />
 
-            <button
-              type="button"
-              onClick={() => setShowPassword((s) => !s)}
-              className="absolute right-3 top-[32px] text-xs text-white/70 hover:text-white"
-            >
-              {showPassword ? "Hide" : "Show"}
-            </button>
+              <button
+                type="button"
+                onClick={() => setShowPassword((s) => !s)}
+                className="absolute inset-y-0 right-3 flex items-center text-xs text-white/70 hover:text-white"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
 
             <p className="mt-1 text-xs text-white/55">
               Use at least 10 characters, including a number.
             </p>
           </div>
 
+          {/* Terms & Conditions */}
+          <div className="mt-2 flex items-start gap-2">
+            <input
+              id="accept-terms"
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border border-white/40 bg-black/60 text-[#33C17D] focus:ring-[#33C17D]/70"
+              required
+            />
+            <label
+              htmlFor="accept-terms"
+              className="text-xs sm:text-sm text-white/70"
+            >
+              I agree to the{" "}
+            <Link
+              href="/terms"
+              className="text-[#33C17D] hover:text-[#33C17D]/80 underline-offset-2 hover:underline"
+            >
+              Terms &amp; Conditions
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/privacy"
+              className="text-[#33C17D] hover:text-[#33C17D]/80 underline-offset-2 hover:underline"
+            >
+              {" "}Privacy Policy
+            </Link>
+              .
+            </label>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 w-full rounded-xl bg-[rgba(243,90,31,0.95)] py-3 text-sm font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
+            className="mt-4 w-full rounded-xl bg-[rgba(243,90,31,0.95)] py-3 text-sm font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
           >
             {loading
               ? "Creating your account..."

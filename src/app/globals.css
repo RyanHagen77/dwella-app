@@ -67,7 +67,7 @@ html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 @layer base {
   html,
   body {
-    @apply bg-black text-white;
+    @apply text-white;
     min-height: 100%;
   }
 }
