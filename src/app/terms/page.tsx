@@ -312,7 +312,7 @@ export default function TermsPage() {
                 href="mailto:support@mydwellaapp.com"
                 className="text-[#33C17D] hover:text-[#33C17D]/80"
               >
-                support@mydwella.com
+                support@mydwellaapp.com
               </a>
               .
             </p>
@@ -333,7 +333,7 @@ export default function TermsPage() {
                 href="mailto:support@mydwellaapp.com"
                 className="text-[#33C17D] hover:text-[#33C17D]/80"
               >
-                support@mydwella.com
+                support@mydwellaapp.com
               </a>
             </p>
           </section>

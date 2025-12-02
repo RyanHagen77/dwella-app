@@ -37,7 +37,7 @@ export default async function ProPendingPage() {
             <p className="mb-4 text-sm text-gray-600">
               Questions about your application?
             </p>
-            <a href="mailto:support@myhomedox.com" className="text-blue-600 hover:underline">
+            <a href="mailto:support@mydwellaapp.com" className="text-blue-600 hover:underline">
               Contact Support
             </a>
           </div>
