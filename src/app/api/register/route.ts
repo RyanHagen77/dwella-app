@@ -125,7 +125,7 @@ export async function POST(req: Request) {
         email: normalizedEmail,
         passwordHash,
         role: userRole,
-        // emailVerified: null  // default is null, leave unset
+        // emailVerified: null
         proStatus: userRole === "PRO" ? "PENDING" : null,
       },
       select: {
@@ -179,7 +179,6 @@ export async function POST(req: Request) {
     }
 
     // --- EMAIL VERIFICATION FLOW ---
-    // Remove any old tokens for this user (shouldn't exist yet, but safe)
     await prisma.emailVerificationToken.deleteMany({
       where: { userId: user.id },
     });
@@ -194,7 +193,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // Fire and forget the email; no need to block the response
     sendEmailVerificationEmail({
       to: normalizedEmail,
       token: verifyToken,
@@ -202,7 +200,15 @@ export async function POST(req: Request) {
       console.error("Error sending verification email:", err);
     });
 
-    return NextResponse.json(user);
+    // ⬇️ Tell the frontend "go to check-email"
+    return NextResponse.json(
+      {
+        ok: true,
+        email: normalizedEmail,
+        requiresEmailVerification: true,
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error("Registration error:", error);
     return NextResponse.json(

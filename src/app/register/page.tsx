@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import * as React from "react";
@@ -52,6 +52,7 @@ function validatePasswordStrengthClient(password: string, email?: string): strin
 
 function RegisterForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const token = searchParams.get("token");
 
   const [form, setForm] = useState<RegisterForm>({
@@ -127,7 +128,11 @@ function RegisterForm() {
         return;
       }
 
-      window.location.href = "/login";
+      const data = await res.json().catch(() => ({}));
+      const email = data.email ?? form.email;
+
+      // 👉 Go to "check your email" page instead of straight to login
+      router.push(`/login/check-email?email=${encodeURIComponent(email)}`);
     } catch {
       setMsg("Registration failed");
       setLoading(false);
