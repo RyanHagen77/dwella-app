@@ -4,7 +4,7 @@ import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
 import { WorkSubmissionStatus } from "@prisma/client";
-import WorkClient from "./WorkClient";
+import CompletedWorkSubmissionsClient from "./CompletedWorkSubmissionsClient";
 
 export default async function WorkPage({
   params,
@@ -88,8 +88,8 @@ export default async function WorkPage({
     },
   });
 
-  // Job requests
-  const jobRequestsRaw = await prisma.jobRequest.findMany({
+  // Service requests (renamed from JobRequest)
+  const serviceRequestsRaw = await prisma.serviceRequest.findMany({
     where: {
       homeId,
       homeownerId: session.user.id,
@@ -174,46 +174,50 @@ export default async function WorkPage({
       })),
     }));
 
-  const jobRequests = jobRequestsRaw
-    .filter((job) => job.contractor !== null)
-    .map((job) => ({
-      id: job.id,
-      title: job.title,
-      description: job.description,
-      category: job.category,
-      urgency: job.urgency,
-      budgetMin: job.budgetMin ? Number(job.budgetMin) : null,
-      budgetMax: job.budgetMax ? Number(job.budgetMax) : null,
-      desiredDate: job.desiredDate?.toISOString() || null,
-      status: job.status,
-      createdAt: job.createdAt.toISOString(),
-      contractor: job.contractor!,
-      quote: job.quote
+  const serviceRequests = serviceRequestsRaw
+    .filter((sr) => sr.contractor !== null)
+    .map((sr) => ({
+      id: sr.id,
+      title: sr.title,
+      description: sr.description,
+      category: sr.category,
+      urgency: sr.urgency,
+      budgetMin: sr.budgetMin ? Number(sr.budgetMin) : null,
+      budgetMax: sr.budgetMax ? Number(sr.budgetMax) : null,
+      desiredDate: sr.desiredDate?.toISOString() || null,
+      status: sr.status,
+      createdAt: sr.createdAt.toISOString(),
+      updatedAt: sr.updatedAt.toISOString(),
+      respondedAt: sr.respondedAt?.toISOString() || null,
+      contractor: sr.contractor!,
+      quote: sr.quote
         ? {
-            id: job.quote.id,
-            totalAmount: Number(job.quote.totalAmount),
-            status: job.quote.status,
-            expiresAt: job.quote.expiresAt?.toISOString() || null,
+            id: sr.quote.id,
+            totalAmount: Number(sr.quote.totalAmount),
+            status: sr.quote.status,
+            expiresAt: sr.quote.expiresAt?.toISOString() || null,
           }
         : null,
-      workRecord: job.workRecord
+      workRecord: sr.workRecord
         ? {
-            id: job.workRecord.id,
-            status: job.workRecord.status,
-            workDate: job.workRecord.workDate.toISOString(),
+            id: sr.workRecord.id,
+            status: sr.workRecord.status,
+            workDate: sr.workRecord.workDate.toISOString(),
           }
         : null,
     }));
 
+  const homeAddress = `${home.address}${home.city ? `, ${home.city}` : ""}${
+    home.state ? `, ${home.state}` : ""
+  }${home.zip ? ` ${home.zip}` : ""}`;
+
   return (
-    <WorkClient
+    <CompletedWorkSubmissionsClient
       homeId={homeId}
-      homeAddress={`${home.address}${home.city ? `, ${home.city}` : ""}${
-        home.state ? `, ${home.state}` : ""
-      }`}
+      homeAddress={homeAddress}
       connections={connections}
       pendingWork={pendingWork}
-      jobRequests={jobRequests}
+      serviceRequests={serviceRequests}
     />
   );
 }

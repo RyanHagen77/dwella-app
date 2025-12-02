@@ -296,7 +296,7 @@ export async function acceptTransfer(
     }
 
     // 8. Transfer all job requests to the new owner
-    await tx.jobRequest.updateMany({
+    await tx.serviceRequest.updateMany({
       where: {
         homeId: transfer.homeId,
         homeownerId: transfer.fromUserId,

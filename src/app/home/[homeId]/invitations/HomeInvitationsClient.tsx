@@ -440,6 +440,7 @@ export default function HomeInvitationsClient({
   const pendingCount = pendingReceived.length;
   const pendingSentCount = sent.filter((i) => i.status === "PENDING").length;
   const totalInvitations = received.length + sent.length;
+  const totalPending = pendingCount + pendingSentCount;
 
   function handleAcceptClick(invitationId: string) {
     setSelectedInvitation(invitationId);
@@ -541,43 +542,57 @@ export default function HomeInvitationsClient({
     <>
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         {/* Breadcrumb */}
-        <Breadcrumb href={`/home/${homeId}`} label={homeAddress} current="Invitations" />
+        <Breadcrumb
+          href={`/home/${homeId}`}
+          label={homeAddress}
+          current="Invitations"
+        />
 
-        {/* Header */}
+        {/* Header – matches other list pages */}
         <section className={glass}>
-          <div className="flex flex-col gap-4">
-            {/* Back button */}
-            <Link
-              href={`/home/${homeId}`}
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
-              aria-label="Back"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                className="h-5 w-5"
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              <Link
+                href={`/home/${homeId}`}
+                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
+                aria-label="Back to home"
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18" />
-              </svg>
-            </Link>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                  stroke="currentColor"
+                  className="w-5 h-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
+                  />
+                </svg>
+              </Link>
 
-            {/* Text */}
-            <div className="min-w-0 flex-1">
-              <h1 className={`text-2xl font-bold ${heading}`}>Contractor Invitations</h1>
-              <p className={`mt-1 text-sm ${textMeta}`}>Manage pros invited to this home.</p>
-              <p className={`mt-1 text-xs ${textMeta}`}>
-                {totalInvitations} {totalInvitations === 1 ? "invitation" : "invitations"} • {pendingCount} pending
-              </p>
+              <div className="flex-1 min-w-0">
+                <h1 className={`text-2xl font-bold ${heading}`}>
+                  Contractor Invitations
+                </h1>
+                <p className={`mt-1 text-sm ${textMeta}`}>
+                  Manage pros invited to this home.
+                </p>
+                <p className={`mt-1 text-xs ${textMeta}`}>
+                  {totalInvitations}{" "}
+                  {totalInvitations === 1 ? "invitation" : "invitations"} •{" "}
+                  {totalPending} pending
+                </p>
+              </div>
             </div>
 
             {/* CTA */}
-            <div>
+            <div className="flex-shrink-0">
               <button
                 type="button"
-                className={`${ctaPrimary} w-full rounded-full px-5 py-2 text-sm font-semibold sm:w-auto`}
+                className={`${ctaPrimary} rounded-full px-5 py-2 text-sm font-semibold`}
                 onClick={() => setInviteOpen(true)}
               >
                 + Invite a Pro
@@ -623,7 +638,11 @@ export default function HomeInvitationsClient({
               onDecline={handleDecline}
             />
           ) : (
-            <SentTab invitations={sent} processing={processing} onCancel={handleCancel} />
+            <SentTab
+              invitations={sent}
+              processing={processing}
+              onCancel={handleCancel}
+            />
           )}
         </section>
 

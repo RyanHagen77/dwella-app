@@ -4,23 +4,23 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { glass, glassTight, heading, textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
+import { glass, glassTight, textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
 import { Button, GhostButton } from "@/components/ui/Button";
 import { Input, fieldLabel } from "@/components/ui";
 import { Modal } from "@/components/ui/Modal";
 import { loadJSON, saveJSON } from "@/lib/storage";
 
 /* ---------------- Types ---------------- */
-type JobStatus = "requested" | "scheduled" | "in_progress" | "complete";
-type Job = { id: string; title: string; clientAddress: string; due: string; status: JobStatus; estAmount?: number; };
+type ServiceStatus = "requested" | "scheduled" | "in_progress" | "complete";
+type Service = { id: string; title: string; clientAddress: string; due: string; status: ServiceStatus; estAmount?: number; };
 type RecordItem = { id: string; title: string; date: string; address: string; amount?: number };
 type Pro = { id: string; business: string; category: string; rating: number; verified: boolean; logo?: string; };
-type ProData = { pro: Pro; jobs: Job[]; records: RecordItem[]; clients: { id: string; address: string; sharedLink: string; owner?: string }[]; reviews: any[] };
+type ProData = { pro: Pro; services: Service[]; records: RecordItem[]; clients: { id: string; address: string; sharedLink: string; owner?: string }[]; reviews: any[] };
 
 type InvoiceStatus = "draft" | "sent" | "paid" | "void";
 type Invoice = {
   id: string;
-  jobId?: string;               // link to a job/record if available
+  serviceId?: string;               // link to a service/record if available
   title: string;
   clientAddress: string;
   issueDate: string;            // ISO yyyy-mm-dd
@@ -68,7 +68,7 @@ export default function BillingPage() {
     if ((!billing || billing.invoices.length === 0) && proData?.records?.length) {
       const seeded: Invoice[] = proData.records.slice(0, 3).map(r => ({
         id: "inv-" + cryptoId(),
-        jobId: r.id.startsWith("rec-") ? r.id.slice(4) : undefined,
+        serviceId: r.id.startsWith("rec-") ? r.id.slice(4) : undefined,
         title: r.title || "Service",
         clientAddress: r.address,
         issueDate: r.date,
@@ -335,7 +335,7 @@ function NewInvoiceModal({
     onClose();
   }
   return (
-    <Modal open={open} onClose={onClose} title="New Invoice">
+    <Modal open={open} onCloseAction={onClose} title="New Invoice">
       <div className="space-y-3">
         <label className="block"><span className={fieldLabel}>Title</span>
           <Input value={form.title} onChange={e => setForm({ ...form, title: (e.target as HTMLInputElement).value })} placeholder="e.g., HVAC Tune-Up" />
@@ -387,7 +387,7 @@ function RecordPaymentModal({
     onClose();
   }
   return (
-    <Modal open onClose={onClose} title={`Record Payment — ${invoice.title}`}>
+    <Modal open onCloseAction={onClose} title={`Record Payment — ${invoice.title}`}>
       <div className="space-y-3">
         <div className={`${glassTight} rounded-xl p-3`}>
           <p className="text-sm">Balance: <strong>{currency(invoice.balance)}</strong></p>
@@ -429,7 +429,7 @@ function PaymentMethodsModal({ open, onClose }: { open: boolean; onClose: () => 
   const refCard = useRef<HTMLInputElement>(null);
 
   return (
-    <Modal open={open} onClose={onClose} title="Payment Methods (Demo)">
+    <Modal open={open} onCloseAction={onClose} title="Payment Methods (Demo)">
       <div className="space-y-3">
         <p className={textMeta}>For the demo, toggle which methods you “support”. In production, wire to Stripe (test mode).</p>
         <div className={`${glassTight} rounded-xl p-3 space-y-2`}>

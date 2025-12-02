@@ -6,6 +6,8 @@
       "dom.iterable",
       "esnext"
     ],
+    "types": ["next-auth"],
+
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,

@@ -8,7 +8,7 @@ import {
   buildRecordKey,
   buildReminderKey,
   buildWarrantyKey,
-  buildJobRequestKey,
+  buildServiceRequestKey,
   PUBLIC_S3_URL_PREFIX
 } from "@/lib/s3";
 import { getServerSession } from "next-auth";
@@ -21,7 +21,7 @@ export const runtime = "nodejs";
 /**
  * POST /api/uploads/presign
  * Generate presigned URL for uploads
- * Works for both homeowners (records/reminders/warranties/job-requests) and contractors (document-completed-work-submissions records)
+ * Works for both homeowners (records/reminders/warranties/service-requests) and contractors (document-completed-work-submissions records)
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -32,7 +32,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { homeId, recordId, warrantyId, reminderId, jobRequestId, filename, contentType, size } = body;
+    const { homeId, recordId, warrantyId, reminderId, serviceRequestId, filename, contentType, size } = body;
 
     if (!homeId || !filename || typeof size !== "number") {
       return NextResponse.json(
@@ -95,16 +95,16 @@ export async function POST(req: Request) {
       await requireHomeAccess(homeId, session.user.id);
 
       // Verify job request if provided
-      if (jobRequestId) {
-        const jobRequest = await prisma.jobRequest.findFirst({
+      if (serviceRequestId) {
+        const serviceRequest = await prisma.serviceRequest.findFirst({
           where: {
-            id: jobRequestId,
+            id: serviceRequestId,
             homeId,
             homeownerId: session.user.id,
           },
         });
 
-        if (!jobRequest) {
+        if (!serviceRequest) {
           return NextResponse.json(
             { error: "Job request not found or access denied" },
             { status: 403 }
@@ -116,8 +116,8 @@ export async function POST(req: Request) {
     // Build the S3 key based on entity type
     let key: string;
 
-    if (jobRequestId) {
-      key = buildJobRequestKey(homeId, jobRequestId, filename);
+    if (serviceRequestId) {
+      key = buildServiceRequestKey(homeId, serviceRequestId, filename);
     } else if (warrantyId) {
       key = buildWarrantyKey(homeId, warrantyId, filename);
     } else if (reminderId) {
@@ -126,7 +126,7 @@ export async function POST(req: Request) {
       key = buildRecordKey(homeId, recordId, filename);
     } else {
       return NextResponse.json(
-        { error: "Missing entity ID (recordId, warrantyId, reminderId, or jobRequestId)" },
+        { error: "Missing entity ID (recordId, warrantyId, reminderId, or serviceRequestId)" },
         { status: 400 }
       );
     }

@@ -1,3 +1,4 @@
+// lib/auth.ts
 import "server-only";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +15,8 @@ interface AppToken extends JWT {
   email?: string;
   role?: Role;
   proStatus?: ProStatus | null;
+  emailVerified?: string | null;
+  profileComplete?: boolean;
 }
 
 /* ---------- NextAuth Config ---------- */
@@ -34,13 +37,31 @@ export const authConfig: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: creds.email },
-          select: { id: true, email: true, name: true, passwordHash: true },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            passwordHash: true,
+            emailVerified: true,
+            profileComplete: true,
+          },
         });
+
+        // No user or no password set → invalid credentials
         if (!user?.passwordHash) return null;
 
+        // ✅ Verify password with bcrypt
         const ok = await bcrypt.compare(creds.password, user.passwordHash);
         if (!ok) return null;
 
+        // ✅ Require verified email for password login
+        if (!user.emailVerified) {
+          // This will surface as an error on the login page (e.g. error=EMAIL_NOT_VERIFIED)
+          throw new Error("EMAIL_NOT_VERIFIED");
+        }
+
+        // (Optional) you can also gate on profileComplete here if you want.
+        // For now we just return the user and can handle profile completion via middleware.
         return {
           id: user.id,
           email: user.email,
@@ -52,17 +73,37 @@ export const authConfig: NextAuthOptions = {
     EmailProvider({
       from: process.env.EMAIL_FROM ?? "Dwella <no-reply@dwella.com>",
       async sendVerificationRequest({ identifier, url, provider }) {
+        const email = identifier.trim().toLowerCase();
+
+        // 🔒 Only send magic link if this email already belongs to a user.
+        // This prevents the "new email → magic link → empty account" problem.
+        const existingUser = await prisma.user.findUnique({
+          where: { email },
+          select: { id: true },
+        });
+
+        if (!existingUser) {
+          if (process.env.NODE_ENV !== "production") {
+            console.log(
+              "[EmailProvider] Magic link requested for non-existent user:",
+              email
+            );
+          }
+          // Silently exit: no email is sent, and no account will be created.
+          // User should instead go through your explicit signup flow.
+          return;
+        }
+
         if (process.env.NODE_ENV !== "production") {
           console.log("[DEV] Magic link:", url);
         }
 
         const { Resend } = await import("resend");
         const resend = new Resend(process.env.RESEND_API_KEY ?? "");
-        const to = identifier.trim();
 
         await resend.emails.send({
-          to,
-          from: (provider.from ?? "dwella <no-reply@dwella.com>") as string,
+          to: email,
+          from: (provider.from ?? "Dwella <no-reply@dwella.com>") as string,
           subject: "Your Dwella sign-in link",
           html: `<p>Click to sign in:</p><p><a href="${url}">${url}</a></p>`,
         });
@@ -88,12 +129,21 @@ export const authConfig: NextAuthOptions = {
       if (t.email) {
         const dbUser = await prisma.user.findUnique({
           where: { email: t.email },
-          select: { id: true, role: true, proStatus: true },
+          select: {
+            id: true,
+            role: true,
+            proStatus: true,
+            emailVerified: true,
+            profileComplete: true,
+          },
         });
+
         if (dbUser) {
           t.sub = dbUser.id;
           t.role = dbUser.role;
           t.proStatus = dbUser.proStatus ?? null;
+          t.emailVerified = dbUser.emailVerified?.toISOString() ?? null;
+          t.profileComplete = dbUser.profileComplete;
         }
       }
 
@@ -107,6 +157,8 @@ export const authConfig: NextAuthOptions = {
         session.user.id = t.sub;
         session.user.role = t.role;
         session.user.proStatus = t.proStatus ?? null;
+        session.user.emailVerified = t.emailVerified ?? null;
+        session.user.profileComplete = t.profileComplete ?? false;
       }
       return session;
     },

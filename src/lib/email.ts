@@ -11,14 +11,127 @@ const APP_BASE_URL =
 // Clean and validate the FROM address
 const getFromAddress = () => {
   const raw = process.env.EMAIL_FROM || "hello@mydwellaapp.com";
-  const cleaned = raw.replace(/^["']|["']$/g, '').trim();
+  const cleaned = raw.replace(/^["']|["']$/g, "").trim();
 
-  if (cleaned && !cleaned.includes('<')) {
+  if (cleaned && !cleaned.includes("<")) {
     return `Dwella <${cleaned}>`;
   }
 
   return cleaned || "MyDwella Team <hello@mydwellaapp.com>";
 };
+
+// Basic Microsoft domain detection
+function isMicrosoftEmail(email: string): boolean {
+  const domain = email.split("@").pop()?.toLowerCase() ?? "";
+  return (
+    domain === "outlook.com" ||
+    domain === "hotmail.com" ||
+    domain === "live.com" ||
+    domain === "msn.com"
+  );
+}
+
+export async function sendEmailVerificationEmail({
+  to,
+  token,
+}: {
+  to: string;
+  token: string;
+}) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn(
+      "RESEND_API_KEY is not set – verification email will not be sent."
+    );
+    return { success: false, error: "No API key" };
+  }
+
+  const verifyUrl = `${APP_BASE_URL}/verify-email?token=${encodeURIComponent(
+    token
+  )}`;
+
+  const subject = "Verify your MyDwella email";
+
+  const text = [
+    "Welcome to MyDwella!",
+    "",
+    "Please verify your email address by clicking the link below:",
+    verifyUrl,
+    "",
+    "This link expires in 1 hour.",
+    "",
+    "If you didn't create a MyDwella account, you can safely ignore this email.",
+  ].join("\n");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background-color:#1a1a1a;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#1a1a1a;padding:40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:rgba(40,40,40,0.95);border-radius:24px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.6);">
+                <tr>
+                  <td style="padding:40px;text-align:center;">
+                    <h1 style="margin:0;font-size:28px;font-weight:600;color:#fff;letter-spacing:-0.02em;">
+                      Verify your email
+                    </h1>
+                    <p style="margin:12px 0 0;font-size:15px;color:rgba(255,255,255,0.75);">
+                      Click the button below to confirm your email address for MyDwella.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 40px 40px 40px;text-align:center;">
+                    <a href="${verifyUrl}"
+                       style="display:inline-block;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;padding:14px 40px;border-radius:999px;font-weight:600;font-size:15px;text-decoration:none;border:1px solid rgba(255,255,255,0.25);">
+                      Verify Email
+                    </a>
+                    <p style="margin:24px 0 4px;font-size:13px;color:rgba(255,255,255,0.65);">
+                      Or copy and paste this link:
+                    </p>
+                    <p style="margin:0;font-size:11px;color:rgba(255,255,255,0.6);word-break:break-all;">
+                      ${verifyUrl}
+                    </p>
+                    <p style="margin-top:24px;font-size:12px;color:rgba(255,255,255,0.5);">
+                      This link expires in 1 hour. If you didn't create a MyDwella account, you can safely ignore this email.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const from = getFromAddress();
+
+  try {
+    const data = await resend.emails.send(
+      isMicrosoftEmail(to)
+        ? {
+            from,
+            to,
+            subject,
+            text, // use plain text only for Microsoft
+          }
+        : {
+            from,
+            to,
+            subject,
+            html,
+            text,
+          }
+    );
+
+    console.log("Verification email sent successfully:", data);
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error sending verification email:", error);
+    return { success: false, error };
+  }
+}
 
 // Password reset email
 export async function sendPasswordResetEmail({
@@ -154,14 +267,25 @@ export async function sendPasswordResetEmail({
     </html>
   `;
 
+  const from = getFromAddress();
+
   try {
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject,
-      html,
-      text,
-    });
+    const data = await resend.emails.send(
+      isMicrosoftEmail(to)
+        ? {
+            from,
+            to,
+            subject,
+            text, // plain text only for Microsoft
+          }
+        : {
+            from,
+            to,
+            subject,
+            html,
+            text,
+          }
+    );
 
     console.log("Password reset email sent successfully:", data);
     return { success: true, data };
@@ -228,10 +352,10 @@ export async function sendInvitationEmail({
                     </h1>
                     <p style="margin: 0; font-size: 16px; color: rgba(255, 255, 255, 0.75); line-height: 1.5;">
                       <strong style="color: #ffffff;">${companyName}</strong> has invited you to join Dwella${
-    role === "HOMEOWNER"
-      ? " to manage your stats maintenance"
-      : " as a contractor"
-  }.
+                        role === "HOMEOWNER"
+                          ? " to manage your stats maintenance"
+                          : " as a contractor"
+                      }.
                     </p>
                   </td>
                 </tr>
@@ -337,13 +461,43 @@ export async function sendInvitationEmail({
     </html>
   `;
 
+  const text = [
+    `${greeting}!`,
+    "",
+    `${companyName} has invited you to join Dwella${
+      role === "HOMEOWNER"
+        ? " to manage your stats maintenance."
+        : " as a contractor."
+    }`,
+    "",
+    message ? `Personal message: "${message}"` : "",
+    "",
+    `Click here to accept: ${inviteUrl}`,
+    "",
+    "This invitation expires in 7 days.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const from = getFromAddress();
+
   try {
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject,
-      html,
-    });
+    const data = await resend.emails.send(
+      isMicrosoftEmail(to)
+        ? {
+            from,
+            to,
+            subject,
+            text, // plain text for Microsoft
+          }
+        : {
+            from,
+            to,
+            subject,
+            html,
+            text,
+          }
+    );
 
     console.log("Invitation email sent successfully:", data);
     return { success: true, data };
@@ -392,7 +546,7 @@ export async function sendDisconnectNotificationEmail({
     "",
     "Your message history with this homeowner is still available in your account.",
     "",
-    "If you have questions, you can review your past communications in your dashboard.",
+    `You can review this in your dashboard: ${dashboardUrl}`,
   ].join("\n");
 
   const html = `
@@ -522,14 +676,25 @@ export async function sendDisconnectNotificationEmail({
     </html>
   `;
 
+  const from = getFromAddress();
+
   try {
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject,
-      html,
-      text,
-    });
+    const data = await resend.emails.send(
+      isMicrosoftEmail(to)
+        ? {
+            from,
+            to,
+            subject,
+            text, // plain text for Microsoft
+          }
+        : {
+            from,
+            to,
+            subject,
+            html,
+            text,
+          }
+    );
 
     console.log("Disconnect notification email sent successfully:", data);
     return { success: true, data };
@@ -576,7 +741,7 @@ export async function sendReconnectNotificationEmail({
     "• You can send and receive messages",
     "• You can send quotes and job proposals",
     "",
-    "Log in to your dashboard to get started.",
+    `Log in to your dashboard to get started: ${dashboardUrl}`,
   ].join("\n");
 
   const html = `
@@ -696,14 +861,25 @@ export async function sendReconnectNotificationEmail({
     </html>
   `;
 
+  const from = getFromAddress();
+
   try {
-    const data = await resend.emails.send({
-      from: getFromAddress(),
-      to,
-      subject,
-      html,
-      text,
-    });
+    const data = await resend.emails.send(
+      isMicrosoftEmail(to)
+        ? {
+            from,
+            to,
+            subject,
+            text, // plain text for Microsoft
+          }
+        : {
+            from,
+            to,
+            subject,
+            html,
+            text,
+          }
+    );
 
     console.log("Reconnect notification email sent successfully:", data);
     return { success: true, data };

@@ -90,7 +90,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           createdAt: true,
         },
       },
-      jobRequests: {
+      serviceRequests: {
         where: {
           contractorId: session.user.id,
         },
@@ -231,7 +231,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const totalRevenue = connection.totalSpent || 0;
   const pendingRequests = isArchived
     ? []
-    : property.jobRequests.filter(
+    : property.serviceRequests.filter(
         (req) => req.status === "PENDING" || req.status === "QUOTED"
       );
   const firstPendingRequest = pendingRequests[0];
@@ -287,7 +287,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     },
   };
 
-  const jobStatusConfig: Record<
+  const serviceStatusConfig: Record<
     string,
     { label: string; color: string; bg: string }
   > = {
@@ -580,7 +580,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     </p>
                     {firstPendingRequest && (
                       <Link
-                        href={`/pro/contractor/job-requests/${firstPendingRequest.id}`}
+                        href={`/pro/contractor/service-requests/${firstPendingRequest.id}`}
                         className={`${ctaPrimary} inline-block mt-3 px-4 py-2 text-sm`}
                       >
                         Respond to Request
@@ -595,25 +595,25 @@ export default async function PropertyDetailPage({ params }: PageProps) {
             <section className={glass}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-lg font-semibold ${heading}`}>
-                  Job Requests ({property.jobRequests.length})
+                  Job Requests ({property.serviceRequests.length})
                 </h2>
               </div>
 
-              {property.jobRequests.length === 0 ? (
+              {property.serviceRequests.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="mb-3 text-4xl">📋</div>
                   <p className={textMeta}>No job requests</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {property.jobRequests.map((request) => {
+                  {property.serviceRequests.map((request) => {
                     const requestStatus =
-                      jobStatusConfig[request.status] ||
-                      jobStatusConfig.PENDING;
+                      serviceStatusConfig[request.status] ||
+                      serviceStatusConfig.PENDING;
                     return (
                       <Link
                         key={request.id}
-                        href={`/pro/contractor/job-requests/${request.id}`}
+                        href={`/pro/contractor/service-requests/${request.id}`}
                         className="block rounded-lg border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
                       >
                         <div className="mb-2 flex items-start justify-between gap-3">
@@ -793,7 +793,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   {/* Priority action: Pending request */}
                   {pendingRequests.length > 0 && firstPendingRequest && (
                     <Link
-                      href={`/pro/contractor/job-requests/${firstPendingRequest.id}`}
+                      href={`/pro/contractor/service-requests/${firstPendingRequest.id}`}
                       className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition border-orange-400/30`}
                     >
                       <span className="text-xl">📋</span>

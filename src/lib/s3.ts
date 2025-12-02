@@ -44,7 +44,7 @@ export const s3 = new S3Client({
 /* --- Build keys for any entity type --- */
 export function buildKey(
   homeId: string,
-  entityType: "records" | "reminders" | "warranties" | "job-requests",
+  entityType: "records" | "reminders" | "warranties" | "service-requests",
   entityId: string,
   filename: string
 ) {
@@ -80,12 +80,12 @@ export function buildWarrantyKey(
 }
 
 /* --- Build keys for job requests --- */
-export function buildJobRequestKey(
+export function buildServiceRequestKey(
   homeId: string,
-  jobRequestId: string,
+  serviceRequestId: string,
   filename: string
 ) {
-  return buildKey(homeId, "job-requests", jobRequestId, filename);
+  return buildKey(homeId, "service-requests", serviceRequestId, filename);
 }
 
 /* --- Sign GET URLs --- */

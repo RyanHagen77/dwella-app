@@ -140,7 +140,7 @@ export default async function ContractorsPage({
 
   // Calculate stats (based on active connections only)
   const totalContractors = activeConnectionsRaw.length;
-  const totalVerifiedJobs = workRecords.length;
+  const totalVerifiedServices = workRecords.length;
   const totalSpentAmount = Array.from(spentByContractor.values()).reduce(
     (sum, amount) => sum + amount,
     0
@@ -207,7 +207,7 @@ export default async function ContractorsPage({
         {/* Stats Cards */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard label="Total Contractors" value={totalContractors} />
-          <StatCard label="Verified Jobs" value={totalVerifiedJobs} />
+          <StatCard label="Verified Jobs" value={totalVerifiedServices} />
           <StatCard
             label="Total Spent"
             value={totalSpentAmount > 0 ? `$${totalSpentAmount.toLocaleString()}` : "$0"}

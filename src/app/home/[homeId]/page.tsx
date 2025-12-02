@@ -184,8 +184,8 @@ export default async function HomePage({
     },
   });
 
-  // Get pending job requests count
-  const pendingJobRequestsCount = await prisma.jobRequest.count({
+  // Get pending service requests count
+  const pendingServiceRequestsCount = await prisma.serviceRequest.count({
     where: {
       homeId,
       status: { in: ["PENDING", "QUOTED"] },
@@ -305,7 +305,7 @@ export default async function HomePage({
         <PropertyStats homeId={home.id} stats={stats} />
 
         {/* Needs Attention - Pending Work & Requests */}
-        {(pendingWorkSubmissionsCount > 0 || pendingJobRequestsCount > 0 || pendingInvitationsCount > 0) && (
+        {(pendingWorkSubmissionsCount > 0 || pendingServiceRequestsCount > 0 || pendingInvitationsCount > 0) && (
           <section className={`${glass} border-l-4 border-orange-400`}>
             <h2 className={`text-lg font-semibold text-orange-400 mb-4 ${heading}`}>
               ⚡ Needs Your Attention
@@ -334,8 +334,8 @@ export default async function HomePage({
                 </Link>
               )}
 
-              {/* Pending Job Requests */}
-              {pendingJobRequestsCount > 0 && (
+              {/* Pending Service Requests */}
+              {pendingServiceRequestsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
                   className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
@@ -344,15 +344,15 @@ export default async function HomePage({
                     <span className="text-xl">🔧</span>
                     <div>
                       <p className="text-sm font-medium text-white">
-                        Job Requests
+                        Service Requests
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingJobRequestsCount} request{pendingJobRequestsCount !== 1 ? 's' : ''} pending response
+                        {pendingServiceRequestsCount} request{pendingServiceRequestsCount !== 1 ? 's' : ''} pending response
                       </p>
                     </div>
                   </div>
                   <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingJobRequestsCount}
+                    {pendingServiceRequestsCount}
                   </span>
                 </Link>
               )}

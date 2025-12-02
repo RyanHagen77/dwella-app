@@ -29,7 +29,7 @@ type Property = {
   connectionStatus: string;
   isArchived: boolean;
   archivedAt: string | null;
-  jobCount: number;
+  serviceCount: number;
   lastWorkDate: string | null;
   lastWorkTitle: string | null;
   imageUrl: string | null;

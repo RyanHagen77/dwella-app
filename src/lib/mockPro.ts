@@ -24,7 +24,7 @@ export async function buildProDataFromAddress(address: string): Promise<ProData>
   const today = new Date();
   const addDays = (n:number)=>{ const d=new Date(today); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 
-  const jobs = [
+  const services = [
     { id:"j1", title:"Seasonal HVAC Tune-up", clientAddress: address, due: addDays(2), status:"scheduled", estAmount:180 },
     { id:"j2", title:"Filter Replacement", clientAddress: address, due: addDays(7), status:"requested" as const },
     { id:"j3", title:"Warranty Check", clientAddress: address, due: addDays(10), status:"in_progress" as const, estAmount:120 },
@@ -46,6 +46,6 @@ export async function buildProDataFromAddress(address: string): Promise<ProData>
 
   return {
     pro: { id: `pro_${seed(business)}`, business, category, rating, verified, logo: "/logo-placeholder.svg" },
-    jobs, records: recs, clients, reviews
+    services, records: recs, clients, reviews
   };
 }

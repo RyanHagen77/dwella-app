@@ -1,22 +1,28 @@
+// app/home/[homeId]/_components/HomeActions.tsx
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ctaPrimary, ctaGhost } from "@/lib/glass";
-import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
-import { InviteProModal } from "@/app/home/[homeId]/invitations/_components/InviteProModal";
+import {
+  AddRecordModal,
+  type UnifiedRecordPayload,
+} from "@/app/home/_components/AddRecordModal";
 
 type HomeActionsProps = {
   homeId: string;
-  homeAddress: string;
+  homeAddress: string; // now unused here but safe to keep if other callers rely on the prop
   unreadMessages: number;
 };
 
-export function HomeActions({ homeId, homeAddress, unreadMessages }: HomeActionsProps) {
+export function HomeActions({
+  homeId,
+  homeAddress,
+  unreadMessages,
+}: HomeActionsProps) {
   const router = useRouter();
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [inviteModalOpen, setInviteModalOpen] = useState(false);
 
   async function handleCreate({
     payload,
@@ -94,21 +100,25 @@ export function HomeActions({ homeId, homeAddress, unreadMessages }: HomeActions
           });
 
           const attachEndpoint =
-            payload.type === "record" ? `/api/home/${homeId}/records/${data.id}/attachments` :
-            payload.type === "reminder" ? `/api/home/${homeId}/reminders/${data.id}/attachments` :
-            `/api/home/${homeId}/warranties/${data.id}/attachments`;
+            payload.type === "record"
+              ? `/api/home/${homeId}/records/${data.id}/attachments`
+              : payload.type === "reminder"
+              ? `/api/home/${homeId}/reminders/${data.id}/attachments`
+              : `/api/home/${homeId}/warranties/${data.id}/attachments`;
 
           await fetch(attachEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify([{
-              filename: file.name,
-              size: file.size,
-              contentType: file.type,
-              storageKey: key,
-              url: publicUrl,
-              visibility: "OWNER",
-            }]),
+            body: JSON.stringify([
+              {
+                filename: file.name,
+                size: file.size,
+                contentType: file.type,
+                storageKey: key,
+                url: publicUrl,
+                visibility: "OWNER",
+              },
+            ]),
           });
         }
       }
@@ -142,34 +152,27 @@ export function HomeActions({ homeId, homeAddress, unreadMessages }: HomeActions
           )}
         </Link>
 
-        {/* Request Work */}
+        {/* Request Service → list page */}
         <Link
-          href={`/home/${homeId}/job-requests/new`}
+          href={`/home/${homeId}/completed-work-submissions`}
           className={`${ctaGhost} text-sm`}
         >
-          🔧 Request Work
+          🔧 Request Service
         </Link>
 
-        {/* Invite Pro - opens modal */}
-        <button
-          onClick={() => setInviteModalOpen(true)}
+        {/* Invite Pro → invitations list page */}
+        <Link
+          href={`/home/${homeId}/invitations`}
           className={`${ctaGhost} text-sm`}
         >
           ✉️ Invite Pro
-        </button>
+        </Link>
       </div>
 
       <AddRecordModal
         open={addModalOpen}
         onCloseAction={() => setAddModalOpen(false)}
         onCreateAction={handleCreate}
-      />
-
-      <InviteProModal
-        open={inviteModalOpen}
-        onCloseAction={() => setInviteModalOpen(false)}
-        homeId={homeId}
-        homeAddress={homeAddress}
       />
     </>
   );

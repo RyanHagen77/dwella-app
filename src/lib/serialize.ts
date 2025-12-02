@@ -30,31 +30,31 @@ export function serializeConnections<T extends { totalSpent?: unknown }>(
 /**
  * Serialize a JobRequest object for client components
  */
-export function serializeJobRequest<
+export function serializeServiceRequest<
   T extends {
     budgetMin?: unknown;
     budgetMax?: unknown;
     quote?: { totalAmount?: unknown } | null;
   }
->(jobRequest: T) {
+>(serviceRequest: T) {
   return {
-    ...jobRequest,
+    ...serviceRequest,
     budgetMin:
-      jobRequest.budgetMin && typeof jobRequest.budgetMin === "object"
-        ? Number(jobRequest.budgetMin)
-        : jobRequest.budgetMin,
+      serviceRequest.budgetMin && typeof serviceRequest.budgetMin === "object"
+        ? Number(serviceRequest.budgetMin)
+        : serviceRequest.budgetMin,
     budgetMax:
-      jobRequest.budgetMax && typeof jobRequest.budgetMax === "object"
-        ? Number(jobRequest.budgetMax)
-        : jobRequest.budgetMax,
-    quote: jobRequest.quote
+      serviceRequest.budgetMax && typeof serviceRequest.budgetMax === "object"
+        ? Number(serviceRequest.budgetMax)
+        : serviceRequest.budgetMax,
+    quote: serviceRequest.quote
       ? {
-          ...jobRequest.quote,
+          ...serviceRequest.quote,
           totalAmount:
-            jobRequest.quote.totalAmount &&
-            typeof jobRequest.quote.totalAmount === "object"
-              ? Number(jobRequest.quote.totalAmount)
-              : jobRequest.quote.totalAmount,
+            serviceRequest.quote.totalAmount &&
+            typeof serviceRequest.quote.totalAmount === "object"
+              ? Number(serviceRequest.quote.totalAmount)
+              : serviceRequest.quote.totalAmount,
         }
       : null,
   };
@@ -63,14 +63,14 @@ export function serializeJobRequest<
 /**
  * Serialize an array of JobRequest objects
  */
-export function serializeJobRequests<
+export function serializeServiceRequests<
   T extends {
     budgetMin?: unknown;
     budgetMax?: unknown;
     quote?: { totalAmount?: unknown } | null;
   }
->(jobRequests: T[]) {
-  return jobRequests.map(serializeJobRequest);
+>(serviceRequests: T[]) {
+  return serviceRequests.map(serializeServiceRequest);
 }
 
 /**

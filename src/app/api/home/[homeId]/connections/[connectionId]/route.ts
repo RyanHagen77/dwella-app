@@ -93,7 +93,7 @@ export async function DELETE(
       });
 
       // Cancel any pending job requests with this contractor for this stats
-      await tx.jobRequest.updateMany({
+      await tx.serviceRequest.updateMany({
         where: {
           homeId: homeId,
           connectionId: connectionId,

@@ -16,7 +16,7 @@ type WorkRecord = {
   finalRecordId: string | null;
 };
 
-type JobRequest = {
+type ServiceRequest = {
   id: string;
   title: string;
   description: string;
@@ -55,7 +55,7 @@ export function ContractorDetailTabs({
   homeId,
   connectionId,
   workRecords,
-  jobRequests,
+  serviceRequests,
   pendingSubmissions,
   activeRequestsCount,
   pendingApprovalsCount,
@@ -64,7 +64,7 @@ export function ContractorDetailTabs({
   homeId: string;
   connectionId: string;
   workRecords: WorkRecord[];
-  jobRequests: JobRequest[];
+  serviceRequests: ServiceRequest[];
   pendingSubmissions: PendingSubmission[];
   activeRequestsCount: number;
   pendingApprovalsCount?: number;
@@ -122,7 +122,7 @@ export function ContractorDetailTabs({
           <WorkHistoryTab workRecords={workRecords} homeId={homeId} />
         )}
         {activeTab === "requests" && (
-          <JobRequestsTab jobRequests={jobRequests} homeId={homeId} />
+          <ServiceRequestsTab serviceRequests={serviceRequests} homeId={homeId} />
         )}
         {activeTab === "pending" && (
           <PendingApprovalsTab
@@ -279,18 +279,18 @@ function WorkHistoryTab({
 
 /* ---------- Job Requests Tab ---------- */
 
-function JobRequestsTab({
-  jobRequests,
+function ServiceRequestsTab({
+  serviceRequests: serviceRequests,
   homeId,
 }: {
-  jobRequests: JobRequest[];
+  serviceRequests: ServiceRequest[];
   homeId: string;
 }) {
-  if (jobRequests.length === 0) {
+  if (serviceRequests.length === 0) {
     return (
       <div className="py-10 text-center text-white/80">
         <div className="mb-4 text-5xl">📝</div>
-        <p className="text-lg">No job requests yet.</p>
+        <p className="text-lg">No service requests yet.</p>
         <p className={`mt-2 text-sm ${textMeta}`}>
           Your service requests to this contractor will appear here.
         </p>
@@ -343,31 +343,31 @@ function JobRequestsTab({
 
   return (
     <div className="space-y-4">
-      {jobRequests.map((job) => (
+      {serviceRequests.map((service) => (
         <Link
-          key={job.id}
-          href={`/home/${homeId}/job-requests/${job.id}`}
+          key={service.id}
+          href={`/home/${homeId}/service-requests/${service.id}`}
           className="block rounded-xl border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10"
         >
           <div className="mb-4">
             <div className="mb-2 flex flex-wrap items-center gap-2">
               <h3 className="text-lg font-semibold text-white">
-                {job.title}
+                {service.title}
               </h3>
-              {getStatusBadge(job.status)}
-              {getUrgencyBadge(job.urgency)}
+              {getStatusBadge(service.status)}
+              {getUrgencyBadge(service.urgency)}
             </div>
 
             <p className="line-clamp-2 text-sm text-white/70">
-              {job.description}
+              {service.description}
             </p>
 
             <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/60">
-              {job.category && <span>{job.category}</span>}
-              {job.desiredDate && (
+              {service.category && <span>{service.category}</span>}
+              {service.desiredDate && (
                 <span>
                   Desired:{" "}
-                  {new Date(job.desiredDate).toLocaleDateString(
+                  {new Date(service.desiredDate).toLocaleDateString(
                     "en-US",
                     {
                       month: "short",
@@ -379,7 +379,7 @@ function JobRequestsTab({
               )}
               <span>
                 Created:{" "}
-                {new Date(job.createdAt).toLocaleDateString("en-US", {
+                {new Date(service.createdAt).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -387,14 +387,14 @@ function JobRequestsTab({
               </span>
             </div>
 
-            {(job.budgetMin || job.budgetMax) && (
+            {(service.budgetMin || service.budgetMax) && (
               <div className="mt-2 text-sm text-white/60">
-                Budget: ${job.budgetMin?.toLocaleString() || "0"} - $
-                {job.budgetMax?.toLocaleString() || "0"}
+                Budget: ${service.budgetMin?.toLocaleString() || "0"} - $
+                {service.budgetMax?.toLocaleString() || "0"}
               </div>
             )}
 
-            {job.quote && (
+            {service.quote && (
               <div className="mt-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
                 <div className="flex items-center justify-between">
                   <div>
@@ -402,23 +402,23 @@ function JobRequestsTab({
                       Quote Received
                     </p>
                     <p className="text-lg font-bold text-white">
-                      ${job.quote.totalAmount.toLocaleString()}
+                      ${service.quote.totalAmount.toLocaleString()}
                     </p>
                   </div>
                   <span className="text-xs text-blue-300/80">
-                    {job.quote.status}
+                    {service.quote.status}
                   </span>
                 </div>
               </div>
             )}
 
-            {job.workRecord && (
+            {service.workRecord && (
               <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
                 <p className="text-sm font-medium text-green-300">
                   Work Scheduled
                 </p>
                 <p className="text-sm text-white/80">
-                  {new Date(job.workRecord.workDate).toLocaleDateString(
+                  {new Date(service.workRecord.workDate).toLocaleDateString(
                     "en-US",
                     {
                       month: "short",
@@ -426,7 +426,7 @@ function JobRequestsTab({
                       year: "numeric",
                     }
                   )}{" "}
-                  • {job.workRecord.status.replace(/_/g, " ")}
+                  • {service.workRecord.status.replace(/_/g, " ")}
                 </p>
               </div>
             )}

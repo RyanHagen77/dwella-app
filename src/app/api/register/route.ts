@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
+import crypto from "crypto";
+import { sendEmailVerificationEmail } from "@/lib/email";
 
 // --- Password strength validation ---
 function validatePasswordStrength(password: string, email?: string): string | null {
@@ -17,7 +19,7 @@ function validatePasswordStrength(password: string, email?: string): string | nu
   }
 
   const lower = password.toLowerCase();
-  const bannedFragments = ["password", "123456", "qwerty", "dwella"];
+  const bannedFragments = ["password", "123456", "qwerty", "mydwella"];
 
   if (bannedFragments.some((frag) => lower.includes(frag))) {
     return "Password is too easy to guess. Please choose something more unique.";
@@ -44,14 +46,18 @@ export async function POST(req: Request) {
       );
     }
 
+    const normalizedEmail = String(email).trim().toLowerCase();
+
     // --- strong password check ---
-    const strengthError = validatePasswordStrength(password, email);
+    const strengthError = validatePasswordStrength(password, normalizedEmail);
     if (strengthError) {
       return NextResponse.json({ error: strengthError }, { status: 400 });
     }
 
     // Check if existing user
-    const exists = await prisma.user.findUnique({ where: { email } });
+    const exists = await prisma.user.findUnique({
+      where: { email: normalizedEmail },
+    });
     if (exists) {
       return NextResponse.json(
         { error: "Email already in use" },
@@ -89,7 +95,7 @@ export async function POST(req: Request) {
         );
       }
 
-      if (invitation.invitedEmail.toLowerCase() !== email.toLowerCase()) {
+      if (invitation.invitedEmail.toLowerCase() !== normalizedEmail) {
         return NextResponse.json(
           { error: "Email must match invitation" },
           { status: 400 }
@@ -112,14 +118,14 @@ export async function POST(req: Request) {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user (NOT verified yet)
     const user = await prisma.user.create({
       data: {
         name: name || null,
-        email,
+        email: normalizedEmail,
         passwordHash,
         role: userRole,
-        emailVerified: new Date(), // until email verification is added
+        // emailVerified: null  // default is null, leave unset
         proStatus: userRole === "PRO" ? "PENDING" : null,
       },
       select: {
@@ -171,6 +177,30 @@ export async function POST(req: Request) {
         });
       }
     }
+
+    // --- EMAIL VERIFICATION FLOW ---
+    // Remove any old tokens for this user (shouldn't exist yet, but safe)
+    await prisma.emailVerificationToken.deleteMany({
+      where: { userId: user.id },
+    });
+
+    const verifyToken = crypto.randomBytes(32).toString("hex");
+
+    await prisma.emailVerificationToken.create({
+      data: {
+        token: verifyToken,
+        userId: user.id,
+        expiresAt: new Date(Date.now() + 1000 * 60 * 60), // 1 hour
+      },
+    });
+
+    // Fire and forget the email; no need to block the response
+    sendEmailVerificationEmail({
+      to: normalizedEmail,
+      token: verifyToken,
+    }).catch((err) => {
+      console.error("Error sending verification email:", err);
+    });
 
     return NextResponse.json(user);
   } catch (error) {

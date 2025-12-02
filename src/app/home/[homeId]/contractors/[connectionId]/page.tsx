@@ -114,7 +114,7 @@ export default async function ContractorDetailPage({
     },
   });
 
-  const jobRequests = await prisma.jobRequest.findMany({
+  const jobRequests = await prisma.serviceRequest.findMany({
     where: {
       homeId,
       contractorId: contractor.id,
@@ -228,7 +228,7 @@ export default async function ContractorDetailPage({
     finalRecordId: record.finalRecordId,
   }));
 
-  const jobRequestsData = jobRequests.map((req) => ({
+  const serviceRequestsData = jobRequests.map((req) => ({
     id: req.id,
     title: req.title,
     description: req.description,
@@ -448,10 +448,10 @@ export default async function ContractorDetailPage({
                 💬 Message
               </Link>
               <Link
-                href={`/home/${homeId}/job-requests/new?contractor=${contractorData.id}`}
+                href={`/home/${homeId}/service-requests/new?contractor=${contractorData.id}`}
                 className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-lg shadow-orange-500/30 transition hover:bg-orange-600"
               >
-                + Request Work
+                + Request Service
               </Link>
             </div>
           </div>
@@ -480,7 +480,7 @@ export default async function ContractorDetailPage({
           homeId={homeId}
           connectionId={connectionData.id}
           workRecords={workRecordsData}
-          jobRequests={jobRequestsData}
+          serviceRequests={serviceRequestsData}
           pendingSubmissions={pendingSubmissionsData}
           activeRequestsCount={activeRequestsCount}
           pendingApprovalsCount={pendingSubmissionsCount}

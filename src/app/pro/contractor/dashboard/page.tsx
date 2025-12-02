@@ -49,7 +49,7 @@ type ConnectionWithMetrics = {
     city: string;
     state: string;
     photos: string[];
-    jobRequests: Array<{
+    serviceRequests: Array<{
       id: string;
       title: string;
       urgency: string;
@@ -118,7 +118,7 @@ export default async function ProDashboardPage() {
           state: true,
           photos: true,
           // Get pending job requests
-          jobRequests: {
+          serviceRequests: {
             where: {
               contractorId: userId,
               status: { in: ["PENDING", "QUOTED"] },
@@ -185,7 +185,7 @@ export default async function ProDashboardPage() {
       relationshipHealth = 'excellent';
     }
 
-    const pendingRequests = conn.home?.jobRequests?.length || 0;
+    const pendingRequests = conn.home?.serviceRequests?.length || 0;
     const opportunities = (conn.home?.warranties?.length || 0) + (conn.home?.reminders?.length || 0);
 
     return {
@@ -260,7 +260,7 @@ export default async function ProDashboardPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {/* Pending Requests */}
           <Link
-            href="/pro/contractor/job-requests"
+            href="/pro/contractor/service-requests"
             className={`${glass} hover:bg-white/10 transition-colors group relative overflow-hidden`}
           >
             {totalPendingRequests > 0 && (
@@ -661,12 +661,12 @@ function ClientCard({ connection }: { connection: ConnectionWithMetrics }) {
           {/* Action items */}
           <div className="mt-3 space-y-2">
             {/* Pending requests - highest priority */}
-            {pendingRequests > 0 && home?.jobRequests && home.jobRequests.length > 0 && (
+            {pendingRequests > 0 && home?.serviceRequests && home.serviceRequests.length > 0 && (
               <div className="rounded-md bg-orange-400/10 border border-orange-400/30 px-3 py-2">
                 <div className="flex items-center gap-2">
                   <span className="text-orange-300 text-sm">📋</span>
                   <span className="text-sm text-orange-200 font-medium">
-                    {home.jobRequests[0].title}
+                    {home.serviceRequests[0].title}
                   </span>
                   {pendingRequests > 1 && (
                     <span className="text-xs text-orange-300/70">

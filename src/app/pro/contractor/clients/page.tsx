@@ -12,12 +12,12 @@ import { loadJSON, saveJSON } from "@/lib/storage";
 
 /* ------------ Types (aligned with /pro) ------------ */
 type ClientHome = { id: string; address: string; sharedLink: string; owner?: string; };
-type JobStatus = "requested" | "scheduled" | "in_progress" | "complete";
-type Job = { id: string; title: string; clientAddress: string; due: string; status: JobStatus; estAmount?: number; };
+type ServiceStatus = "requested" | "scheduled" | "in_progress" | "complete";
+type Service = { id: string; title: string; clientAddress: string; due: string; status: ServiceStatus; estAmount?: number; };
 type RecordItem = { id: string; title: string; date: string; address: string; amount?: number; };
 type Review = { id: string; author: string; rating: number; text: string; date: string; };
 type Pro = { id: string; business: string; category: string; rating: number; verified: boolean; logo?: string; };
-type ProData = { pro: Pro; jobs: Job[]; records: RecordItem[]; clients: ClientHome[]; reviews: Review[]; };
+type ProData = { pro: Pro; services: Service[]; records: RecordItem[]; clients: ClientHome[]; reviews: Review[]; };
 
 export default function ClientsPage() {
   const [db, setDb] = useState<ProData | null>(null);
@@ -126,8 +126,8 @@ function createJobFor(client: ClientHome, setDb: React.Dispatch<React.SetStateAc
   const due = new Date(); due.setDate(due.getDate() + 3);
   setDb(d => {
     if (!d) return d;
-    const job: Job = { id, title: "New Service Request", clientAddress: client.address, due: due.toISOString().slice(0,10), status: "requested" };
-    return { ...d, jobs: [job, ...d.jobs] };
+    const job: Service = { id, title: "New Service Request", clientAddress: client.address, due: due.toISOString().slice(0,10), status: "requested" };
+    return { ...d, services: [job, ...d.services] };
   });
 }
 function cryptoId() { return (globalThis.crypto && "randomUUID" in crypto) ? crypto.randomUUID() : String(Date.now()); }

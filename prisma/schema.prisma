@@ -116,18 +116,17 @@ enum WorkSubmissionStatus {
   EXPIRED // Submission expired
 }
 
-// FOR JOB REQUESTS (homeowner requesting future work)
-enum JobRequestStatus {
-  PENDING // Waiting for contractor response
-  QUOTED // Contractor sent quote
-  ACCEPTED // Homeowner accepted quote
-  DECLINED // Declined by either party
-  IN_PROGRESS // Work in progress
-  COMPLETED // Work completed
-  CANCELLED // Request cancelled
+enum ServiceRequestStatus {
+  PENDING
+  QUOTED
+  ACCEPTED
+  DECLINED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
-enum JobRequestUrgency {
+enum ServiceRequestUrgency {
   LOW
   NORMAL
   HIGH
@@ -159,18 +158,21 @@ model PasswordResetToken {
 
 model User {
   id            String    @id @default(cuid())
-  email         String    @unique @db.Citext
+  email         String    @unique
   passwordHash  String?
   name          String?
   image         String?
   emailVerified DateTime?
+
+  profileComplete Boolean @default(false)
 
   role      Role       @default(HOMEOWNER)
   proStatus ProStatus?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  passwordResetTokens PasswordResetToken[]
+  passwordResetTokens     PasswordResetToken[]
+  emailVerificationTokens EmailVerificationToken[]
 
   accounts Account[]
   sessions Session[]
@@ -213,9 +215,9 @@ model User {
   workSubmissionsAsContractor WorkSubmission[] @relation("ContractorWorkSubmissions")
   workSubmissionsAsHomeowner  WorkSubmission[] @relation("HomeownerWorkSubmissions")
 
-  // Job requests (homeowner requests future work)
-  sentJobRequests     JobRequest[] @relation("HomeownerJobRequests")
-  receivedJobRequests JobRequest[] @relation("ContractorJobRequests")
+  // Service requests (homeowner requests future work)
+  sentServiceRequests     ServiceRequest[] @relation("HomeownerServiceRequests")
+  receivedServiceRequests ServiceRequest[] @relation("ContractorServiceRequests")
 
   // Work records
   workRecordsAsContractor WorkRecord[] @relation("ContractorWorkRecords")
@@ -283,8 +285,8 @@ model Home {
   workSubmissions WorkSubmission[]
   workRecords     WorkRecord[]
 
-  // Job requests (future work requests)
-  jobRequests JobRequest[]
+  // Service requests (future work requests)
+  serviceRequests ServiceRequest[]
 
   // Back relation for lastHome
   lastForUsers User[] @relation("UserLastHome")
@@ -375,7 +377,7 @@ model Attachment {
   warrantyId       String?
   messageId        String?
   workRecordId     String?
-  jobRequestId     String?
+  serviceRequestId String?
   workSubmissionId String?
 
   key        String
@@ -407,7 +409,7 @@ model Attachment {
   message        Message?        @relation(fields: [messageId], references: [id], onDelete: SetNull)
   workRecord     WorkRecord?     @relation("WorkRecordAttachments", fields: [workRecordId], references: [id], onDelete: SetNull)
   uploader       User?           @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: SetNull)
-  jobRequest     JobRequest?     @relation("JobRequestAttachments", fields: [jobRequestId], references: [id], onDelete: Cascade)
+  serviceRequest ServiceRequest? @relation("ServiceRequestAttachments", fields: [serviceRequestId], references: [id], onDelete: Cascade)
   workSubmission WorkSubmission? @relation("WorkSubmissionAttachments", fields: [workSubmissionId], references: [id], onDelete: Cascade)
 
   @@index([homeId])
@@ -415,7 +417,7 @@ model Attachment {
   @@index([reminderId])
   @@index([warrantyId])
   @@index([workRecordId])
-  @@index([jobRequestId])
+  @@index([serviceRequestId])
   @@index([workSubmissionId])
   @@index([messageId])
   @@index([uploadedBy])
@@ -566,10 +568,10 @@ model Connection {
   inspector  User? @relation("ConnectionInspector", fields: [inspectorId], references: [id], onDelete: Cascade)
   home       Home  @relation(fields: [homeId], references: [id], onDelete: Cascade)
 
-  messages    Message[]
-  threads     Thread[]
-  quotes      Quote[]
-  jobRequests JobRequest[]
+  messages        Message[]
+  threads         Thread[]
+  quotes          Quote[]
+  serviceRequests ServiceRequest[]
 
   archivedAt DateTime?
 
@@ -660,12 +662,12 @@ model Thread {
 
 /**
  * =========================
- * Job Request System (FUTURE WORK)
+ * Service Request System (FUTURE WORK)
  * Homeowner requests work/quotes from contractor
  * =========================
  */
 
-model JobRequest {
+model ServiceRequest {
   id String @id @default(cuid())
 
   connectionId String
@@ -674,31 +676,31 @@ model JobRequest {
   contractorId String
 
   title       String
-  description String            @db.Text
+  description String                @db.Text
   category    String?
-  urgency     JobRequestUrgency @default(NORMAL)
+  urgency     ServiceRequestUrgency @default(NORMAL)
 
   budgetMin   Decimal?  @db.Decimal(12, 2)
   budgetMax   Decimal?  @db.Decimal(12, 2)
   desiredDate DateTime?
 
   photos      String[]     @default([])
-  attachments Attachment[] @relation("JobRequestAttachments")
+  attachments Attachment[] @relation("ServiceRequestAttachments")
 
-  status JobRequestStatus @default(PENDING)
+  status ServiceRequestStatus @default(PENDING)
 
   contractorNotes String?   @db.Text
   respondedAt     DateTime?
 
   quoteId      String?     @unique
-  quote        Quote?      @relation("JobRequestQuote", fields: [quoteId], references: [id], onDelete: SetNull)
+  quote        Quote?      @relation("ServiceRequestQuote", fields: [quoteId], references: [id], onDelete: SetNull)
   workRecordId String?     @unique
-  workRecord   WorkRecord? @relation("JobRequestRecord", fields: [workRecordId], references: [id], onDelete: SetNull)
+  workRecord   WorkRecord? @relation("ServiceRequestRecord", fields: [workRecordId], references: [id], onDelete: SetNull)
 
   connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
   home       Home       @relation(fields: [homeId], references: [id], onDelete: Cascade)
-  homeowner  User       @relation("HomeownerJobRequests", fields: [homeownerId], references: [id], onDelete: Cascade)
-  contractor User       @relation("ContractorJobRequests", fields: [contractorId], references: [id], onDelete: Cascade)
+  homeowner  User       @relation("HomeownerServiceRequests", fields: [homeownerId], references: [id], onDelete: Cascade)
+  contractor User       @relation("ContractorServiceRequests", fields: [contractorId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -765,8 +767,8 @@ model WorkSubmission {
 model WorkRecord {
   id String @id @default(cuid())
 
-  jobRequestId String?     @unique
-  jobRequest   JobRequest? @relation("JobRequestRecord")
+  serviceRequestId String?         @unique
+  serviceRequest   ServiceRequest? @relation("ServiceRequestRecord")
 
   submissionId String?         @unique
   submission   WorkSubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
@@ -822,25 +824,25 @@ model WorkRecord {
 }
 
 model Quote {
-  id           String      @id @default(cuid())
-  jobRequestId String?     @unique
-  connectionId String
-  homeId       String
-  title        String
-  description  String?     @db.Text
-  totalAmount  Decimal     @db.Decimal(12, 2)
-  status       QuoteStatus @default(DRAFT)
-  expiresAt    DateTime?
+  id               String      @id @default(cuid())
+  serviceRequestId String?     @unique
+  connectionId     String
+  homeId           String
+  title            String
+  description      String?     @db.Text
+  totalAmount      Decimal     @db.Decimal(12, 2)
+  status           QuoteStatus @default(DRAFT)
+  expiresAt        DateTime?
 
-  jobRequest JobRequest? @relation("JobRequestQuote")
-  connection Connection  @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  home       Home        @relation(fields: [homeId], references: [id], onDelete: Cascade)
-  items      QuoteItem[]
+  serviceRequest ServiceRequest? @relation("ServiceRequestQuote")
+  connection     Connection      @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  home           Home            @relation(fields: [homeId], references: [id], onDelete: Cascade)
+  items          QuoteItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([jobRequestId])
+  @@index([serviceRequestId])
   @@index([connectionId])
   @@index([homeId])
   @@index([status])
@@ -983,4 +985,15 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
 }

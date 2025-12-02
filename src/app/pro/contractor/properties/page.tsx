@@ -77,7 +77,7 @@ export default async function PropertiesPage() {
             },
           },
           // Get pending job requests
-          jobRequests: {
+          serviceRequests: {
             where: {
               contractorId: userId,
               status: { in: ["PENDING", "QUOTED"] },
@@ -156,7 +156,7 @@ export default async function PropertiesPage() {
     // No pending requests for archived connections
     const pendingRequests = isArchived
       ? []
-      : home?.jobRequests?.map((req) => ({
+      : home?.serviceRequests?.map((req) => ({
           id: req.id,
           title: req.title,
           urgency: req.urgency,
@@ -178,7 +178,7 @@ export default async function PropertiesPage() {
       archivedAt: conn.archivedAt?.toISOString() || null,
       verifiedWorkCount: conn.verifiedWorkCount,
       totalSpent: Number(conn.totalSpent) || null,
-      jobCount: records.length,
+      serviceCount: records.length,
       lastWorkDate: lastWork?.workDate?.toISOString() ?? null,
       lastWorkTitle: lastWork?.workType ?? lastWork?.description ?? null,
       daysSinceLastWork,

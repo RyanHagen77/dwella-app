@@ -32,7 +32,7 @@ export type AuditEntity =
   | "Home"
   | "HomeTransfer"
   | "Connection"
-  | "JobRequest"
+  | "ServiceRequest"
   | "System";
 
 type AuditLogParams = {

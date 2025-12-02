@@ -478,7 +478,7 @@ export default function ContractorInvitationsClient({
       >
         <div className="mt-2 space-y-4 text-white">
           <p className={`text-sm ${textMeta}`}>
-            Confirm the property address for this job so MyHomeDox can attach
+            Confirm the property address for this job so MyDwella can attach
             your work to the correct home record.
           </p>
 
