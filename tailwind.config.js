@@ -16,6 +16,7 @@ module.exports = {
     "./app/**/_components/**/*.{js,ts,jsx,tsx,mdx}",        // ← BETTER: catches all
     "./src/app/**/_components/**/*.{js,ts,jsx,tsx,mdx}",    // ← BETTER: catches all
   ],
+
   theme: {
     extend: {
       colors: {

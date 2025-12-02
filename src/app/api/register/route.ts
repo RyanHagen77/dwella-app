@@ -64,8 +64,21 @@ export async function POST(req: Request) {
     });
 
     if (existingUser) {
-      // If user exists but is NOT verified, just resend verification instead of blocking
+      // If user exists but is NOT verified:
+      // - update passwordHash to the *new* password
+      // - resend verification email
       if (!existingUser.emailVerified) {
+        const newPasswordHash = await bcrypt.hash(password, 10);
+
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: {
+            passwordHash: newPasswordHash,
+            // optionally update name if they changed it
+            ...(name ? { name } : {}),
+          },
+        });
+
         // Clear any old tokens
         await prisma.emailVerificationToken.deleteMany({
           where: { userId: existingUser.id },
@@ -94,7 +107,7 @@ export async function POST(req: Request) {
             ok: true,
             email: normalizedEmail,
             requiresEmailVerification: true,
-            // optional: message: "Verification email resent",
+            // message: "Verification email resent",
           },
           { status: 200 }
         );
@@ -167,7 +180,7 @@ export async function POST(req: Request) {
         email: normalizedEmail,
         passwordHash,
         role: userRole,
-        // emailVerified: null  (default)
+        // emailVerified: null
         proStatus: userRole === "PRO" ? "PENDING" : null,
       },
       select: {
@@ -242,7 +255,6 @@ export async function POST(req: Request) {
       console.error("Error sending verification email:", err);
     });
 
-    // ⬇️ Tell the frontend "go to check-email"
     return NextResponse.json(
       {
         ok: true,

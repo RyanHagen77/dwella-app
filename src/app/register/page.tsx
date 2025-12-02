@@ -34,7 +34,7 @@ function validatePasswordStrengthClient(password: string, email?: string): strin
   }
 
   const lower = password.toLowerCase();
-  const weakFragments = ["password", "qwerty", "123456", "dwella"];
+  const weakFragments = ["password", "qwerty", "123456", "mydwella"];
 
   if (weakFragments.some((frag) => lower.includes(frag))) {
     return "Password is too easy to guess. Please choose something more unique.";
@@ -64,6 +64,7 @@ function RegisterForm() {
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [invitationData, setInvitationData] = useState<InvitationData | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Fetch invitation details
   useEffect(() => {
@@ -130,10 +131,7 @@ function RegisterForm() {
       }
 
       const email = (data.email as string | undefined) ?? form.email;
-
-      // ⬅️ THIS IS THE IMPORTANT PART
       router.push(`/login/check-email?email=${encodeURIComponent(email)}`);
-
     } catch {
       setMsg("Registration failed");
       setLoading(false);
@@ -230,14 +228,15 @@ function RegisterForm() {
           </div>
 
           {/* Password */}
-          <div>
+          <div className="relative">
             <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
               Password <span className="text-red-400">*</span>
             </label>
+
             <input
-              className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
+              className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 pr-12 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
               placeholder="Minimum 10 characters"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={form.password}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, password: e.target.value }))
@@ -245,6 +244,15 @@ function RegisterForm() {
               required
               minLength={10}
             />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              className="absolute right-3 top-[32px] text-xs text-white/70 hover:text-white"
+            >
+              {showPassword ? "Hide" : "Show"}
+            </button>
+
             <p className="mt-1 text-xs text-white/55">
               Use at least 10 characters, including a number.
             </p>

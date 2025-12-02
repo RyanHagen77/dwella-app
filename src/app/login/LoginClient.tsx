@@ -1,4 +1,3 @@
-// src/app/login/LoginClient.tsx (or wherever this lives)
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,6 +11,8 @@ export default function LoginClient() {
 
   const [emailPwd, setEmailPwd] = useState("");
   const [password, setPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+
   const [emailLink, setEmailLink] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busyPwd, setBusyPwd] = useState(false);
@@ -118,15 +119,25 @@ export default function LoginClient() {
                     Forgot password?
                   </button>
                 </div>
-                <input
-                  className="w-full rounded-xl border border-white/20 bg-white/5 px-3 py-2.5 text-sm text-white placeholder:text-white/40 outline-none ring-0 focus:border-[#F35A1F]/70 focus:ring-2 focus:ring-[#F35A1F]/30"
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
+                <div className="relative">
+                  <input
+                    className="w-full rounded-xl border border-white/20 bg-white/5 px-3 py-2.5 pr-10 text-sm text-white placeholder:text-white/40 outline-none ring-0 focus:border-[#F35A1F]/70 focus:ring-2 focus:ring-[#F35A1F]/30"
+                    type={showLoginPassword ? "text" : "password"}
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((v) => !v)}
+                    className="absolute inset-y-0 right-3 flex items-center text-xs text-white/60 hover:text-white"
+                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  >
+                    {showLoginPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
               </div>
               <button
                 className="mt-1 w-full rounded-xl border border-white/30 bg-[rgba(243,90,31,0.9)] px-4 py-2.5 text-sm font-medium text-white shadow-[0_10px_28px_rgba(243,90,31,0.35)] transition hover:bg-[rgba(243,90,31,0.97)] disabled:cursor-not-allowed disabled:opacity-70"
