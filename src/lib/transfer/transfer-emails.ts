@@ -3,26 +3,32 @@
 // =============================================================================
 // Email templates for stats transfer notifications
 
-import { Resend } from 'resend';
+import { ServerClient } from 'postmark';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const POSTMARK_SERVER_TOKEN = process.env.POSTMARK_SERVER_TOKEN || '';
+const MESSAGE_STREAM = process.env.POSTMARK_MESSAGE_STREAM || 'outbound';
+
+const postmarkClient = POSTMARK_SERVER_TOKEN
+  ? new ServerClient(POSTMARK_SERVER_TOKEN)
+  : null;
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://mydwella.com';
 
 // Clean and validate the FROM address (same as lib/email.ts)
 const getFromAddress = () => {
-  const raw = process.env.EMAIL_FROM || "hello@mydwellaapp.com";
+  const raw = process.env.EMAIL_FROM || 'hello@mydwellaapp.com';
   const cleaned = raw.replace(/^["']|["']$/g, '').trim();
 
   if (cleaned && !cleaned.includes('<')) {
     return `Dwella <${cleaned}>`;
   }
 
-  return cleaned || "MyDwella Team <hello@mydwellaapp.com>";
+  return cleaned || 'MyDwella Team <hello@mydwellaapp.com>';
 };
 
 // Log configuration on first import
 console.log('[Transfer Emails] Configuration:', {
-  hasApiKey: !!process.env.RESEND_API_KEY,
+  hasServerToken: !!POSTMARK_SERVER_TOKEN,
   appUrl: APP_URL,
   fromEmail: getFromAddress(),
 });
@@ -168,14 +174,18 @@ export async function sendTransferInviteEmail(params: TransferInviteEmailParams)
     hasAccount,
   });
 
-  if (!process.env.RESEND_API_KEY) {
-    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+  if (!postmarkClient) {
+    console.error('[Transfer Email] ERROR: POSTMARK_SERVER_TOKEN is not set!');
     return;
   }
 
   const acceptUrl = `${APP_URL}/transfer/accept?token=${token}`;
-  const loginUrl = `${APP_URL}/login?redirect=${encodeURIComponent(`/transfer/accept?token=${token}`)}`;
-  const signupUrl = `${APP_URL}/register?redirect=${encodeURIComponent(`/transfer/accept?token=${token}`)}&email=${encodeURIComponent(recipientEmail)}`;
+  const loginUrl = `${APP_URL}/login?redirect=${encodeURIComponent(
+    `/transfer/accept?token=${token}`
+  )}`;
+  const signupUrl = `${APP_URL}/register?redirect=${encodeURIComponent(
+    `/transfer/accept?token=${token}`
+  )}&email=${encodeURIComponent(recipientEmail)}`;
 
   const expiresDate = expiresAt.toLocaleDateString('en-US', {
     weekday: 'long',
@@ -240,11 +250,12 @@ export async function sendTransferInviteEmail(params: TransferInviteEmailParams)
   `;
 
   try {
-    const result = await resend.emails.send({
-      from: getFromAddress(),
-      to: recipientEmail,
-      subject: `🏠 ${senderName} wants to transfer home ownership to you`,
-      html,
+    const result = await postmarkClient.sendEmail({
+      From: getFromAddress(),
+      To: recipientEmail,
+      Subject: `🏠 ${senderName} wants to transfer home ownership to you`,
+      HtmlBody: html,
+      MessageStream: MESSAGE_STREAM,
     });
     console.log('[Transfer Email] Invite email sent successfully:', result);
     return result;
@@ -281,8 +292,8 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
     homeName,
   });
 
-  if (!process.env.RESEND_API_KEY) {
-    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+  if (!postmarkClient) {
+    console.error('[Transfer Email] ERROR: POSTMARK_SERVER_TOKEN is not set!');
     return;
   }
 
@@ -375,17 +386,19 @@ export async function sendTransferAcceptedEmail(params: TransferAcceptedEmailPar
 
   try {
     const results = await Promise.all([
-      resend.emails.send({
-        from: getFromAddress(),
-        to: previousOwnerEmail,
-        subject: `✅ Home transfer complete - ${homeName}`,
-        html: previousOwnerHtml,
+      postmarkClient.sendEmail({
+        From: getFromAddress(),
+        To: previousOwnerEmail,
+        Subject: `✅ Home transfer complete - ${homeName}`,
+        HtmlBody: previousOwnerHtml,
+        MessageStream: MESSAGE_STREAM,
       }),
-      resend.emails.send({
-        from: getFromAddress(),
-        to: newOwnerEmail,
-        subject: `🎉 Welcome to your new home - ${homeName}`,
-        html: newOwnerHtml,
+      postmarkClient.sendEmail({
+        From: getFromAddress(),
+        To: newOwnerEmail,
+        Subject: `🎉 Welcome to your new home - ${homeName}`,
+        HtmlBody: newOwnerHtml,
+        MessageStream: MESSAGE_STREAM,
       }),
     ]);
     console.log('[Transfer Email] Accepted emails sent successfully:', results);
@@ -420,8 +433,8 @@ export async function sendTransferDeclinedEmail(params: TransferDeclinedEmailPar
     homeName,
   });
 
-  if (!process.env.RESEND_API_KEY) {
-    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+  if (!postmarkClient) {
+    console.error('[Transfer Email] ERROR: POSTMARK_SERVER_TOKEN is not set!');
     return;
   }
 
@@ -467,11 +480,12 @@ export async function sendTransferDeclinedEmail(params: TransferDeclinedEmailPar
   `;
 
   try {
-    const result = await resend.emails.send({
-      from: getFromAddress(),
-      to: previousOwnerEmail,
-      subject: `Transfer declined - ${homeName}`,
-      html,
+    const result = await postmarkClient.sendEmail({
+      From: getFromAddress(),
+      To: previousOwnerEmail,
+      Subject: `Transfer declined - ${homeName}`,
+      HtmlBody: html,
+      MessageStream: MESSAGE_STREAM,
     });
     console.log('[Transfer Email] Declined email sent successfully:', result);
     return result;
@@ -504,8 +518,8 @@ export async function sendTransferCancelledEmail(params: TransferCancelledEmailP
     homeName,
   });
 
-  if (!process.env.RESEND_API_KEY) {
-    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+  if (!postmarkClient) {
+    console.error('[Transfer Email] ERROR: POSTMARK_SERVER_TOKEN is not set!');
     return;
   }
 
@@ -546,11 +560,12 @@ export async function sendTransferCancelledEmail(params: TransferCancelledEmailP
   `;
 
   try {
-    const result = await resend.emails.send({
-      from: getFromAddress(),
-      to: recipientEmail,
-      subject: `Home transfer cancelled - ${homeName}`,
-      html,
+    const result = await postmarkClient.sendEmail({
+      From: getFromAddress(),
+      To: recipientEmail,
+      Subject: `Home transfer cancelled - ${homeName}`,
+      HtmlBody: html,
+      MessageStream: MESSAGE_STREAM,
     });
     console.log('[Transfer Email] Cancelled email sent successfully:', result);
     return result;
@@ -586,8 +601,8 @@ export async function sendTransferNotificationToContractors(params: ContractorNo
     homeName,
   });
 
-  if (!process.env.RESEND_API_KEY) {
-    console.error('[Transfer Email] ERROR: RESEND_API_KEY is not set!');
+  if (!postmarkClient) {
+    console.error('[Transfer Email] ERROR: POSTMARK_SERVER_TOKEN is not set!');
     return;
   }
 
@@ -644,17 +659,18 @@ export async function sendTransferNotificationToContractors(params: ContractorNo
 </html>
       `;
 
-      return resend.emails.send({
-        from: getFromAddress(),
-        to: contractor.email,
-        subject: `Home ownership update - ${homeName}`,
-        html,
+      return postmarkClient.sendEmail({
+        From: getFromAddress(),
+        To: contractor.email,
+        Subject: `Home ownership update - ${homeName}`,
+        HtmlBody: html,
+        MessageStream: MESSAGE_STREAM,
       });
     })
   );
 
-  const successful = results.filter(r => r.status === 'fulfilled').length;
-  const failed = results.filter(r => r.status === 'rejected').length;
+  const successful = results.filter((r) => r.status === 'fulfilled').length;
+  const failed = results.filter((r) => r.status === 'rejected').length;
 
   console.log('[Transfer Email] Contractor notifications complete:', {
     successful,
@@ -663,8 +679,11 @@ export async function sendTransferNotificationToContractors(params: ContractorNo
   });
 
   if (failed > 0) {
-    console.error('[Transfer Email] Some contractor notifications failed:',
-      results.filter(r => r.status === 'rejected').map(r => (r as PromiseRejectedResult).reason)
+    console.error(
+      '[Transfer Email] Some contractor notifications failed:',
+      results
+        .filter((r) => r.status === 'rejected')
+        .map((r) => (r as PromiseRejectedResult).reason)
     );
   }
 

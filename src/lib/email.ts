@@ -1,6 +1,12 @@
-import { Resend } from "resend";
+import { ServerClient } from "postmark";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Postmark client
+const POSTMARK_SERVER_TOKEN = process.env.POSTMARK_SERVER_TOKEN || "";
+const MESSAGE_STREAM = process.env.POSTMARK_MESSAGE_STREAM || "outbound";
+
+const postmarkClient = POSTMARK_SERVER_TOKEN
+  ? new ServerClient(POSTMARK_SERVER_TOKEN)
+  : null;
 
 // Base URL for building links
 const APP_BASE_URL =
@@ -20,17 +26,44 @@ const getFromAddress = () => {
   return cleaned || "MyDwella Team <hello@mydwellaapp.com>";
 };
 
-// Basic Microsoft domain detection
-function isMicrosoftEmail(email: string): boolean {
-  const domain = email.split("@").pop()?.toLowerCase() ?? "";
-  return (
-    domain === "outlook.com" ||
-    domain === "hotmail.com" ||
-    domain === "live.com" ||
-    domain === "msn.com"
-  );
+async function sendWithPostmark({
+  to,
+  subject,
+  text,
+  html,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+}) {
+  if (!postmarkClient) {
+    console.warn(
+      "POSTMARK_SERVER_TOKEN is not set – email will not be sent."
+    );
+    return { success: false, error: "No API key" };
+  }
+
+  const from = getFromAddress();
+
+  try {
+    const data = await postmarkClient.sendEmail({
+      From: from,
+      To: to,
+      Subject: subject,
+      TextBody: text,
+      HtmlBody: html,
+      MessageStream: MESSAGE_STREAM,
+    });
+
+    return { success: true, data };
+  } catch (error) {
+    console.error("Error sending email via Postmark:", error);
+    return { success: false, error };
+  }
 }
 
+// Email verification
 export async function sendEmailVerificationEmail({
   to,
   token,
@@ -38,13 +71,6 @@ export async function sendEmailVerificationEmail({
   to: string;
   token: string;
 }) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn(
-      "RESEND_API_KEY is not set – verification email will not be sent."
-    );
-    return { success: false, error: "No API key" };
-  }
-
   const verifyUrl = `${APP_BASE_URL}/verify-email?token=${encodeURIComponent(
     token
   )}`;
@@ -105,32 +131,11 @@ export async function sendEmailVerificationEmail({
     </html>
   `;
 
-  const from = getFromAddress();
-
-  try {
-    const data = await resend.emails.send(
-      isMicrosoftEmail(to)
-        ? {
-            from,
-            to,
-            subject,
-            text, // use plain text only for Microsoft
-          }
-        : {
-            from,
-            to,
-            subject,
-            html,
-            text,
-          }
-    );
-
-    console.log("Verification email sent successfully:", data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error sending verification email:", error);
-    return { success: false, error };
+  const result = await sendWithPostmark({ to, subject, text, html });
+  if (result.success) {
+    console.log("Verification email sent successfully:", result.data);
   }
+  return result;
 }
 
 // Password reset email
@@ -141,13 +146,6 @@ export async function sendPasswordResetEmail({
   to: string;
   token: string;
 }) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn(
-      "RESEND_API_KEY is not set – password reset email will not be sent."
-    );
-    return { success: false, error: "No API key" };
-  }
-
   const resetUrl = `${APP_BASE_URL}/reset-password?token=${encodeURIComponent(
     token
   )}`;
@@ -267,32 +265,11 @@ export async function sendPasswordResetEmail({
     </html>
   `;
 
-  const from = getFromAddress();
-
-  try {
-    const data = await resend.emails.send(
-      isMicrosoftEmail(to)
-        ? {
-            from,
-            to,
-            subject,
-            text, // plain text only for Microsoft
-          }
-        : {
-            from,
-            to,
-            subject,
-            html,
-            text,
-          }
-    );
-
-    console.log("Password reset email sent successfully:", data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error sending password reset email:", error);
-    return { success: false, error };
+  const result = await sendWithPostmark({ to, subject, text, html });
+  if (result.success) {
+    console.log("Password reset email sent successfully:", result.data);
   }
+  return result;
 }
 
 // Invitation email
@@ -315,13 +292,6 @@ export async function sendInvitationEmail({
   token,
   role,
 }: InvitationEmailParams) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn(
-      "RESEND_API_KEY is not set – invitation email will not be sent."
-    );
-    return { success: false, error: "No API key" };
-  }
-
   const inviteUrl = `${APP_BASE_URL}/register?token=${token}`;
   const companyName = inviterCompany || inviterName;
   const greeting = inviteeName ? `Hi ${inviteeName}` : "Hello";
@@ -479,32 +449,11 @@ export async function sendInvitationEmail({
     .filter(Boolean)
     .join("\n");
 
-  const from = getFromAddress();
-
-  try {
-    const data = await resend.emails.send(
-      isMicrosoftEmail(to)
-        ? {
-            from,
-            to,
-            subject,
-            text, // plain text for Microsoft
-          }
-        : {
-            from,
-            to,
-            subject,
-            html,
-            text,
-          }
-    );
-
-    console.log("Invitation email sent successfully:", data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error sending invitation email:", error);
-    return { success: false, error };
+  const result = await sendWithPostmark({ to, subject, text, html });
+  if (result.success) {
+    console.log("Invitation email sent successfully:", result.data);
   }
+  return result;
 }
 
 // Disconnect notification email (sent to contractor when homeowner disconnects)
@@ -521,13 +470,6 @@ export async function sendDisconnectNotificationEmail({
   homeownerName,
   homeAddress,
 }: DisconnectNotificationParams) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn(
-      "RESEND_API_KEY is not set – disconnect notification email will not be sent."
-    );
-    return { success: false, error: "No API key" };
-  }
-
   const dashboardUrl = `${APP_BASE_URL}/contractor`;
   const greeting = contractorName || "there";
 
@@ -676,32 +618,11 @@ export async function sendDisconnectNotificationEmail({
     </html>
   `;
 
-  const from = getFromAddress();
-
-  try {
-    const data = await resend.emails.send(
-      isMicrosoftEmail(to)
-        ? {
-            from,
-            to,
-            subject,
-            text, // plain text for Microsoft
-          }
-        : {
-            from,
-            to,
-            subject,
-            html,
-            text,
-          }
-    );
-
-    console.log("Disconnect notification email sent successfully:", data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error sending disconnect notification email:", error);
-    return { success: false, error };
+  const result = await sendWithPostmark({ to, subject, text, html });
+  if (result.success) {
+    console.log("Disconnect notification email sent successfully:", result.data);
   }
+  return result;
 }
 
 // Reconnect notification email (sent to contractor when homeowner restores connection)
@@ -718,13 +639,6 @@ export async function sendReconnectNotificationEmail({
   homeownerName,
   homeAddress,
 }: ReconnectNotificationParams) {
-  if (!process.env.RESEND_API_KEY) {
-    console.warn(
-      "RESEND_API_KEY is not set – reconnect notification email will not be sent."
-    );
-    return { success: false, error: "No API key" };
-  }
-
   const dashboardUrl = `${APP_BASE_URL}/contractor`;
   const greeting = contractorName || "there";
 
@@ -861,30 +775,9 @@ export async function sendReconnectNotificationEmail({
     </html>
   `;
 
-  const from = getFromAddress();
-
-  try {
-    const data = await resend.emails.send(
-      isMicrosoftEmail(to)
-        ? {
-            from,
-            to,
-            subject,
-            text, // plain text for Microsoft
-          }
-        : {
-            from,
-            to,
-            subject,
-            html,
-            text,
-          }
-    );
-
-    console.log("Reconnect notification email sent successfully:", data);
-    return { success: true, data };
-  } catch (error) {
-    console.error("Error sending reconnect notification email:", error);
-    return { success: false, error };
+  const result = await sendWithPostmark({ to, subject, text, html });
+  if (result.success) {
+    console.log("Reconnect notification email sent successfully:", result.data);
   }
+  return result;
 }

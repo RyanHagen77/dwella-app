@@ -98,14 +98,31 @@ export const authConfig: NextAuthOptions = {
           console.log("[DEV] Magic link:", url);
         }
 
-        const { Resend } = await import("resend");
-        const resend = new Resend(process.env.RESEND_API_KEY ?? "");
+        const serverToken = process.env.POSTMARK_SERVER_TOKEN;
+        if (!serverToken) {
+          console.error(
+            "[EmailProvider] POSTMARK_SERVER_TOKEN is not set – magic link email will not be sent."
+          );
+          return;
+        }
 
-        await resend.emails.send({
-          to: email,
-          from: (provider.from ?? "Dwella <no-reply@dwella.com>") as string,
-          subject: "Your Dwella sign-in link",
-          html: `<p>Click to sign in:</p><p><a href="${url}">${url}</a></p>`,
+        const { ServerClient } = await import("postmark");
+        const client = new ServerClient(serverToken);
+        const messageStream =
+          process.env.POSTMARK_MESSAGE_STREAM || "outbound";
+
+        const from =
+          (provider.from as string | undefined) ??
+          process.env.EMAIL_FROM ??
+          "Dwella <no-reply@dwella.com>";
+
+        await client.sendEmail({
+          From: from,
+          To: email,
+          Subject: "Your Dwella sign-in link",
+          HtmlBody: `<p>Click to sign in:</p><p><a href="${url}">${url}</a></p>`,
+          TextBody: `Click to sign in:\n${url}`,
+          MessageStream: messageStream,
         });
       },
     }),
