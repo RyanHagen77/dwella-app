@@ -249,7 +249,7 @@ export default async function HomePage({
   const connections = home.connections as ConnectionWithContractor[];
 
   return (
-    <main className="relative min-h-screen text-white">
+    <main className="relative min-h-screen text-white pb-20">
       {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image
@@ -264,7 +264,7 @@ export default async function HomePage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
+            <div className="mx-auto max-w-6xl px-4 py-4 space-y-4 sm:px-5 sm:py-5 md:px-6 md:py-6 md:space-y-6">
         {/* Hero card */}
         <section
           aria-labelledby="home-hero"
