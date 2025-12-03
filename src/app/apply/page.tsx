@@ -106,14 +106,20 @@ export default function ApplySelectPage() {
 
             {/* Pricing callout */}
             <div className="mb-4 rounded-lg border border-[#33C17D]/30 bg-[#33C17D]/8 px-4 py-2.5 text-center">
-              <div className="text-xs text-white/70 mb-0.5">Launch special</div>
+              <div className="text-xs text-white/70 mb-0.5">Limited Launch Pricing</div>
+
               <div className="flex items-baseline justify-center gap-2">
-                <span className="text-2xl font-bold text-white">$27</span>
+                <span className="text-2xl font-bold text-white">$39</span>
                 <span className="text-sm text-white/70">/month</span>
               </div>
+
               <div className="text-xs text-white/60 mt-0.5">
-                <span className="line-through">$39</span>
-                <span className="ml-2 text-[#33C17D]">Save 30%</span>
+                <span className="text-[#33C17D]">Save 20%</span>
+                <span className="ml-1 text-white/50">($374/yr when paid annually)</span>
+              </div>
+
+              <div className="text-xs text-white/70 mt-1.5 pt-1.5 border-t border-white/10">
+                Free up to 10 clients
               </div>
             </div>
 

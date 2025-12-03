@@ -149,52 +149,55 @@ export default function ContractorApplyPage() {
         </div>
 
         {/* Pricing box */}
-        <div className="mb-6 rounded-xl border border-[#33C17D]/30 bg-gradient-to-br from-[#33C17D]/10 to-transparent p-5 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-semibold text-white/90 mb-1">
-                Launch pricing
-              </h2>
-              <p className="text-xs text-white/70 mb-3">
-                Lock in founder pricing before rates increase
-              </p>
+<div className="mb-6 rounded-xl border border-[#33C17D]/30 bg-gradient-to-br from-[#33C17D]/10 to-transparent p-5 sm:p-6">
+  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+    <div>
+      {/* Launch Label */}
+      <h2 className="text-sm font-semibold text-white/90 mb-1">
+        Limited Launch Pricing
+      </h2>
+      <p className="text-xs text-white/70 mb-3">
+        First 50 contractors lock this rate in forever
+      </p>
 
-              <div className="flex items-baseline gap-2">
-                <span className="text-3xl sm:text-4xl font-bold text-white">
-                  $27
-                </span>
-                <span className="text-white/70 text-sm">/ month</span>
-              </div>
+      {/* Monthly price */}
+      <div className="flex items-baseline gap-2">
+        <span className="text-3xl sm:text-4xl font-bold text-white">
+          $39
+        </span>
+        <span className="text-white/70 text-sm">/ month</span>
+      </div>
 
-              <div className="mt-1 flex items-center gap-2">
-                <span className="text-xs text-white/60 line-through">
-                  $39/month
-                </span>
-                <span className="rounded-full bg-[#33C17D]/20 px-2 py-0.5 text-xs font-medium text-[#33C17D]">
-                  Save 30%
-                </span>
-              </div>
+      {/* Annual savings */}
+      <div className="mt-1 flex items-center gap-2">
+        <span className="rounded-full bg-[#33C17D]/20 px-2 py-0.5 text-xs font-medium text-[#33C17D]">
+          Save 20%
+        </span>
+        <span className="text-xs text-white/60">
+          when paid annually ($374/yr)
+        </span>
+      </div>
 
-              <p className="mt-2 text-xs text-white/75">
-                $327 billed annually — less than one service call
-              </p>
-            </div>
+      {/* Free tier */}
+      <p className="mt-2 text-xs text-white/75">
+        Free up to 10 clients • Up to 250 clients included
+      </p>
 
-            <div className="flex-shrink-0">
-              <div className="text-right">
-                <div className="text-xs text-white/60 mb-1">Limited time offer</div>
-                <div className="text-sm font-medium text-white">
-                  McHenry County contractors
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Value bullets */}
+      <ul className="mt-3 space-y-1 text-xs text-white/75">
+        <li>• Verified documentation of every job</li>
+        <li>• Automated warranty & maintenance reminders</li>
+        <li>• Homeowner messaging & service requests</li>
+        <li>• 1 monthly marketing email to your entire client list</li>
+      </ul>
 
-          <div className="mt-4 pt-4 border-t border-white/10 flex items-start gap-2 text-xs text-white/70">
-            <span className="text-[#33C17D] flex-shrink-0">✓</span>
-            <span>Cancel anytime. 30-day money-back guarantee.</span>
-          </div>
-        </div>
+      {/* Badge */}
+      <div className="mt-3 inline-flex rounded-full bg-[#33C17D]/15 px-3 py-1 text-xs font-medium text-[#33C17D]">
+        Founder rate – never increases
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Error */}
         {error && (
