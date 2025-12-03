@@ -289,7 +289,7 @@ function HomeownerHero({ router }: { router: ReturnType<typeof useRouter> }) {
         }
         primaryCta="Start Your Home Record — Free"
         secondaryCta="See How It Works"
-        trustNote="Free forever for homeowners. No credit card required."
+        trustNote="Free for homeowners. No credit card required."
         onPrimary={() => router.push("/register")}
         onSecondary={() => router.push("/demo")}
       />

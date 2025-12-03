@@ -1,9 +1,11 @@
-// app/api/stats/claim/route.ts
+// app/api/claim/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { generateNumericCode, hashVerificationCode } from "@/lib/verification";
+import { sendVerificationPostcardViaLob } from "@/lib/postcard";
 
 export const runtime = "nodejs";
 
@@ -35,7 +37,7 @@ export async function POST(req: Request) {
 
     const normalizedAddress = normalizeAddress(data);
 
-    // Check if stats already exists
+    // Check if home already exists
     let home = await prisma.home.findFirst({
       where: { normalizedAddress },
     });
@@ -51,39 +53,49 @@ export async function POST(req: Request) {
 
       if (existingAccess) {
         return NextResponse.json(
-          { error: "You already have access to this stats", id: home.id },
+          { error: "You already have access to this home", id: home.id },
           { status: 400 }
         );
       }
 
-      // Check if stats has an owner
-      const existingOwner = await prisma.homeAccess.findFirst({
+      // Check if home has an owner
+      const existingOwnerAccess = await prisma.homeAccess.findFirst({
         where: {
           homeId: home.id,
           role: "OWNER",
         },
       });
 
-      if (existingOwner) {
+      if (existingOwnerAccess) {
         return NextResponse.json(
-          { error: "This stats is already claimed by another user" },
+          { error: "This home is already claimed by another user" },
           { status: 400 }
         );
       }
 
-      // Grant access to existing stats
+      // Grant access to existing home + mark ownerId
       await prisma.homeAccess.create({
         data: {
           homeId: home.id,
           userId,
-          role: "OWNER"
+          role: "OWNER",
         },
       });
 
-      return NextResponse.json({ id: home.id });
+      home = await prisma.home.update({
+        where: { id: home.id },
+        data: {
+          ownerId: userId,
+        },
+      });
+
+      // Create verification + send postcard (best-effort)
+      const extras = await createPostcardVerificationForHome({ home, userId, userName: session.user.name });
+
+      return NextResponse.json({ id: home.id, ...extras });
     }
 
-    // Create new stats
+    // Create new home
     home = await prisma.home.create({
       data: {
         address: data.address,
@@ -100,13 +112,15 @@ export async function POST(req: Request) {
       data: {
         homeId: home.id,
         userId,
-        role: "OWNER"
+        role: "OWNER",
       },
     });
 
-    return NextResponse.json({ id: home.id });
+    const extras = await createPostcardVerificationForHome({ home, userId, userName: session.user.name });
+
+    return NextResponse.json({ id: home.id, ...extras });
   } catch (error) {
-    console.error("Error claiming stats:", error);
+    console.error("Error claiming home:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -116,8 +130,65 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      { error: "Failed to claim stats" },
+      { error: "Failed to claim home" },
       { status: 500 }
     );
+  }
+}
+
+async function createPostcardVerificationForHome({
+  home,
+  userId,
+  userName,
+}: {
+  home: { id: string; address: string; addressLine2?: string | null; city: string; state: string; zip: string; country?: string | null };
+  userId: string;
+  userName?: string | null;
+}) {
+  try {
+    const code = generateNumericCode(6);
+    const codeHash = hashVerificationCode(code);
+
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 30);
+
+    const verification = await prisma.homeVerification.create({
+      data: {
+        homeId: home.id,
+        method: "POSTCARD",
+        status: "PENDING",
+        codeHash,
+        expiresAt,
+        createdByUserId: userId,
+      },
+    });
+
+    const toAddress = {
+      name: userName || "Current Resident",
+      addressLine1: home.address,
+      addressLine2: home.addressLine2 ?? null,
+      city: home.city,
+      state: home.state,
+      postalCode: home.zip,
+      country: home.country ?? "US",
+    };
+
+    const postcardResult = await sendVerificationPostcardViaLob({
+      to: toAddress,
+      home: { id: home.id, address: home.address },
+      code,
+    });
+
+    return {
+      verificationId: verification.id,
+      verificationProviderId: postcardResult.providerId,
+      verificationExpiresAt: expiresAt,
+    };
+  } catch (err) {
+    console.error("Error creating postcard verification for home:", err);
+    // don't fail the claim if postcard fails
+    return {
+      verificationWarning: "Home claimed, but postcard verification failed to start.",
+    };
   }
 }

@@ -21,6 +21,7 @@ import { ClientCard } from "@/app/home/_components/ClientCard";
 import { HomePicker } from "@/app/home/_components/HomePicker";
 import { PropertyStats } from "@/app/home/_components/PropertyStats";
 import { ConnectedPros } from "@/app/home/_components/ConnectedPros";
+import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge"; // 👈 NEW
 
 type HomeMeta = {
   attrs?: {
@@ -111,6 +112,13 @@ export default async function HomePage({
       zip: true,
       photos: true,
       meta: true,
+
+      // 👇 NEW: verification fields
+      verificationStatus: true,
+      verificationMethod: true,
+      verifiedAt: true,
+      verifiedByUserId: true,
+
       records: {
         orderBy: { date: "desc" },
         take: 5,
@@ -286,9 +294,28 @@ export default async function HomePage({
                     initialAddress={addrLine}
                   />
 
-                  <h1 className={`text-2xl font-semibold ${heading}`}>
-                    {addrLine}
-                  </h1>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className={`text-2xl font-semibold ${heading}`}>
+                      {addrLine}
+                    </h1>
+
+                    {home.verificationStatus && (
+                      <div className="flex items-center gap-2">
+                        <HomeVerificationBadge
+                          status={home.verificationStatus}
+                        />
+                        {home.verificationStatus === "UNVERIFIED" && (
+                          <Link
+                            href={`/home/${home.id}/verify`}
+                            className="text-xs text-indigo-300 hover:text-indigo-200"
+                          >
+                            Verify
+                          </Link>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
                   <p className={`text-sm ${textMeta}`}>
                     Last updated {formatDate(stats.lastUpdated)}
                   </p>
@@ -297,7 +324,11 @@ export default async function HomePage({
             </div>
 
             {/* Actions row */}
-            <HomeActions homeId={home.id} homeAddress={addrLine} unreadMessages={0} />
+            <HomeActions
+              homeId={home.id}
+              homeAddress={addrLine}
+              unreadMessages={0}
+            />
           </div>
         </section>
 
@@ -305,9 +336,13 @@ export default async function HomePage({
         <PropertyStats homeId={home.id} stats={stats} />
 
         {/* Needs Attention - Pending Work & Requests */}
-        {(pendingWorkSubmissionsCount > 0 || pendingServiceRequestsCount > 0 || pendingInvitationsCount > 0) && (
+        {(pendingWorkSubmissionsCount > 0 ||
+          pendingServiceRequestsCount > 0 ||
+          pendingInvitationsCount > 0) && (
           <section className={`${glass} border-l-4 border-orange-400`}>
-            <h2 className={`text-lg font-semibold text-orange-400 mb-4 ${heading}`}>
+            <h2
+              className={`mb-4 text-lg font-semibold text-orange-400 ${heading}`}
+            >
               ⚡ Needs Your Attention
             </h2>
             <div className="space-y-3">
@@ -315,7 +350,7 @@ export default async function HomePage({
               {pendingWorkSubmissionsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">📋</span>
@@ -324,7 +359,9 @@ export default async function HomePage({
                         Review Completed Work
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingWorkSubmissionsCount} submission{pendingWorkSubmissionsCount !== 1 ? 's' : ''} awaiting approval
+                        {pendingWorkSubmissionsCount} submission
+                        {pendingWorkSubmissionsCount !== 1 ? "s" : ""} awaiting
+                        approval
                       </p>
                     </div>
                   </div>
@@ -338,7 +375,7 @@ export default async function HomePage({
               {pendingServiceRequestsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">🔧</span>
@@ -347,7 +384,9 @@ export default async function HomePage({
                         Service Requests
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingServiceRequestsCount} request{pendingServiceRequestsCount !== 1 ? 's' : ''} pending response
+                        {pendingServiceRequestsCount} request
+                        {pendingServiceRequestsCount !== 1 ? "s" : ""} pending
+                        response
                       </p>
                     </div>
                   </div>
@@ -361,7 +400,7 @@ export default async function HomePage({
               {pendingInvitationsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/invitations`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 hover:bg-white/10 transition"
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">✉️</span>
@@ -370,7 +409,9 @@ export default async function HomePage({
                         Pending Invitations
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingInvitationsCount} invitation{pendingInvitationsCount !== 1 ? 's' : ''} awaiting response
+                        {pendingInvitationsCount} invitation
+                        {pendingInvitationsCount !== 1 ? "s" : ""} awaiting
+                        response
                       </p>
                     </div>
                   </div>
@@ -452,7 +493,11 @@ export default async function HomePage({
           {/* Left column */}
           <div className="space-y-6 lg:col-span-2">
             {/* Connected Pros Section */}
-            <ConnectedPros homeId={home.id} homeAddress={addrLine} connections={connections} />
+            <ConnectedPros
+              homeId={home.id}
+              homeAddress={addrLine}
+              connections={connections}
+            />
 
             {/* Records */}
             <ClientCard
@@ -460,6 +505,7 @@ export default async function HomePage({
               viewAllLink={`/home/${home.id}/records`}
               homeId={home.id}
               addType="record"
+              verificationStatus={home.verificationStatus} // 👈 pass through
             >
               {serializedRecords.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
@@ -555,7 +601,7 @@ function RecordItem({
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-medium text-white">{record.title}</h3>
             {record.kind && (
-              <span className="inline-flex items-center rounded text-xs font-medium bg-blue-400/20 px-2 py-0.5 text-blue-300">
+              <span className="inline-flex items-center rounded bg-blue-400/20 px-2 py-0.5 text-xs font-medium text-blue-300">
                 {record.kind}
               </span>
             )}

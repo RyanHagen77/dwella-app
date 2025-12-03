@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { glass, ctaGhost, heading } from "@/lib/glass";
 import { AddRecordModal, type UnifiedRecordPayload } from "./AddRecordModal";
+import type { HomeVerificationStatus } from "@prisma/client";
+import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge";
 
 type RecordType = "record" | "reminder" | "warranty";
 
@@ -25,12 +27,14 @@ export function ClientCard({
   viewAllLink,
   homeId,
   addType,
+  verificationStatus,
 }: {
   title: string;
   children: React.ReactNode;
   viewAllLink?: string;
   homeId: string;
   addType?: RecordType;
+  verificationStatus?: HomeVerificationStatus;
 }) {
   const router = useRouter();
   const [addOpen, setAddOpen] = useState(false);
@@ -50,7 +54,8 @@ export function ClientCard({
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create record");
+    if (!res.ok || !json?.id)
+      throw new Error(json?.error || "Failed to create record");
     return { id: json.id };
   }
 
@@ -65,7 +70,8 @@ export function ClientCard({
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create reminder");
+    if (!res.ok || !json?.id)
+      throw new Error(json?.error || "Failed to create reminder");
     return { id: json.id };
   }
 
@@ -82,7 +88,8 @@ export function ClientCard({
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create warranty");
+    if (!res.ok || !json?.id)
+      throw new Error(json?.error || "Failed to create warranty");
     return { id: json.id };
   }
 
@@ -141,7 +148,8 @@ export function ClientCard({
         headers: { "Content-Type": f.type || "application/octet-stream" },
         body: f,
       });
-      if (!put.ok) throw new Error(`S3 PUT failed: ${await put.text().catch(() => "")}`);
+      if (!put.ok)
+        throw new Error(`S3 PUT failed: ${await put.text().catch(() => "")}`);
 
       uploaded.push({
         filename: f.name,
@@ -155,9 +163,12 @@ export function ClientCard({
     }
 
     let endpoint = "";
-    if (recordId) endpoint = `/api/home/${homeId}/records/${recordId}/attachments`;
-    else if (warrantyId) endpoint = `/api/home/${homeId}/warranties/${warrantyId}/attachments`;
-    else if (reminderId) endpoint = `/api/home/${homeId}/reminders/${reminderId}/attachments`;
+    if (recordId)
+      endpoint = `/api/home/${homeId}/records/${recordId}/attachments`;
+    else if (warrantyId)
+      endpoint = `/api/home/${homeId}/warranties/${warrantyId}/attachments`;
+    else if (reminderId)
+      endpoint = `/api/home/${homeId}/reminders/${reminderId}/attachments`;
     if (!endpoint) return;
 
     const persist = await fetch(endpoint, {
@@ -165,7 +176,10 @@ export function ClientCard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(uploaded),
     });
-    if (!persist.ok) throw new Error(`Persist attachments failed: ${await persist.text()}`);
+    if (!persist.ok)
+      throw new Error(
+        `Persist attachments failed: ${await persist.text()}`
+      );
   }
 
   async function onCreateUnified({
@@ -208,11 +222,31 @@ export function ClientCard({
     router.refresh();
   }
 
+  const showBadge = !!verificationStatus;
+
+  const badgeNode =
+    showBadge && verificationStatus === "UNVERIFIED" ? (
+      <Link
+        href={`/home/${homeId}/verify`}
+        className="inline-flex items-center gap-2"
+      >
+        <HomeVerificationBadge status={verificationStatus} />
+        <span className="text-[11px] text-indigo-300 hover:text-indigo-200">
+          Verify
+        </span>
+      </Link>
+    ) : showBadge ? (
+      <HomeVerificationBadge status={verificationStatus!} />
+    ) : null;
+
   return (
     <>
       <section className={glass}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-medium ${heading}`}>{title}</h2>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className={`text-lg font-medium ${heading}`}>{title}</h2>
+            {badgeNode}
+          </div>
           {addType && (
             <button
               onClick={() => setAddOpen(true)}
@@ -224,7 +258,7 @@ export function ClientCard({
         </div>
         {children}
         {viewAllLink && (
-          <div className="mt-4 pt-3 border-t border-white/10 text-right">
+          <div className="mt-4 border-t border-white/10 pt-3 text-right">
             <Link href={viewAllLink} className={`${ctaGhost} text-sm`}>
               View All →
             </Link>

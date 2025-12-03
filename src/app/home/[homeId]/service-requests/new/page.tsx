@@ -10,6 +10,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { glass, heading, textMeta } from "@/lib/glass";
 import { RequestWorkForm } from "../_components/RequestWorkForm";
+import { NoContractorsCard } from "../_components/NoContractorsCard";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
 
@@ -123,19 +124,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
             </div>
           </section>
 
-          <div className={`${glass} text-center`}>
-            <div className="mb-4 text-6xl">🔨</div>
-            <h2 className="mb-2 text-xl font-semibold">No Connected Contractors</h2>
-            <p className={`mb-6 ${textMeta}`}>
-              You need to connect with a contractor before you can request work.
-            </p>
-            <Link
-              href={`/home/${homeId}/contractors/find`}
-              className="inline-block rounded-lg bg-[rgba(243,90,31,0.85)] px-6 py-3 font-medium text-white hover:bg-[rgba(243,90,31,0.95)]"
-            >
-              Find Contractors
-            </Link>
-          </div>
+          <NoContractorsCard homeId={homeId} homeAddress={homeAddress} />
         </div>
       </main>
     );
