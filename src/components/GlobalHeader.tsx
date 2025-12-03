@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-// import Image from "next/image"; // no longer needed
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useEffect } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -49,7 +48,7 @@ export function GlobalHeader({
     () => (href: string, extra = "") =>
       [
         ctaGhost,
-        "rounded-full px-3 py-1.5 transition",
+        "rounded-full px-3 py-1.5 transition text-sm",
         pathname === href ? "bg-white text-slate-900 hover:bg-white" : "",
         extra,
       ].join(" "),
@@ -71,19 +70,21 @@ export function GlobalHeader({
   return (
     <>
       <div
-        className={`sticky top-0 z-40 transition-colors ${
-          scrolled ? "bg-black/45 backdrop-blur-md" : "bg-transparent"
+        className={`sticky top-0 z-40 w-full transition-colors ${
+          scrolled
+            ? "bg-black/55 backdrop-blur-md"
+            : "bg-black/35 backdrop-blur-md"
         }`}
       >
         {/* header row */}
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:py-5 text-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-5 md:px-6 py-3 md:py-4 pt-[env(safe-area-inset-top)] text-white">
           {/* Logo (SVG) */}
           <Link
             href={logoHref}
-            className="inline-flex items-center gap-3 shrink-0"
+            className="inline-flex items-center gap-2 shrink-0"
             aria-label={srBrand}
           >
-            <DwellaLogo className="h-8 w-auto sm:h-10" />
+            <DwellaLogo className="h-7 w-auto sm:h-8" />
             <span className="sr-only">{srBrand ?? logoAlt}</span>
           </Link>
 
@@ -177,7 +178,7 @@ export function GlobalHeader({
                             setAccountOpen(false);
                             setClaimOpen(true);
                           }}
-                          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-white/90 hover:bg-white/10"
+                          className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-white/90 hover:bg:white/10"
                         >
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -277,8 +278,8 @@ export function GlobalHeader({
         {/* mobile dropdown */}
         {open && (
           <div className="md:hidden">
-            <div className="mx-auto max-w-7xl px-6 pb-3">
-              <div className="rounded-2xl border border-white/15 bg-black/55 backdrop-blur-md p-2">
+            <div className="mx-auto max-w-6xl px-4 pb-3">
+              <div className="rounded-2xl border border-white/15 bg-black/70 backdrop-blur-md p-2">
                 <div className="grid grid-cols-2 gap-2">
                   {links.map(({ href, label, badge, tone = "white" }, i) => (
                     <Link
@@ -300,7 +301,7 @@ export function GlobalHeader({
 
                   {status === "authenticated" ? (
                     <>
-                      <div className="col-span-2 py-1 text-center text-sm text-white/85">
+                      <div className="col-span-2 py-1 text-center text-xs text-white/80">
                         {session?.user?.email}
                       </div>
 
@@ -349,7 +350,7 @@ export function GlobalHeader({
         )}
 
         {/* bottom divider */}
-        <div className="mx-auto h-px max-w-7xl bg-white/15" />
+        <div className="mx-auto h-px max-w-6xl bg-white/15" />
       </div>
 
       {/* Claim-stats modal */}

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ClaimHomeModal } from "./ClaimHomeModal";
 
-
 type Home = {
   id: string;
   address: string;
@@ -30,20 +29,22 @@ function HomeContextBarInner() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
 
-  // derive current stats from URL when on /stats/[workId]
+  // derive current home from URL when on /home/[homeId]
   useEffect(() => {
     const match = pathname?.match(/\/home\/([^/]+)/);
     if (match) {
       setCurrentHomeId(match[1]);
-      window.localStorage.setItem("lastHomeId", match[1]);
-    } else {
-      // non-stats pages: use last visited if available
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("lastHomeId", match[1]);
+      }
+    } else if (typeof window !== "undefined") {
+      // non-home pages: use last visited if available
       const last = window.localStorage.getItem("lastHomeId");
       if (last) setCurrentHomeId(last);
     }
   }, [pathname]);
 
-  // fetch stats once
+  // fetch homes once
   useEffect(() => {
     async function loadHomes() {
       try {
@@ -52,7 +53,7 @@ function HomeContextBarInner() {
         const data = await res.json();
         setHomes(data.homes || []);
       } catch (err) {
-        console.error("Failed to fetch stats", err);
+        console.error("Failed to fetch homes", err);
       }
     }
     loadHomes();
@@ -63,7 +64,10 @@ function HomeContextBarInner() {
   async function switchHome(homeId: string) {
     setPickerOpen(false);
     setCurrentHomeId(homeId);
-    window.localStorage.setItem("lastHomeId", homeId);
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("lastHomeId", homeId);
+    }
 
     try {
       await fetch("/api/user/last-home", {
@@ -72,10 +76,10 @@ function HomeContextBarInner() {
         body: JSON.stringify({ homeId }),
       });
     } catch (err) {
-      console.error("Failed to update last stats", err);
+      console.error("Failed to update last home", err);
     }
 
-    // only push when we’re not already on that stats
+    // only push when we’re not already on that home
     if (!pathname?.startsWith(`/home/${homeId}`)) {
       router.push(`/home/${homeId}`);
     }
@@ -84,20 +88,19 @@ function HomeContextBarInner() {
   return (
     <>
       {/* BAR: sits above the hero card */}
-      <div className="relative z-[60] mx-auto flex max-w-7xl items-center justify-between px-6 pt-4">
+      <div className="relative z-[60] mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-5 md:px-6 pt-2 md:pt-3">
         {/* picker */}
         <div className="relative z-[70] w-full max-w-md">
           <button
             type="button"
             onClick={() => setPickerOpen((v) => !v)}
-            className={`flex w-full items-center gap-2 rounded-full px-4 py-2 text-sm text-white shadow-lg
-                        border border-white/25 bg-black/35 backdrop-blur-md`}
+            className="flex w-full items-center gap-2 rounded-full border border-white/25 bg-black/35 px-4 py-2 text-sm text-white shadow-lg backdrop-blur-md"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
               <HomeTraceHouseIcon className="h-4 w-4" />
             </span>
             <span className="flex-1 truncate text-left">
-              {currentHome ? formatAddress(currentHome) : "Select a stats"}
+              {currentHome ? formatAddress(currentHome) : "Select a home"}
             </span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -123,10 +126,7 @@ function HomeContextBarInner() {
                 onClick={() => setPickerOpen(false)}
               />
               {/* dropdown itself – ABOVE hero buttons */}
-              <div
-                className="absolute left-0 top-full z-[80] mt-2 w-[min(360px,calc(100vw-3rem))]
-                           rounded-2xl border border-white/15 bg-black/90 backdrop-blur-xl shadow-2xl"
-              >
+              <div className="absolute left-0 top-full z-[80] mt-2 w-[min(360px,calc(100vw-3rem))] rounded-2xl border border-white/15 bg-black/90 backdrop-blur-xl shadow-2xl">
                 <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white/50">
                   Your homes
                 </div>
@@ -136,12 +136,11 @@ function HomeContextBarInner() {
                       key={home.id}
                       type="button"
                       onClick={() => switchHome(home.id)}
-                      className={`mb-1 flex w-full flex-col items-start rounded-xl px-3 py-2 text-left text-sm
-                         ${
-                           home.id === currentHome?.id
-                             ? "bg-white/15 text-white"
-                             : "bg-white/5 text-white/90 hover:bg-white/10"
-                         }`}
+                      className={`mb-1 flex w-full flex-col items-start rounded-xl px-3 py-2 text-left text-sm ${
+                        home.id === currentHome?.id
+                          ? "bg-white/15 text-white"
+                          : "bg-white/5 text-white/90 hover:bg-white/10"
+                      }`}
                     >
                       <span className="truncate">{formatAddress(home)}</span>
                       {home.id === currentHome?.id && (
@@ -158,8 +157,7 @@ function HomeContextBarInner() {
                       setPickerOpen(false);
                       setClaimOpen(true);
                     }}
-                    className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/30
-                               bg-transparent px-3 py-2 text-sm text-white/80 hover:bg-white/10"
+                    className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/30 bg-transparent px-3 py-2 text-sm text-white/80 hover:bg-white/10"
                   >
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/10">
                       +
@@ -172,7 +170,7 @@ function HomeContextBarInner() {
           )}
         </div>
 
-        {/* optional right-side CTA – for now just the add button for non-picker entry */}
+        {/* right-side CTA – keep small and only show from sm+ */}
         <button
           type="button"
           onClick={() => setClaimOpen(true)}
@@ -217,7 +215,6 @@ function HomeTraceHouseIcon({ className }: { className?: string }) {
   );
 }
 
-// glue exports so both `default` and `{ HomeContextBar }` document-completed-work-submissions
 function HomeContextBar() {
   return <HomeContextBarInner />;
 }
