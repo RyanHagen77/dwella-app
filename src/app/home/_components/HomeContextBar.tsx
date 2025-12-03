@@ -29,7 +29,6 @@ function HomeContextBarInner() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [claimOpen, setClaimOpen] = useState(false);
 
-  // derive current home from URL when on /home/[homeId]
   useEffect(() => {
     const match = pathname?.match(/\/home\/([^/]+)/);
     if (match) {
@@ -38,13 +37,11 @@ function HomeContextBarInner() {
         window.localStorage.setItem("lastHomeId", match[1]);
       }
     } else if (typeof window !== "undefined") {
-      // non-home pages: use last visited if available
       const last = window.localStorage.getItem("lastHomeId");
       if (last) setCurrentHomeId(last);
     }
   }, [pathname]);
 
-  // fetch homes once
   useEffect(() => {
     async function loadHomes() {
       try {
@@ -79,7 +76,6 @@ function HomeContextBarInner() {
       console.error("Failed to update last home", err);
     }
 
-    // only push when we’re not already on that home
     if (!pathname?.startsWith(`/home/${homeId}`)) {
       router.push(`/home/${homeId}`);
     }
@@ -87,14 +83,13 @@ function HomeContextBarInner() {
 
   return (
     <>
-      {/* BAR: sits above the hero card */}
       <div className="relative z-[60] mx-auto flex max-w-6xl items-center justify-between px-4 sm:px-5 md:px-6 pt-2 md:pt-3">
         {/* picker */}
         <div className="relative z-[70] w-full max-w-md">
           <button
             type="button"
             onClick={() => setPickerOpen((v) => !v)}
-            className="flex w-full items-center gap-2 rounded-full border border-white/25 bg-black/35 px-4 py-2 text-sm text-white shadow-lg backdrop-blur-md"
+            className="flex w-full items-center gap-2 rounded-full border border-white/25 bg-black/35 px-4 py-2 text-sm text-white shadow-lg backdrop-blur-md overflow-hidden"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-white/10">
               <HomeTraceHouseIcon className="h-4 w-4" />
@@ -120,12 +115,10 @@ function HomeContextBarInner() {
 
           {pickerOpen && (
             <>
-              {/* backdrop above page but under dropdown */}
               <div
                 className="fixed inset-0 z-[75]"
                 onClick={() => setPickerOpen(false)}
               />
-              {/* dropdown itself – ABOVE hero buttons */}
               <div className="absolute left-0 top-full z-[80] mt-2 w-[min(360px,calc(100vw-3rem))] rounded-2xl border border-white/15 bg-black/90 backdrop-blur-xl shadow-2xl">
                 <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white/50">
                   Your homes
@@ -170,7 +163,7 @@ function HomeContextBarInner() {
           )}
         </div>
 
-        {/* right-side CTA – keep small and only show from sm+ */}
+        {/* right-side CTA */}
         <button
           type="button"
           onClick={() => setClaimOpen(true)}
@@ -183,7 +176,6 @@ function HomeContextBarInner() {
         </button>
       </div>
 
-      {/* small spacer so the bar doesn’t overlap the hero card */}
       <div className="h-2" />
 
       <ClaimHomeModal
@@ -194,7 +186,6 @@ function HomeContextBarInner() {
   );
 }
 
-/** Just the little house outline from our logo */
 function HomeTraceHouseIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -207,7 +198,7 @@ function HomeTraceHouseIcon({ className }: { className?: string }) {
         d="M5 11.5V18a1 1 0 0 0 1 1h3v-4h6v4h3a1 1 0 0 0 1-1v-6.5a1 1 0 0 0-.34-.75l-7-6a1 1 0 0 0-1.32 0l-7 6A1 1 0 0 0 5 11.5z"
         fill="none"
         stroke="white"
-        strokeWidth="1.7"
+        strokeWidth={1.7}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -215,6 +206,7 @@ function HomeTraceHouseIcon({ className }: { className?: string }) {
   );
 }
 
+// glue exports
 function HomeContextBar() {
   return <HomeContextBarInner />;
 }

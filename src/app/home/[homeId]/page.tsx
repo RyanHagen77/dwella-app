@@ -1,10 +1,5 @@
 /**
- * HOME DASHBOARD - REDESIGNED
- *
- * Based on working original, with additions:
- * - Connected Pros section visible on main page
- * - Action items section for pending work/invitations
- * - Better layout hierarchy
+ * HOME DASHBOARD - APP-LIKE LAYOUT
  */
 
 import { prisma } from "@/lib/prisma";
@@ -21,7 +16,7 @@ import { ClientCard } from "@/app/home/_components/ClientCard";
 import { HomePicker } from "@/app/home/_components/HomePicker";
 import { PropertyStats } from "@/app/home/_components/PropertyStats";
 import { ConnectedPros } from "@/app/home/_components/ConnectedPros";
-import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge"; // 👈 NEW
+import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge";
 
 type HomeMeta = {
   attrs?: {
@@ -101,7 +96,6 @@ export default async function HomePage({
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Original query + connections
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: {
@@ -112,13 +106,10 @@ export default async function HomePage({
       zip: true,
       photos: true,
       meta: true,
-
-      // 👇 NEW: verification fields
       verificationStatus: true,
       verificationMethod: true,
       verifiedAt: true,
       verifiedByUserId: true,
-
       records: {
         orderBy: { date: "desc" },
         take: 5,
@@ -151,7 +142,6 @@ export default async function HomePage({
           expiresAt: true,
         },
       },
-      // NEW: Get connected contractors
       connections: {
         where: { status: "ACTIVE" },
         orderBy: { updatedAt: "desc" },
@@ -180,7 +170,6 @@ export default async function HomePage({
 
   if (!home) notFound();
 
-  // Get pending work submissions count (from WorkRecord, not WorkSubmission)
   const pendingWorkSubmissionsCount = await prisma.workRecord.count({
     where: {
       homeId,
@@ -192,7 +181,6 @@ export default async function HomePage({
     },
   });
 
-  // Get pending service requests count
   const pendingServiceRequestsCount = await prisma.serviceRequest.count({
     where: {
       homeId,
@@ -200,7 +188,6 @@ export default async function HomePage({
     },
   });
 
-  // Get pending invitations count
   const pendingInvitationsCount = await prisma.invitation.count({
     where: {
       homeId,
@@ -245,11 +232,10 @@ export default async function HomePage({
     isWarrantyExpiringSoon(w.expiresAt, now)
   );
 
-  // Cast connections to typed array
   const connections = home.connections as ConnectionWithContractor[];
 
   return (
-    <main className="relative min-h-screen text-white pb-20">
+    <main className="relative min-h-screen text-white overflow-x-hidden">
       {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image
@@ -264,11 +250,11 @@ export default async function HomePage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-            <div className="mx-auto max-w-6xl px-4 py-4 space-y-4 sm:px-5 sm:py-5 md:px-6 md:py-6 md:space-y-6">
+      <div className="mx-auto max-w-6xl px-4 py-4 space-y-4 sm:px-5 sm:py-5 md:px-6 md:py-6 md:space-y-6">
         {/* Hero card */}
         <section
           aria-labelledby="home-hero"
-          className={`${glass} overflow-visible relative z-[20]`}
+          className={`${glass} overflow-visible relative z-[20] rounded-2xl`}
         >
           <h2 id="home-hero" className="sr-only">
             Home overview
@@ -280,9 +266,10 @@ export default async function HomePage({
                 <Image
                   src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
                   alt={addrLine}
-                  width={800}
-                  height={450}
-                  className="aspect-video w-full rounded-md object-cover"
+                  width={960}
+                  height={540}
+                  className="aspect-video w-full rounded-xl object-cover"
+                  priority
                 />
               </div>
 
@@ -294,8 +281,10 @@ export default async function HomePage({
                     initialAddress={addrLine}
                   />
 
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className={`text-2xl font-semibold ${heading}`}>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1
+                      className={`text-xl sm:text-2xl md:text-3xl font-semibold leading-tight ${heading}`}
+                    >
                       {addrLine}
                     </h1>
 
@@ -307,7 +296,7 @@ export default async function HomePage({
                         {home.verificationStatus === "UNVERIFIED" && (
                           <Link
                             href={`/home/${home.id}/verify`}
-                            className="text-xs text-indigo-300 hover:text-indigo-200"
+                            className="text-[11px] font-medium text-indigo-300 hover:text-indigo-200"
                           >
                             Verify
                           </Link>
@@ -316,7 +305,7 @@ export default async function HomePage({
                     )}
                   </div>
 
-                  <p className={`text-sm ${textMeta}`}>
+                  <p className={`text-xs sm:text-sm ${textMeta}`}>
                     Last updated {formatDate(stats.lastUpdated)}
                   </p>
                 </div>
@@ -335,13 +324,13 @@ export default async function HomePage({
         {/* Stats */}
         <PropertyStats homeId={home.id} stats={stats} />
 
-        {/* Needs Attention - Pending Work & Requests */}
+        {/* Needs Attention */}
         {(pendingWorkSubmissionsCount > 0 ||
           pendingServiceRequestsCount > 0 ||
           pendingInvitationsCount > 0) && (
-          <section className={`${glass} border-l-4 border-orange-400`}>
+          <section className={`${glass} rounded-2xl border-l-4 border-orange-400`}>
             <h2
-              className={`mb-4 text-lg font-semibold text-orange-400 ${heading}`}
+              className={`mb-3 text-base sm:text-lg font-semibold text-orange-400 ${heading}`}
             >
               ⚡ Needs Your Attention
             </h2>
@@ -429,11 +418,11 @@ export default async function HomePage({
           expiringSoonWarranties.length > 0) && (
           <section className="space-y-3">
             {overdueReminders.length > 0 && (
-              <div className={`${glass} border-l-4 border-red-400`}>
-                <div className="flex items-start justify-between">
+              <div className={`${glass} rounded-2xl border-l-4 border-red-400`}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3
-                      className={`text-lg font-medium text-red-400 ${heading}`}
+                      className={`text-base sm:text-lg font-medium text-red-400 ${heading}`}
                     >
                       ⚠️ Overdue Reminders ({overdueReminders.length})
                     </h3>
@@ -447,7 +436,7 @@ export default async function HomePage({
                   </div>
                   <Link
                     href={`/home/${home.id}/reminders`}
-                    className={`${ctaPrimary} text-sm`}
+                    className={`${ctaPrimary} text-xs sm:text-sm self-start`}
                   >
                     View All
                   </Link>
@@ -456,11 +445,13 @@ export default async function HomePage({
             )}
 
             {expiringSoonWarranties.length > 0 && (
-              <div className={`${glass} border-l-4 border-yellow-400`}>
-                <div className="flex items-start justify-between">
+              <div
+                className={`${glass} rounded-2xl border-l-4 border-yellow-400`}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h3
-                      className={`text-lg font-medium text-yellow-400 ${heading}`}
+                      className={`text-base sm:text-lg font-medium text-yellow-400 ${heading}`}
                     >
                       ⏰ Warranties Expiring Soon (
                       {expiringSoonWarranties.length})
@@ -478,7 +469,7 @@ export default async function HomePage({
                   </div>
                   <Link
                     href={`/home/${home.id}/warranties`}
-                    className={`${ctaPrimary} text-sm`}
+                    className={`${ctaPrimary} text-xs sm:text-sm self-start`}
                   >
                     View All
                   </Link>
@@ -489,9 +480,9 @@ export default async function HomePage({
         )}
 
         {/* Main grid */}
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <section className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
           {/* Left column */}
-          <div className="space-y-6 lg:col-span-2">
+          <div className="space-y-4 md:space-y-6 lg:col-span-2">
             {/* Connected Pros Section */}
             <ConnectedPros
               homeId={home.id}
@@ -505,7 +496,7 @@ export default async function HomePage({
               viewAllLink={`/home/${home.id}/records`}
               homeId={home.id}
               addType="record"
-              verificationStatus={home.verificationStatus} // 👈 pass through
+              verificationStatus={home.verificationStatus}
             >
               {serializedRecords.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
@@ -525,7 +516,7 @@ export default async function HomePage({
           </div>
 
           {/* Right column */}
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             <ClientCard
               title="Upcoming Reminders"
               viewAllLink={`/home/${home.id}/reminders`}
@@ -607,7 +598,7 @@ function RecordItem({
             )}
           </div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-white/70">
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/70">
             {record.date && <span>📅 {formatDate(record.date)}</span>}
             {record.vendor && <span>🔧 {record.vendor}</span>}
             {record.cost != null && (
@@ -698,9 +689,7 @@ function WarrantyItem({
             {warranty.item}
           </h3>
           {warranty.provider && (
-            <p className="text-sm text-white/70">
-              {warranty.provider}
-            </p>
+            <p className="text-sm text-white/70">{warranty.provider}</p>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">

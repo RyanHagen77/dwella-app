@@ -9,16 +9,19 @@ export const metadata = {
   description: "Your home's digital record",
 };
 
-// Helps mobile / iOS sizing and zoom behavior
 export const viewport = {
   width: "device-width",
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en" className="h-full">
-      <body className="min-h-screen bg-black text-white antialiased">
+      <body className="min-h-screen bg-black text-white antialiased overflow-x-hidden">
         <SessionProviderWrapper>
           <ToastProvider>{children}</ToastProvider>
         </SessionProviderWrapper>
