@@ -299,121 +299,123 @@ function ReminderCard({
         href={`/home/${homeId}/reminders/${reminder.id}`}
         className={`block rounded-lg border p-4 transition-colors ${cardBase}`}
       >
-        <div className="flex items-start justify-between gap-4">
-          {/* Left side: main content */}
-          <div className="min-w-0 flex-1 space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="flex-1 truncate text-lg font-medium text-white">
-                {reminder.title}
-              </h3>
-            </div>
+        <div className="flex flex-col gap-3">
+          {/* Title */}
+          <h3 className="text-lg font-medium text-white break-words">
+            {reminder.title}
+          </h3>
 
-            <div className="flex flex-wrap items-center gap-4">
+          {/* Date + status message */}
+          <div className="flex flex-wrap items-center gap-4">
+            <span
+              className={`text-sm font-medium ${
+                isOverdue && !isCompleted
+                  ? "text-red-400"
+                  : "text-white/90"
+              }`}
+            >
+              📅{" "}
+              {dueDate.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
+
+            {!isCompleted && (
               <span
-                className={`text-sm font-medium ${
-                  isOverdue && !isCompleted
+                className={`text-sm ${
+                  isDueSoon
+                    ? "text-yellow-400"
+                    : isOverdue
                     ? "text-red-400"
-                    : "text-white/90"
+                    : "text-white/60"
                 }`}
               >
-                📅{" "}
-                {dueDate.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {isOverdue ? (
+                  Math.abs(daysUntilDue) === 1
+                    ? "1 day overdue"
+                    : `${Math.abs(daysUntilDue)} days overdue`
+                ) : daysUntilDue === 0 ? (
+                  "Due today"
+                ) : daysUntilDue === 1 ? (
+                  "Due tomorrow"
+                ) : (
+                  `${daysUntilDue} days away`
+                )}
               </span>
-
-              {!isCompleted && (
-                <span
-                  className={`text-sm ${
-                    isDueSoon
-                      ? "text-yellow-400"
-                      : isOverdue
-                      ? "text-red-400"
-                      : "text-white/60"
-                  }`}
-                >
-                  {isOverdue ? (
-                    Math.abs(daysUntilDue) === 1
-                      ? "1 day overdue"
-                      : `${Math.abs(daysUntilDue)} days overdue`
-                  ) : daysUntilDue === 0 ? (
-                    "Due today"
-                  ) : daysUntilDue === 1 ? (
-                    "Due tomorrow"
-                  ) : (
-                    `${daysUntilDue} days away`
-                  )}
-                </span>
-              )}
-
-              {isCompleted && (
-                <span className="text-sm text-emerald-300">Completed</span>
-              )}
-            </div>
-
-            {reminder.note && (
-              <p className="line-clamp-1 text-sm text-white/70">
-                {reminder.note}
-              </p>
             )}
 
-            {reminder.attachments?.length > 0 && (
-              <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
-                <span>📎</span>
-                <span>
-                  {reminder.attachments.length} attachment
-                  {reminder.attachments.length > 1 ? "s" : ""}
-                </span>
-
-                {reminder.attachments.slice(0, 3).map((att) => (
-                  <button
-                    key={att.id}
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      window.open(
-                        `/api/home/${homeId}/attachments/${att.id}`,
-                        "_blank"
-                      );
-                    }}
-                    className="underline hover:text-white/90"
-                  >
-                    {att.filename.length > 15
-                      ? att.filename.slice(0, 12) + "..."
-                      : att.filename}
-                  </button>
-                ))}
-
-                {reminder.attachments.length > 3 && (
-                  <span>+{reminder.attachments.length - 3} more</span>
-                )}
-              </div>
+            {isCompleted && (
+              <span className="text-sm text-emerald-300">Completed</span>
             )}
           </div>
 
-          {/* Right side: status + actions */}
-          <div className="flex flex-shrink-0 flex-col items-end gap-2">
+          {/* Note */}
+          {reminder.note && (
+            <p className="line-clamp-1 text-sm text-white/70">
+              {reminder.note}
+            </p>
+          )}
+
+          {/* Attachments */}
+          {reminder.attachments?.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
+              <span>📎</span>
+              <span>
+                {reminder.attachments.length} attachment
+                {reminder.attachments.length > 1 ? "s" : ""}
+              </span>
+
+              {reminder.attachments.slice(0, 3).map((att) => (
+                <button
+                  key={att.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.open(
+                      `/api/home/${homeId}/attachments/${att.id}`,
+                      "_blank"
+                    );
+                  }}
+                  className="underline hover:text-white/90"
+                >
+                  {att.filename.length > 15
+                    ? att.filename.slice(0, 12) + "..."
+                    : att.filename}
+                </button>
+              ))}
+
+              {reminder.attachments.length > 3 && (
+                <span>+{reminder.attachments.length - 3} more</span>
+              )}
+            </div>
+          )}
+
+          {/* Actions + Status Badge */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            {/* Status Badge */}
             {!isCompleted && isOverdue && (
               <span className="inline-flex items-center rounded border border-red-400/30 bg-red-400/20 px-2 py-1.5 text-xs font-medium text-red-300">
                 Overdue
               </span>
             )}
+
             {!isCompleted && isDueSoon && (
               <span className="inline-flex items-center rounded border border-yellow-400/30 bg-yellow-400/20 px-2 py-1.5 text-xs font-medium text-yellow-300">
                 Due Soon
               </span>
             )}
+
             {isCompleted && (
               <span className="inline-flex items-center rounded border border-emerald-400/40 bg-emerald-500/20 px-2 py-1.5 text-xs font-medium text-emerald-200">
                 Completed
               </span>
             )}
 
-            {/* Actions row */}
-            <div className="mt-1 flex flex-wrap items-center justify-end gap-2">
+            {/* Buttons */}
+            <div className="flex flex-wrap items-center gap-2">
               {!isCompleted && (
                 <button
                   type="button"
