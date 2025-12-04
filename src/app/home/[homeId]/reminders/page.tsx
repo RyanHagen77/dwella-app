@@ -68,7 +68,6 @@ export default async function RemindersPage({
       title: true,
       dueAt: true,
       note: true,
-      completedAt: true,
       archivedAt: true,
       attachments: {
         select: {
@@ -96,7 +95,7 @@ export default async function RemindersPage({
       (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const isCompleted = Boolean(r.completedAt || r.archivedAt);
+    const isCompleted = Boolean(r.archivedAt);
     const isOverdue = !isCompleted && dueDate < now;
     const isDueSoon = !isCompleted && !isOverdue && daysUntil <= 7;
 
