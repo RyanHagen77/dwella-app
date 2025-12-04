@@ -30,7 +30,7 @@ const navItems = [
   { href: "/admin/homes", label: "Homes", icon: Home },
   { href: "/admin/transfers", label: "Transfers", icon: ArrowLeftRight },
   { href: "/admin/connections", label: "Connections", icon: Link2 },
-  { href: "/admin/service-requests", label: "Job Requests", icon: ClipboardList },
+  { href: "/admin/service-requests", label: "Service Requests", icon: ClipboardList },
   { href: "/admin/system", label: "System", icon: Activity },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

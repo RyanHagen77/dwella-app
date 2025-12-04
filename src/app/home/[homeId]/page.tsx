@@ -1,10 +1,9 @@
-// app/home/[homeId]/page.tsx
 /**
  * HOME DASHBOARD - REDESIGNED
  *
  * - Hero with home photo + address + verification badge
  * - Property stats
- * - Needs Attention (pending work / requests / invitations)
+ * - Needs Attention (pending work / requests / invitations / messages)
  * - Alerts (overdue reminders, expiring warranties)
  * - Connected pros
  * - Recent maintenance, reminders, warranties
@@ -25,6 +24,7 @@ import { HomePicker } from "@/app/home/_components/HomePicker";
 import { PropertyStats } from "@/app/home/_components/PropertyStats";
 import { ConnectedPros } from "@/app/home/_components/ConnectedPros";
 import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge";
+import { UnreadMessagesAlert } from "@/app/home/_components/UnreadMessagesAlert";
 import type { HomeVerificationStatus } from "@prisma/client";
 
 type HomeMeta = {
@@ -249,7 +249,8 @@ export default async function HomePage({
   );
 
   const connections = home.connections as ConnectionWithContractor[];
-  const verificationStatus = home.verificationStatus as HomeVerificationStatus | null;
+  const verificationStatus =
+    home.verificationStatus as HomeVerificationStatus | null;
 
   return (
     <main className="relative min-h-screen text-white">
@@ -314,7 +315,7 @@ export default async function HomePage({
             <HomeActions
               homeId={home.id}
               homeAddress={addrLine}
-              unreadMessages={0}
+              unreadMessages={0 /* still your prop; pill badge logic stays */}
             />
           </div>
         </section>
@@ -322,91 +323,13 @@ export default async function HomePage({
         {/* Stats */}
         <PropertyStats homeId={home.id} stats={stats} />
 
-        {/* Needs Attention */}
-        {(pendingWorkSubmissionsCount > 0 ||
-          pendingServiceRequestsCount > 0 ||
-          pendingInvitationsCount > 0) && (
-          <section className={`${glass} border-l-4 border-orange-400`}>
-            <h2
-              className={`mb-4 text-lg font-semibold text-orange-400 ${heading}`}
-            >
-              ⚡ Needs Your Attention
-            </h2>
-            <div className="space-y-3">
-              {pendingWorkSubmissionsCount > 0 && (
-                <Link
-                  href={`/home/${home.id}/completed-work-submissions`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">📋</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Review Completed Work
-                      </p>
-                      <p className="text-xs text-white/60">
-                        {pendingWorkSubmissionsCount} submission
-                        {pendingWorkSubmissionsCount !== 1 ? "s" : ""} awaiting
-                        approval
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingWorkSubmissionsCount}
-                  </span>
-                </Link>
-              )}
-
-              {pendingServiceRequestsCount > 0 && (
-                <Link
-                  href={`/home/${home.id}/completed-work-submissions`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🔧</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Service Requests
-                      </p>
-                      <p className="text-xs text-white/60">
-                        {pendingServiceRequestsCount} request
-                        {pendingServiceRequestsCount !== 1 ? "s" : ""} pending
-                        response
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingServiceRequestsCount}
-                  </span>
-                </Link>
-              )}
-
-              {pendingInvitationsCount > 0 && (
-                <Link
-                  href={`/home/${home.id}/invitations`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">✉️</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Pending Invitations
-                      </p>
-                      <p className="text-xs text-white/60">
-                        {pendingInvitationsCount} invitation
-                        {pendingInvitationsCount !== 1 ? "s" : ""} awaiting
-                        response
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingInvitationsCount}
-                  </span>
-                </Link>
-              )}
-            </div>
-          </section>
-        )}
+        {/* Needs Attention – now a single panel that includes messages */}
+        <UnreadMessagesAlert
+          homeId={home.id}
+          pendingWorkSubmissionsCount={pendingWorkSubmissionsCount}
+          pendingServiceRequestsCount={pendingServiceRequestsCount}
+          pendingInvitationsCount={pendingInvitationsCount}
+        />
 
         {/* Alerts */}
         {(overdueReminders.length > 0 ||
@@ -682,9 +605,7 @@ function WarrantyItem({
             {warranty.item}
           </h3>
           {warranty.provider && (
-            <p className="text-sm text-white/70">
-              {warranty.provider}
-            </p>
+            <p className="text-sm text-white/70">{warranty.provider}</p>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">

@@ -158,7 +158,7 @@ export default async function ContractorServiceRequestsPage() {
             Dashboard
           </Link>
           <span className="text-white/50">/</span>
-          <span className="text-white">Job Requests</span>
+          <span className="text-white">Service Requests</span>
         </nav>
 
         {/* Header w/ back arrow */}
