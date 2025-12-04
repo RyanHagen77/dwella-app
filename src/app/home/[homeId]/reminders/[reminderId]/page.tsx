@@ -13,9 +13,9 @@ import Breadcrumb from "@/components/ui/Breadcrumb";
 export default async function ReminderDetailPage({
   params,
 }: {
-  params: { homeId: string; reminderId: string };
+  params: Promise<{ homeId: string; reminderId: string }>;
 }) {
-  const { homeId, reminderId } = params;
+  const { homeId, reminderId } = await params;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();

@@ -43,14 +43,13 @@ export default async function RemindersPage({
 
   const addrLine = `${home.address}${
     home.city ? `, ${home.city}` : ""
-  }${home.state ? `, ${home.state}` : ""}${
-    home.zip ? ` ${home.zip}` : ""
-  }`;
+  }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
   const where: {
     homeId: string;
+    archivedAt: null;
     title?: { contains: string; mode: "insensitive" };
-  } = { homeId };
+  } = { homeId, archivedAt: null };
 
   if (search) {
     where.title = { contains: search, mode: "insensitive" };
@@ -69,6 +68,8 @@ export default async function RemindersPage({
       title: true,
       dueAt: true,
       note: true,
+      completedAt: true,
+      archivedAt: true,
       attachments: {
         select: {
           id: true,
@@ -81,6 +82,9 @@ export default async function RemindersPage({
     },
   });
 
+  // ---------------------------
+  // STATUS MAPPING
+  // ---------------------------
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
@@ -91,10 +95,14 @@ export default async function RemindersPage({
     const daysUntil = Math.ceil(
       (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
     );
-    const isOverdue = dueDate < now;
-    const isDueSoon = !isOverdue && daysUntil <= 7;
 
-    const status: ReminderItem["status"] = isOverdue
+    const isCompleted = Boolean(r.completedAt || r.archivedAt);
+    const isOverdue = !isCompleted && dueDate < now;
+    const isDueSoon = !isCompleted && !isOverdue && daysUntil <= 7;
+
+    const status: ReminderItem["status"] = isCompleted
+      ? "completed"
+      : isOverdue
       ? "overdue"
       : isDueSoon
       ? "due-soon"
@@ -105,6 +113,7 @@ export default async function RemindersPage({
       title: r.title,
       dueAt: r.dueAt.toISOString(),
       note: r.note,
+      isCompleted,
       isOverdue,
       isDueSoon,
       daysUntil,
@@ -124,12 +133,28 @@ export default async function RemindersPage({
     };
   });
 
-  const overdueCount = remindersWithStatus.filter((r) => r.isOverdue).length;
-  const upcomingCount = remindersWithStatus.filter((r) => !r.isOverdue).length;
-  const next7DaysCount = remindersWithStatus.filter(
+  // ---------------------------
+  // COUNTS
+  // ---------------------------
+  const activeReminders = remindersWithStatus.filter((r) => !r.isCompleted);
+
+  const overdueCount = activeReminders.filter((r) => r.isOverdue).length;
+
+  const upcomingCount = activeReminders.filter(
+    (r) => !r.isOverdue
+  ).length;
+
+  const completedCount = remindersWithStatus.filter((r) => r.isCompleted).length;
+
+  const activeCount = remindersWithStatus.length - completedCount;
+
+  const next7DaysCount = activeReminders.filter(
     (r) => !r.isOverdue && r.daysUntil <= 7
   ).length;
 
+  // ---------------------------
+  // PAGE RENDER
+  // ---------------------------
   return (
     <main className="min-h-screen text-white">
       <div className="fixed inset-0 -z-50">
@@ -145,15 +170,19 @@ export default async function RemindersPage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <Breadcrumb href={`/home/${homeId}`} label={addrLine} current="Reminders" />
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <Breadcrumb
+          href={`/home/${homeId}`}
+          label={addrLine}
+          current="Reminders"
+        />
 
         <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <Link
                 href={`/home/${homeId}`}
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
                 aria-label="Back to home"
               >
                 <svg
@@ -162,30 +191,37 @@ export default async function RemindersPage({
                   viewBox="0 0 24 24"
                   strokeWidth={2}
                   stroke="currentColor"
-                  className="w-5 h-5"
+                  className="h-5 w-5"
                 >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+                    d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
                   />
                 </svg>
               </Link>
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <h1 className={`text-2xl font-bold ${heading}`}>Reminders</h1>
-                <p className={`text-sm ${textMeta} mt-1`}>
+                <p className={`mt-1 text-sm ${textMeta}`}>
                   {remindersWithStatus.length}{" "}
-                  {remindersWithStatus.length === 1 ? "reminder" : "reminders"}
+                  {remindersWithStatus.length === 1
+                    ? "reminder"
+                    : "reminders"}
                 </p>
               </div>
             </div>
             <div className="flex-shrink-0">
-              <AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />
+              <AddRecordButton
+                homeId={homeId}
+                label="+ Add Reminder"
+                defaultType="reminder"
+              />
             </div>
           </div>
         </section>
 
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* STATS */}
+        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard label="Total" value={remindersWithStatus.length} />
           <StatCard
             label="Overdue"
@@ -200,6 +236,7 @@ export default async function RemindersPage({
           />
         </section>
 
+        {/* CLIENT PAGE */}
         <RemindersPageClient
           reminders={remindersWithStatus}
           homeId={homeId}
@@ -207,7 +244,8 @@ export default async function RemindersPage({
           initialSort={sort}
           overdueCount={overdueCount}
           upcomingCount={upcomingCount}
-          // ✅ don't pass onAddReminderAction from server unless it's a Server Action
+          completedCount={completedCount}
+          activeCount={activeCount}
         />
 
         <div className="h-12" />

@@ -7,15 +7,18 @@ import { glass, ctaGhost } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
 import { EditReminderModal } from "./_components/EditReminderModal";
 
+export type ReminderStatus = "overdue" | "due-soon" | "upcoming" | "completed";
+
 export type ReminderItem = {
   id: string;
   title: string;
   dueAt: string;
   note: string | null;
   formattedDate: string;
-  status: "overdue" | "due-soon" | "upcoming";
+  status: ReminderStatus;
   isOverdue: boolean;
   isDueSoon: boolean;
+  isCompleted: boolean;
   daysUntil: number;
   attachments: {
     id: string;
@@ -34,6 +37,8 @@ type Props = {
   initialSort?: string;
   overdueCount: number;
   upcomingCount: number;
+  completedCount: number;
+  activeCount: number;
   /** Optional UI callback (client-only). If passed from server it must be a Server Action. */
   onAddReminderAction?: () => void;
 };
@@ -46,6 +51,8 @@ export function RemindersPageClient({
   initialSort,
   overdueCount,
   upcomingCount,
+  completedCount,
+  activeCount,
   onAddReminderAction,
 }: Props) {
   const router = useRouter();
@@ -110,6 +117,21 @@ export function RemindersPageClient({
     router.push(`/home/${homeId}/reminders`);
   }
 
+  // --- Client-side filtering for status ---
+  const filteredReminders = reminders.filter((r) => {
+    if (status === "overdue") {
+      return !r.isCompleted && r.status === "overdue";
+    }
+    if (status === "upcoming") {
+      return !r.isCompleted && (r.status === "due-soon" || r.status === "upcoming");
+    }
+    if (status === "completed") {
+      return r.isCompleted;
+    }
+    // "all" = active only
+    return !r.isCompleted;
+  });
+
   return (
     <>
       {/* Filters */}
@@ -133,9 +155,10 @@ export function RemindersPageClient({
               value={status}
               onChange={(e) => handleStatusChange(e.target.value)}
             >
-              <option value="all">All ({reminders.length})</option>
+              <option value="all">Active ({activeCount})</option>
               <option value="overdue">Overdue ({overdueCount})</option>
               <option value="upcoming">Upcoming ({upcomingCount})</option>
+              <option value="completed">Completed ({completedCount})</option>
             </Select>
           </div>
 
@@ -156,12 +179,12 @@ export function RemindersPageClient({
 
       {/* Reminders List */}
       <section className={glass}>
-        {reminders.length === 0 ? (
+        {filteredReminders.length === 0 ? (
           <div className="py-16 text-center">
             <p className="mb-4 text-white/70">
               {hasActiveFilters
                 ? "No reminders match your filters."
-                : "No reminders yet for this stats."}
+                : "No reminders yet for this home."}
             </p>
 
             {hasActiveFilters ? (
@@ -184,7 +207,7 @@ export function RemindersPageClient({
           </div>
         ) : (
           <div className="space-y-3">
-            {reminders.map((reminder) => (
+            {filteredReminders.map((reminder) => (
               <ReminderCard
                 key={reminder.id}
                 reminder={reminder}
@@ -209,9 +232,11 @@ function ReminderCard({
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
   const dueDate = new Date(reminder.dueAt);
   const now = new Date();
+  const isCompleted = reminder.isCompleted;
   const isOverdue = reminder.status === "overdue";
   const isDueSoon = reminder.status === "due-soon";
   const daysUntilDue = Math.ceil(
@@ -237,19 +262,45 @@ function ReminderCard({
     }
   }
 
+  async function handleComplete() {
+    if (completing) return;
+    setCompleting(true);
+    try {
+      const res = await fetch(
+        `/api/home/${homeId}/reminders/${reminder.id}/complete`,
+        { method: "PATCH" }
+      );
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to mark complete");
+      }
+
+      router.refresh();
+    } catch (error) {
+      console.error("Complete failed:", error);
+      alert("Failed to mark as complete. Please try again.");
+      setCompleting(false);
+    }
+  }
+
+  const cardBase =
+    isCompleted
+      ? "border-emerald-400/30 bg-emerald-500/5 hover:bg-emerald-500/10"
+      : isOverdue
+      ? "border-red-400/30 bg-red-500/5 hover:bg-red-500/10"
+      : isDueSoon
+      ? "border-yellow-400/30 bg-yellow-500/5 hover:bg-yellow-500/10"
+      : "border-white/10 bg-white/5 hover:bg-white/10";
+
   return (
     <>
       <Link
         href={`/home/${homeId}/reminders/${reminder.id}`}
-        className={`block rounded-lg border p-4 transition-colors ${
-          isOverdue
-            ? "border-red-400/30 bg-red-500/5 hover:bg-red-500/10"
-            : isDueSoon
-            ? "border-yellow-400/30 bg-yellow-500/5 hover:bg-yellow-500/10"
-            : "border-white/10 bg-white/5 hover:bg-white/10"
-        }`}
+        className={`block rounded-lg border p-4 transition-colors ${cardBase}`}
       >
         <div className="flex items-start justify-between gap-4">
+          {/* Left side: main content */}
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex items-center gap-2">
               <h3 className="flex-1 truncate text-lg font-medium text-white">
@@ -260,7 +311,9 @@ function ReminderCard({
             <div className="flex flex-wrap items-center gap-4">
               <span
                 className={`text-sm font-medium ${
-                  isOverdue ? "text-red-400" : "text-white/90"
+                  isOverdue && !isCompleted
+                    ? "text-red-400"
+                    : "text-white/90"
                 }`}
               >
                 📅{" "}
@@ -271,27 +324,33 @@ function ReminderCard({
                 })}
               </span>
 
-              <span
-                className={`text-sm ${
-                  isDueSoon
-                    ? "text-yellow-400"
-                    : isOverdue
-                    ? "text-red-400"
-                    : "text-white/60"
-                }`}
-              >
-                {isOverdue ? (
-                  Math.abs(daysUntilDue) === 1
-                    ? "1 day overdue"
-                    : `${Math.abs(daysUntilDue)} days overdue`
-                ) : daysUntilDue === 0 ? (
-                  "Due today"
-                ) : daysUntilDue === 1 ? (
-                  "Due tomorrow"
-                ) : (
-                  `${daysUntilDue} days away`
-                )}
-              </span>
+              {!isCompleted && (
+                <span
+                  className={`text-sm ${
+                    isDueSoon
+                      ? "text-yellow-400"
+                      : isOverdue
+                      ? "text-red-400"
+                      : "text-white/60"
+                  }`}
+                >
+                  {isOverdue ? (
+                    Math.abs(daysUntilDue) === 1
+                      ? "1 day overdue"
+                      : `${Math.abs(daysUntilDue)} days overdue`
+                  ) : daysUntilDue === 0 ? (
+                    "Due today"
+                  ) : daysUntilDue === 1 ? (
+                    "Due tomorrow"
+                  ) : (
+                    `${daysUntilDue} days away`
+                  )}
+                </span>
+              )}
+
+              {isCompleted && (
+                <span className="text-sm text-emerald-300">Completed</span>
+              )}
             </div>
 
             {reminder.note && (
@@ -335,56 +394,80 @@ function ReminderCard({
             )}
           </div>
 
-          <div className="flex flex-shrink-0 items-center gap-2">
-            {isOverdue && (
+          {/* Right side: status + actions */}
+          <div className="flex flex-shrink-0 flex-col items-end gap-2">
+            {!isCompleted && isOverdue && (
               <span className="inline-flex items-center rounded border border-red-400/30 bg-red-400/20 px-2 py-1.5 text-xs font-medium text-red-300">
                 Overdue
               </span>
             )}
-            {isDueSoon && (
+            {!isCompleted && isDueSoon && (
               <span className="inline-flex items-center rounded border border-yellow-400/30 bg-yellow-400/20 px-2 py-1.5 text-xs font-medium text-yellow-300">
                 Due Soon
               </span>
             )}
+            {isCompleted && (
+              <span className="inline-flex items-center rounded border border-emerald-400/40 bg-emerald-500/20 px-2 py-1.5 text-xs font-medium text-emerald-200">
+                Completed
+              </span>
+            )}
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setEditOpen(true);
-              }}
-              className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/15"
-            >
-              Edit
-            </button>
+            {/* Actions row */}
+            <div className="mt-1 flex flex-wrap items-center justify-end gap-2">
+              {!isCompleted && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void handleComplete();
+                  }}
+                  disabled={completing || deleting}
+                  className="rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-1.5 text-xs font-medium text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-60"
+                >
+                  {completing ? "Marking…" : "Mark complete"}
+                </button>
+              )}
 
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditOpen(true);
+                }}
+                className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/15"
+              >
+                Edit
+              </button>
 
-                if (showConfirm) {
-                  handleDelete();
-                } else {
-                  setShowConfirm(true);
-                  setTimeout(() => setShowConfirm(false), 3000);
-                }
-              }}
-              disabled={deleting}
-              className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                showConfirm
-                  ? "border-red-400/50 bg-red-500/30 text-red-200 hover:bg-red-500/40"
-                  : "border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-              } disabled:opacity-50`}
-            >
-              {deleting
-                ? "Deleting..."
-                : showConfirm
-                ? "Confirm Delete?"
-                : "Delete"}
-            </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  if (showConfirm) {
+                    void handleDelete();
+                  } else {
+                    setShowConfirm(true);
+                    setTimeout(() => setShowConfirm(false), 3000);
+                  }
+                }}
+                disabled={deleting}
+                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                  showConfirm
+                    ? "border-red-400/50 bg-red-500/30 text-red-200 hover:bg-red-500/40"
+                    : "border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
+                } disabled:opacity-50`}
+              >
+                {deleting
+                  ? "Deleting..."
+                  : showConfirm
+                  ? "Confirm Delete?"
+                  : "Delete"}
+              </button>
+            </div>
           </div>
         </div>
       </Link>

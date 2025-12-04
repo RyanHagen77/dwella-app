@@ -510,10 +510,6 @@ model Reminder {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
-
-  @@index([homeId, dueAt])
-  @@index([createdBy])
-  @@index([homeId, dueAt, createdBy])
 }
 
 model Warranty {
