@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Select, Textarea, fieldLabel } from "@/components/ui";
@@ -19,17 +19,16 @@ type RecordData = {
 
 type Props = {
   open: boolean;
-  onClose: () => void;
+  onCloseAction: () => void;
   record: RecordData;
   homeId: string;
 };
 
-export function EditRecordModal({ open, onClose, record, homeId }: Props) {
+export function EditRecordModal({ open, onCloseAction, record, homeId }: Props) {
   const router = useRouter();
   const { push } = useToast();
   const [saving, setSaving] = useState(false);
 
-  // Initialize form with current record data
   const [form, setForm] = useState({
     title: record.title,
     date: record.date ? new Date(record.date).toISOString().slice(0, 10) : "",
@@ -40,20 +39,21 @@ export function EditRecordModal({ open, onClose, record, homeId }: Props) {
   });
 
   // Reset form when record changes or modal opens
-  useState(() => {
-    if (open) {
-      setForm({
-        title: record.title,
-        date: record.date ? new Date(record.date).toISOString().slice(0, 10) : "",
-        category: record.kind || "Maintenance",
-        vendor: record.vendor || "",
-        cost: record.cost || 0,
-        note: record.note || "",
-      });
-    }
-  });
+  useEffect(() => {
+    if (!open) return;
+    setForm({
+      title: record.title,
+      date: record.date
+        ? new Date(record.date).toISOString().slice(0, 10)
+        : "",
+      category: record.kind || "Maintenance",
+      vendor: record.vendor || "",
+      cost: record.cost || 0,
+      note: record.note || "",
+    });
+  }, [open, record.id, record.title, record.date, record.kind, record.vendor, record.cost, record.note]);
 
-  function set<K extends keyof typeof form>(k: K, v: typeof form[K]) {
+  function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
@@ -87,92 +87,96 @@ export function EditRecordModal({ open, onClose, record, homeId }: Props) {
       }
 
       push("Record updated successfully");
-      onClose();
+      onCloseAction();
       router.refresh();
     } catch (error) {
       console.error("Failed to update record:", error);
-      push(error instanceof Error ? error.message : "Failed to update record");
+      push(
+        error instanceof Error ? error.message : "Failed to update record"
+      );
     } finally {
       setSaving(false);
     }
   }
 
   return (
-    <Modal open={open} onCloseAction={onClose} title="Edit Record">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <label className="block">
-          <span className={fieldLabel}>Title</span>
-          <Input
-            value={form.title}
-            onChange={(e) => set("title", e.target.value)}
-            placeholder="e.g., HVAC Tune-up"
-            required
-          />
-        </label>
-
-        <div className="grid grid-cols-2 gap-3">
+    <Modal open={open} onCloseAction={onCloseAction} title="Edit Record">
+      <div className="max-h-[calc(100vh-5rem)] overflow-y-auto px-1 pb-2 sm:px-0">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1 sm:pt-0">
           <label className="block">
-            <span className={fieldLabel}>Date</span>
+            <span className={fieldLabel}>Title</span>
             <Input
-              type="date"
-              value={form.date}
-              onChange={(e) => set("date", e.target.value)}
+              value={form.title}
+              onChange={(e) => set("title", e.target.value)}
+              placeholder="e.g., HVAC Tune-up"
+              required
             />
           </label>
-          <label className="block">
-            <span className={fieldLabel}>Category</span>
-            <Select
-              value={form.category}
-              onChange={(e) => set("category", e.target.value)}
-            >
-              <option>Maintenance</option>
-              <option>Repair</option>
-              <option>Upgrade</option>
-              <option>Inspection</option>
-            </Select>
-          </label>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className={fieldLabel}>Date</span>
+              <Input
+                type="date"
+                value={form.date}
+                onChange={(e) => set("date", e.target.value)}
+              />
+            </label>
+            <label className="block">
+              <span className={fieldLabel}>Category</span>
+              <Select
+                value={form.category}
+                onChange={(e) => set("category", e.target.value)}
+              >
+                <option>Maintenance</option>
+                <option>Repair</option>
+                <option>Upgrade</option>
+                <option>Inspection</option>
+              </Select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className={fieldLabel}>Vendor</span>
+              <Input
+                value={form.vendor}
+                onChange={(e) => set("vendor", e.target.value)}
+                placeholder="e.g., ChillRight Heating"
+              />
+            </label>
+            <label className="block">
+              <span className={fieldLabel}>Cost</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.cost}
+                onChange={(e) => set("cost", Number(e.target.value))}
+              />
+            </label>
+          </div>
+
           <label className="block">
-            <span className={fieldLabel}>Vendor</span>
-            <Input
-              value={form.vendor}
-              onChange={(e) => set("vendor", e.target.value)}
-              placeholder="e.g., ChillRight Heating"
+            <span className={fieldLabel}>Notes</span>
+            <Textarea
+              rows={3}
+              value={form.note}
+              onChange={(e) => set("note", e.target.value)}
+              placeholder="Optional details…"
             />
           </label>
-          <label className="block">
-            <span className={fieldLabel}>Cost</span>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.cost}
-              onChange={(e) => set("cost", Number(e.target.value))}
-            />
-          </label>
-        </div>
 
-        <label className="block">
-          <span className={fieldLabel}>Notes</span>
-          <Textarea
-            rows={4}
-            value={form.note}
-            onChange={(e) => set("note", e.target.value)}
-            placeholder="Optional details…"
-          />
-        </label>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <GhostButton type="button" onClick={onClose} disabled={saving}>
-            Cancel
-          </GhostButton>
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving..." : "Save Changes"}
-          </Button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-2 pt-2">
+            <GhostButton type="button" onClick={onCloseAction} disabled={saving}>
+              Cancel
+            </GhostButton>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </div>
     </Modal>
   );
 }
