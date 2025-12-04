@@ -56,7 +56,7 @@ export function ClientCard({
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json?.id)
       throw new Error(json?.error || "Failed to create record");
-    return { id: json.id as string };
+    return { id: json.id };
   }
 
   async function createReminder(payload: {
@@ -72,7 +72,7 @@ export function ClientCard({
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json?.id)
       throw new Error(json?.error || "Failed to create reminder");
-    return { id: json.id as string };
+    return { id: json.id };
   }
 
   async function createWarranty(payload: {
@@ -90,11 +90,11 @@ export function ClientCard({
     const json = await res.json().catch(() => ({}));
     if (!res.ok || !json?.id)
       throw new Error(json?.error || "Failed to create warranty");
-    return { id: json.id as string };
+    return { id: json.id };
   }
 
   async function uploadAndPersistAttachments({
-    homeId: currentHomeId,
+    homeId,
     recordId,
     warrantyId,
     reminderId,
@@ -119,7 +119,7 @@ export function ClientCard({
         warrantyId?: string;
         reminderId?: string;
       } = {
-        homeId: currentHomeId,
+        homeId,
         filename: f.name,
         contentType: f.type || "application/octet-stream",
         size: f.size,
@@ -164,11 +164,11 @@ export function ClientCard({
 
     let endpoint = "";
     if (recordId)
-      endpoint = `/api/home/${currentHomeId}/records/${recordId}/attachments`;
+      endpoint = `/api/home/${homeId}/records/${recordId}/attachments`;
     else if (warrantyId)
-      endpoint = `/api/home/${currentHomeId}/warranties/${warrantyId}/attachments`;
+      endpoint = `/api/home/${homeId}/warranties/${warrantyId}/attachments`;
     else if (reminderId)
-      endpoint = `/api/home/${currentHomeId}/reminders/${reminderId}/attachments`;
+      endpoint = `/api/home/${homeId}/reminders/${reminderId}/attachments`;
     if (!endpoint) return;
 
     const persist = await fetch(endpoint, {
@@ -199,22 +199,14 @@ export function ClientCard({
         cost: typeof payload.cost === "number" ? payload.cost : undefined,
         verified: payload.verified ?? undefined,
       });
-      await uploadAndPersistAttachments({
-        homeId,
-        recordId: record.id,
-        files,
-      });
+      await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
     } else if (payload.type === "reminder") {
       const reminder = await createReminder({
         title: payload.title,
         dueAt: payload.dueAt!,
         note: payload.note ?? undefined,
       });
-      await uploadAndPersistAttachments({
-        homeId,
-        reminderId: reminder.id,
-        files,
-      });
+      await uploadAndPersistAttachments({ homeId, reminderId: reminder.id, files });
     } else if (payload.type === "warranty") {
       const warranty = await createWarranty({
         item: payload.item!,
@@ -223,11 +215,7 @@ export function ClientCard({
         expiresAt: payload.expiresAt ?? undefined,
         note: payload.note ?? undefined,
       });
-      await uploadAndPersistAttachments({
-        homeId,
-        warrantyId: warranty.id,
-        files,
-      });
+      await uploadAndPersistAttachments({ homeId, warrantyId: warranty.id, files });
     }
 
     setAddOpen(false);
@@ -240,43 +228,35 @@ export function ClientCard({
     showBadge && verificationStatus === "UNVERIFIED" ? (
       <Link
         href={`/home/${homeId}/verify`}
-        className="inline-flex items-center gap-1.5 rounded-full bg-yellow-500/10 px-2.5 py-1 text-[11px] font-medium text-yellow-300 ring-1 ring-yellow-500/40"
+        className="inline-flex items-center gap-2"
       >
         <HomeVerificationBadge status={verificationStatus} />
-        <span>Verify</span>
+        <span className="text-[11px] text-indigo-300 hover:text-indigo-200">
+          Verify
+        </span>
       </Link>
     ) : showBadge ? (
-      <div className="inline-flex">
-        <HomeVerificationBadge status={verificationStatus!} />
-      </div>
+      <HomeVerificationBadge status={verificationStatus!} />
     ) : null;
 
   return (
     <>
       <section className={glass}>
-        {/* Cleaner header: title + badge, Add as pill */}
-        <div className="mb-3 flex flex-col gap-2 sm:mb-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className={`text-base sm:text-lg font-medium ${heading}`}>
-              {title}
-            </h2>
-            {badgeNode && (
-              <div className="flex items-center">{badgeNode}</div>
-            )}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h2 className={`text-lg font-medium ${heading}`}>{title}</h2>
+            {badgeNode}
           </div>
-
           {addType && (
             <button
               onClick={() => setAddOpen(true)}
-              className="self-start rounded-full border border-white/25 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/80 hover:bg-white/10 sm:self-auto"
+              className="text-sm text-white/70 hover:text-white transition-colors"
             >
               + Add
             </button>
           )}
         </div>
-
         {children}
-
         {viewAllLink && (
           <div className="mt-4 border-t border-white/10 pt-3 text-right">
             <Link href={viewAllLink} className={`${ctaGhost} text-sm`}>

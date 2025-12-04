@@ -1,5 +1,13 @@
+// app/home/[homeId]/page.tsx
 /**
- * HOME DASHBOARD - APP-LIKE LAYOUT
+ * HOME DASHBOARD - REDESIGNED
+ *
+ * - Hero with home photo + address + verification badge
+ * - Property stats
+ * - Needs Attention (pending work / requests / invitations)
+ * - Alerts (overdue reminders, expiring warranties)
+ * - Connected pros
+ * - Recent maintenance, reminders, warranties
  */
 
 import { prisma } from "@/lib/prisma";
@@ -17,6 +25,7 @@ import { HomePicker } from "@/app/home/_components/HomePicker";
 import { PropertyStats } from "@/app/home/_components/PropertyStats";
 import { ConnectedPros } from "@/app/home/_components/ConnectedPros";
 import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge";
+import type { HomeVerificationStatus } from "@prisma/client";
 
 type HomeMeta = {
   attrs?: {
@@ -106,10 +115,12 @@ export default async function HomePage({
       zip: true,
       photos: true,
       meta: true,
+
       verificationStatus: true,
       verificationMethod: true,
       verifiedAt: true,
       verifiedByUserId: true,
+
       records: {
         orderBy: { date: "desc" },
         take: 5,
@@ -175,7 +186,12 @@ export default async function HomePage({
       homeId,
       isVerified: false,
       status: {
-        in: ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED", "DISPUTED"],
+        in: [
+          "PENDING_REVIEW",
+          "DOCUMENTED_UNVERIFIED",
+          "DOCUMENTED",
+          "DISPUTED",
+        ],
       },
       archivedAt: null,
     },
@@ -233,28 +249,15 @@ export default async function HomePage({
   );
 
   const connections = home.connections as ConnectionWithContractor[];
+  const verificationStatus = home.verificationStatus as HomeVerificationStatus | null;
 
   return (
-    <main className="relative min-h-screen text-white overflow-x-hidden">
-      {/* Background */}
-      <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-      </div>
-
-      <div className="mx-auto max-w-6xl px-4 py-4 space-y-4 sm:px-5 sm:py-5 md:px-6 md:py-6 md:space-y-6">
+    <main className="relative min-h-screen text-white">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Hero card */}
         <section
           aria-labelledby="home-hero"
-          className={`${glass} overflow-visible relative z-[20] rounded-2xl`}
+          className={`${glass} overflow-visible relative z-[20]`}
         >
           <h2 id="home-hero" className="sr-only">
             Home overview
@@ -266,10 +269,9 @@ export default async function HomePage({
                 <Image
                   src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
                   alt={addrLine}
-                  width={960}
-                  height={540}
-                  className="aspect-video w-full rounded-xl object-cover"
-                  priority
+                  width={800}
+                  height={450}
+                  className="aspect-video w-full rounded-md object-cover"
                 />
               </div>
 
@@ -281,22 +283,18 @@ export default async function HomePage({
                     initialAddress={addrLine}
                   />
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h1
-                      className={`text-xl sm:text-2xl md:text-3xl font-semibold leading-tight ${heading}`}
-                    >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h1 className={`text-2xl font-semibold ${heading}`}>
                       {addrLine}
                     </h1>
 
-                    {home.verificationStatus && (
+                    {verificationStatus && (
                       <div className="flex items-center gap-2">
-                        <HomeVerificationBadge
-                          status={home.verificationStatus}
-                        />
-                        {home.verificationStatus === "UNVERIFIED" && (
+                        <HomeVerificationBadge status={verificationStatus} />
+                        {verificationStatus === "UNVERIFIED" && (
                           <Link
                             href={`/home/${home.id}/verify`}
-                            className="text-[11px] font-medium text-indigo-300 hover:text-indigo-200"
+                            className="text-xs text-indigo-300 hover:text-indigo-200"
                           >
                             Verify
                           </Link>
@@ -305,7 +303,7 @@ export default async function HomePage({
                     )}
                   </div>
 
-                  <p className={`text-xs sm:text-sm ${textMeta}`}>
+                  <p className={`text-sm ${textMeta}`}>
                     Last updated {formatDate(stats.lastUpdated)}
                   </p>
                 </div>
@@ -328,14 +326,13 @@ export default async function HomePage({
         {(pendingWorkSubmissionsCount > 0 ||
           pendingServiceRequestsCount > 0 ||
           pendingInvitationsCount > 0) && (
-          <section className={`${glass} rounded-2xl border-l-4 border-orange-400`}>
+          <section className={`${glass} border-l-4 border-orange-400`}>
             <h2
-              className={`mb-3 text-base sm:text-lg font-semibold text-orange-400 ${heading}`}
+              className={`mb-4 text-lg font-semibold text-orange-400 ${heading}`}
             >
               ⚡ Needs Your Attention
             </h2>
             <div className="space-y-3">
-              {/* Pending Work Submissions */}
               {pendingWorkSubmissionsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
@@ -360,7 +357,6 @@ export default async function HomePage({
                 </Link>
               )}
 
-              {/* Pending Service Requests */}
               {pendingServiceRequestsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
@@ -385,7 +381,6 @@ export default async function HomePage({
                 </Link>
               )}
 
-              {/* Pending Invitations */}
               {pendingInvitationsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/invitations`}
@@ -418,16 +413,16 @@ export default async function HomePage({
           expiringSoonWarranties.length > 0) && (
           <section className="space-y-3">
             {overdueReminders.length > 0 && (
-              <div className={`${glass} rounded-2xl border-l-4 border-red-400`}>
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className={`${glass} border-l-4 border-red-400`}>
+                <div className="flex items-start justify-between">
                   <div>
                     <h3
-                      className={`text-base sm:text-lg font-medium text-red-400 ${heading}`}
+                      className={`text-lg font-medium text-red-400 ${heading}`}
                     >
                       ⚠️ Overdue Reminders ({overdueReminders.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
-                      {overdueReminders.map((r: Reminder) => (
+                      {overdueReminders.map((r) => (
                         <li key={r.id} className="text-sm text-white/90">
                           • {r.title} (due {formatDate(r.dueAt)})
                         </li>
@@ -436,7 +431,7 @@ export default async function HomePage({
                   </div>
                   <Link
                     href={`/home/${home.id}/reminders`}
-                    className={`${ctaPrimary} text-xs sm:text-sm self-start`}
+                    className={`${ctaPrimary} text-sm`}
                   >
                     View All
                   </Link>
@@ -445,19 +440,17 @@ export default async function HomePage({
             )}
 
             {expiringSoonWarranties.length > 0 && (
-              <div
-                className={`${glass} rounded-2xl border-l-4 border-yellow-400`}
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className={`${glass} border-l-4 border-yellow-400`}>
+                <div className="flex items-start justify-between">
                   <div>
                     <h3
-                      className={`text-base sm:text-lg font-medium text-yellow-400 ${heading}`}
+                      className={`text-lg font-medium text-yellow-400 ${heading}`}
                     >
                       ⏰ Warranties Expiring Soon (
                       {expiringSoonWarranties.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
-                      {expiringSoonWarranties.map((w: Warranty) => (
+                      {expiringSoonWarranties.map((w) => (
                         <li key={w.id} className="text-sm text-white/90">
                           • {w.item}{" "}
                           {w.expiresAt && (
@@ -469,7 +462,7 @@ export default async function HomePage({
                   </div>
                   <Link
                     href={`/home/${home.id}/warranties`}
-                    className={`${ctaPrimary} text-xs sm:text-sm self-start`}
+                    className={`${ctaPrimary} text-sm`}
                   >
                     View All
                   </Link>
@@ -480,23 +473,21 @@ export default async function HomePage({
         )}
 
         {/* Main grid */}
-        <section className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Left column */}
-          <div className="space-y-4 md:space-y-6 lg:col-span-2">
-            {/* Connected Pros Section */}
+          <div className="space-y-6 lg:col-span-2">
             <ConnectedPros
               homeId={home.id}
               homeAddress={addrLine}
               connections={connections}
             />
 
-            {/* Records */}
+            {/* Recent Maintenance & Repairs — NO verification badge, +Add on right */}
             <ClientCard
               title="Recent Maintenance & Repairs"
               viewAllLink={`/home/${home.id}/records`}
               homeId={home.id}
               addType="record"
-              verificationStatus={home.verificationStatus}
             >
               {serializedRecords.length === 0 ? (
                 <div className="py-8 text-center text-white/70">
@@ -507,7 +498,7 @@ export default async function HomePage({
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {serializedRecords.map((r: HomeRecord) => (
+                  {serializedRecords.map((r) => (
                     <RecordItem key={r.id} record={r} homeId={home.id} />
                   ))}
                 </div>
@@ -516,7 +507,8 @@ export default async function HomePage({
           </div>
 
           {/* Right column */}
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-6">
+            {/* Upcoming Reminders — +Add on right */}
             <ClientCard
               title="Upcoming Reminders"
               viewAllLink={`/home/${home.id}/reminders`}
@@ -529,7 +521,7 @@ export default async function HomePage({
                 </div>
               ) : (
                 <ul className="space-y-3">
-                  {upcomingReminders.map((m: Reminder) => (
+                  {upcomingReminders.map((m) => (
                     <ReminderItem
                       key={m.id}
                       reminder={m}
@@ -541,6 +533,7 @@ export default async function HomePage({
               )}
             </ClientCard>
 
+            {/* Active Warranties — +Add on right */}
             <ClientCard
               title="Active Warranties"
               viewAllLink={`/home/${home.id}/warranties`}
@@ -553,7 +546,7 @@ export default async function HomePage({
                 </div>
               ) : (
                 <ul className="space-y-3">
-                  {home.warranties.map((w: Warranty) => (
+                  {home.warranties.map((w) => (
                     <WarrantyItem
                       key={w.id}
                       warranty={w}
@@ -598,7 +591,7 @@ function RecordItem({
             )}
           </div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs sm:text-sm text-white/70">
+          <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-white/70">
             {record.date && <span>📅 {formatDate(record.date)}</span>}
             {record.vendor && <span>🔧 {record.vendor}</span>}
             {record.cost != null && (
@@ -689,7 +682,9 @@ function WarrantyItem({
             {warranty.item}
           </h3>
           {warranty.provider && (
-            <p className="text-sm text-white/70">{warranty.provider}</p>
+            <p className="text-sm text-white/70">
+              {warranty.provider}
+            </p>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
