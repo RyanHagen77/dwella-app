@@ -233,7 +233,7 @@ export function EditReminderModal({
                 onChange={(e) => set("title", e.target.value)}
                 placeholder="e.g., Replace HVAC filter"
                 required
-                className="w-full max-w-full"
+                className="w-full"
               />
             </label>
 
@@ -245,7 +245,7 @@ export function EditReminderModal({
                 value={form.dueAt}
                 onChange={(e) => set("dueAt", e.target.value)}
                 required
-                className="w-full max-w-full overflow-hidden"
+                className="w-full"
               />
             </label>
 
@@ -257,7 +257,7 @@ export function EditReminderModal({
                 value={form.note}
                 onChange={(e) => set("note", e.target.value)}
                 placeholder="Additional details…"
-                className="w-full max-w-full"
+                className="w-full"
               />
             </label>
 
@@ -306,7 +306,7 @@ export function EditReminderModal({
                 multiple
                 accept="image/*,.pdf"
                 onChange={(e) => onFiles(e.target.files)}
-                className="mt-1 block w-full max-w-full text-white/85 file:mr-3 file:rounded-md file:border file:border-white/30 file:bg-white/10 file:px-3 file:py-1.5 file:text-white hover:file:bg-white/15"
+                className="mt-1 block w-full text-white/85 file:mr-3 file:rounded-md file:border file:border-white/30 file:bg-white/10 file:px-3 file:py-1.5 file:text-white hover:file:bg-white/15"
               />
             </label>
 
