@@ -271,7 +271,9 @@ export function EditReminderModal({
                           className="flex flex-1 items-center gap-2 text-sm hover:text-white"
                         >
                           <span>📎</span>
-                          <span className="truncate">{att.filename}</span>
+                          <span className="flex-1 truncate max-w-[150px] sm:max-w-[250px]">
+                            {att.filename}
+                          </span>
                           {kb && (
                             <span className="text-xs text-white/50">
                               {kb} KB
