@@ -240,20 +240,21 @@ export function EditReminderModal({
             {/* Due date */}
             <label className="block">
               <span className={fieldLabel}>Due Date</span>
-              <div className="w-full">
-                <Input
-                  type="date"
-                  value={form.dueAt}
-                  onChange={(e) => set("dueAt", e.target.value)}
-                  required
-                  className="w-full min-w-0"
-                  style={{
-                    width: '100%',
-                    maxWidth: '100%',
-                    boxSizing: 'border-box'
-                  }}
-                />
-              </div>
+              <input
+                type="date"
+                value={form.dueAt}
+                onChange={(e) => set("dueAt", e.target.value)}
+                required
+                className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white placeholder-white/50 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50"
+                style={{
+                  width: '100%',
+                  maxWidth: '100%',
+                  minWidth: '0',
+                  boxSizing: 'border-box',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'textfield'
+                }}
+              />
             </label>
 
             {/* Notes */}
