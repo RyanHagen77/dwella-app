@@ -59,6 +59,8 @@ export function EditReminderModal({
     note: reminder.note || "",
   });
 
+  const existing = reminder.attachments ?? [];
+
   // Reset when modal opens / reminder changes
   useEffect(() => {
     if (!open) return;
@@ -83,6 +85,7 @@ export function EditReminderModal({
   function onFiles(list: FileList | null) {
     if (!list) return;
 
+    // revoke old previews
     previews.forEach((url) => URL.revokeObjectURL(url));
 
     const arr = Array.from(list);
@@ -136,6 +139,7 @@ export function EditReminderModal({
         const uploaded: UploadedAttachment[] = [];
 
         for (const file of files) {
+          // presign
           const presignRes = await fetch("/api/uploads/presign", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -159,6 +163,7 @@ export function EditReminderModal({
             publicUrl?: string;
           };
 
+          // upload to S3
           const uploadRes = await fetch(presigned.url, {
             method: "PUT",
             body: file,
@@ -182,6 +187,7 @@ export function EditReminderModal({
           });
         }
 
+        // save metadata
         const saveRes = await fetch(
           `/api/home/${homeId}/reminders/${reminder.id}/attachments`,
           {
@@ -209,138 +215,145 @@ export function EditReminderModal({
     }
   }
 
-  const existing = reminder.attachments ?? [];
-
   return (
     <div className="relative z-[100]">
       <Modal open={open} onCloseAction={onCloseAction} title="Edit Reminder">
-        {/* Constrain modal width + vertical scrolling for mobile */}
-        <div className="w-full max-w-md mx-auto">
-          <div className="max-h-[calc(100vh-5rem)] overflow-y-auto px-3 pb-3 pt-1 sm:px-4 sm:pb-4">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <p className={`text-sm ${textMeta}`}>
-                Update reminder details and optionally upload new files.
-              </p>
+        {/* Content wrapper: constrain width + prevent horizontal scroll */}
+        <div className="w-full max-w-[520px] mx-auto max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1 sm:px-4 sm:pb-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <p className={`text-sm ${textMeta}`}>
+              Update reminder details and manage attachments.
+            </p>
 
-              <label className="block">
-                <span className={fieldLabel}>Title</span>
-                <Input
-                  value={form.title}
-                  onChange={(e) => set("title", e.target.value)}
-                  placeholder="e.g., Clean gutters"
-                  required
-                />
-              </label>
+            {/* Title */}
+            <label className="block">
+              <span className={fieldLabel}>Title</span>
+              <Input
+                value={form.title}
+                onChange={(e) => set("title", e.target.value)}
+                placeholder="e.g., Replace HVAC filter"
+                required
+                className="w-full max-w-full"
+              />
+            </label>
 
-              <label className="block">
-                <span className={fieldLabel}>Due Date</span>
-                <Input
-                  type="date"
-                  value={form.dueAt}
-                  onChange={(e) => set("dueAt", e.target.value)}
-                  required
-                />
-              </label>
+            {/* Due date */}
+            <label className="block">
+              <span className={fieldLabel}>Due Date</span>
+              <Input
+                type="date"
+                value={form.dueAt}
+                onChange={(e) => set("dueAt", e.target.value)}
+                required
+                className="w-full max-w-full overflow-hidden"
+              />
+            </label>
 
-              <label className="block">
-                <span className={fieldLabel}>Notes (optional)</span>
-                <Textarea
-                  rows={3}
-                  value={form.note}
-                  onChange={(e) => set("note", e.target.value)}
-                  placeholder="Additional details…"
-                />
-              </label>
+            {/* Notes */}
+            <label className="block">
+              <span className={fieldLabel}>Notes (optional)</span>
+              <Textarea
+                rows={3}
+                value={form.note}
+                onChange={(e) => set("note", e.target.value)}
+                placeholder="Additional details…"
+                className="w-full max-w-full"
+              />
+            </label>
 
-              <label className="block">
-                <span className={fieldLabel}>Add Attachments (optional)</span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*,.pdf"
-                  onChange={(e) => onFiles(e.target.files)}
-                  className="mt-1 block w-full text-white/85 file:mr-3 file:rounded-md file:border file:border-white/30 file:bg-white/10 file:px-3 file:py-1.5 file:text-white hover:file:bg-white/15"
-                />
-              </label>
+            {/* Existing attachments */}
+            {existing.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm text-white/70">
+                  Existing attachments
+                </div>
+                <div className="space-y-1">
+                  {existing.map((att) => {
+                    const kb =
+                      att.size == null
+                        ? null
+                        : (Number(att.size) / 1024).toFixed(1);
 
-              {/* Existing attachments */}
-              {existing.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm text-white/70">
-                    Existing Attachments:
-                  </div>
-                  <div className="space-y-1">
-                    {existing.map((att) => {
-                      const kb =
-                        att.size == null
-                          ? null
-                          : (Number(att.size) / 1024).toFixed(1);
-
-                      return (
-                        <a
-                          key={att.id}
-                          href={`/api/home/${homeId}/attachments/${att.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
-                        >
-                          <span>📎</span>
-                          <span className="flex-1 truncate">
-                            {att.filename}
+                    return (
+                      <a
+                        key={att.id}
+                        href={`/api/home/${homeId}/attachments/${att.id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+                      >
+                        <span>📎</span>
+                        <span className="flex-1 truncate">
+                          {att.filename}
+                        </span>
+                        {kb && (
+                          <span className="text-xs text-white/50">
+                            {kb} KB
                           </span>
-                          {kb && (
-                            <span className="text-xs text-white/50">
-                              {kb} KB
-                            </span>
-                          )}
-                        </a>
-                      );
-                    })}
-                  </div>
+                        )}
+                      </a>
+                    );
+                  })}
                 </div>
-              )}
-
-              {/* New previews */}
-              {previews.length > 0 && (
-                <div className="space-y-2">
-                  <div className="text-sm text-white/70">New Attachments:</div>
-                  <div className="flex gap-2 overflow-x-auto pb-1">
-                    {previews.map((u, i) => (
-                      <div key={u} className="relative flex-shrink-0">
-                        <Image
-                          src={u}
-                          alt={`Preview ${i + 1}`}
-                          width={80}
-                          height={80}
-                          className="h-20 w-20 rounded border border-white/20 object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeFile(i)}
-                          className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-xs text-white hover:bg-red-600"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-1">
-                <GhostButton
-                  type="button"
-                  onClick={onCloseAction}
-                  disabled={saving}
-                >
-                  Cancel
-                </GhostButton>
-                <Button type="submit" disabled={saving}>
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
               </div>
-            </form>
-          </div>
+            )}
+
+            {/* New attachments */}
+            <label className="block">
+              <span className={fieldLabel}>Add Attachments (optional)</span>
+              <input
+                type="file"
+                multiple
+                accept="image/*,.pdf"
+                onChange={(e) => onFiles(e.target.files)}
+                className="mt-1 block w-full max-w-full text-white/85 file:mr-3 file:rounded-md file:border file:border-white/30 file:bg-white/10 file:px-3 file:py-1.5 file:text-white hover:file:bg-white/15"
+              />
+            </label>
+
+            {/* New previews */}
+            {previews.length > 0 && (
+              <div className="space-y-2">
+                <div className="text-sm text-white/70">New attachments</div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {previews.map((u, i) => (
+                    <div
+                      key={u}
+                      className="relative flex-shrink-0"
+                    >
+                      <Image
+                        src={u}
+                        alt={`Preview ${i + 1}`}
+                        width={80}
+                        height={80}
+                        className="h-20 w-20 rounded border border-white/20 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeFile(i)}
+                        className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-xs text-white hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-2 pt-2">
+              <GhostButton
+                type="button"
+                onClick={onCloseAction}
+                disabled={saving}
+              >
+                Cancel
+              </GhostButton>
+              <Button type="submit" disabled={saving}>
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
         </div>
       </Modal>
     </div>
