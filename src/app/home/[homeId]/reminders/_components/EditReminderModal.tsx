@@ -9,7 +9,7 @@ import { Button, GhostButton } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { textMeta } from "@/lib/glass";
 
-type ReminderData = {
+export type ReminderData = {
   id: string;
   title: string;
   dueAt: Date | string;
@@ -52,6 +52,7 @@ export function EditReminderModal({
   const [saving, setSaving] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
+  const [deletedAttachmentIds, setDeletedAttachmentIds] = useState<string[]>([]);
 
   const [form, setForm] = useState({
     title: reminder.title,
@@ -59,9 +60,11 @@ export function EditReminderModal({
     note: reminder.note || "",
   });
 
-  const existing = reminder.attachments ?? [];
+  const existing = (reminder.attachments ?? []).filter(
+    (att) => !deletedAttachmentIds.includes(att.id)
+  );
 
-  // Reset when modal opens / reminder changes
+  // Reset on open/reminder change
   useEffect(() => {
     if (!open) return;
 
@@ -71,11 +74,11 @@ export function EditReminderModal({
       note: reminder.note || "",
     });
 
-    // Clear files + revoke previews
-    previews.forEach((url) => URL.revokeObjectURL(url));
+    previews.forEach((u) => URL.revokeObjectURL(u));
     setFiles([]);
     setPreviews([]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setDeletedAttachmentIds([]);
+    // eslint-disable-next-line
   }, [open, reminder.id]);
 
   function set<K extends keyof typeof form>(key: K, value: (typeof form)[K]) {
@@ -84,9 +87,7 @@ export function EditReminderModal({
 
   function onFiles(list: FileList | null) {
     if (!list) return;
-
-    // revoke old previews
-    previews.forEach((url) => URL.revokeObjectURL(url));
+    previews.forEach((u) => URL.revokeObjectURL(u));
 
     const arr = Array.from(list);
     setFiles(arr);
@@ -99,23 +100,18 @@ export function EditReminderModal({
     setPreviews((p) => p.filter((_, i) => i !== index));
   }
 
+  function removeExistingAttachment(id: string) {
+    setDeletedAttachmentIds((prev) => [...prev, id]);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-
-    if (!form.title.trim()) {
-      push("Title is required");
-      return;
-    }
-
-    if (!form.dueAt) {
-      push("Due date is required");
-      return;
-    }
+    if (!form.title.trim()) return push("Title is required");
+    if (!form.dueAt) return push("Due date is required");
 
     setSaving(true);
-
     try {
-      // 1) Update reminder
+      // Update reminder
       const res = await fetch(
         `/api/home/${homeId}/reminders/${reminder.id}`,
         {
@@ -129,17 +125,21 @@ export function EditReminderModal({
         }
       );
 
-      if (!res.ok) {
-        const error = await res.json().catch(() => ({} as { error?: string }));
-        throw new Error(error.error || "Failed to update reminder");
+      if (!res.ok)
+        throw new Error((await res.json().catch(() => ({}))).error || "Failed");
+
+      // Delete attachments
+      for (const id of deletedAttachmentIds) {
+        await fetch(`/api/home/${homeId}/attachments/${id}`, {
+          method: "DELETE",
+        });
       }
 
-      // 2) Upload files if any
+      // Upload new files
       if (files.length > 0) {
         const uploaded: UploadedAttachment[] = [];
 
         for (const file of files) {
-          // presign
           const presignRes = await fetch("/api/uploads/presign", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -147,48 +147,30 @@ export function EditReminderModal({
               homeId,
               reminderId: reminder.id,
               filename: file.name,
-              contentType: file.type || "application/octet-stream",
+              contentType: file.type,
               size: file.size,
             }),
           });
 
-          if (!presignRes.ok) {
-            const msg = await presignRes.text();
-            throw new Error(`Failed to get upload URL: ${msg}`);
-          }
+          const presigned = await presignRes.json();
 
-          const presigned = (await presignRes.json()) as {
-            key: string;
-            url: string;
-            publicUrl?: string;
-          };
-
-          // upload to S3
-          const uploadRes = await fetch(presigned.url, {
+          await fetch(presigned.url, {
             method: "PUT",
             body: file,
-            headers: {
-              "Content-Type": file.type || "application/octet-stream",
-            },
+            headers: { "Content-Type": file.type },
           });
-
-          if (!uploadRes.ok) {
-            const err = await uploadRes.text();
-            throw new Error(`Failed to upload ${file.name}: ${err}`);
-          }
 
           uploaded.push({
             storageKey: presigned.key,
             url: presigned.publicUrl || "",
             filename: file.name,
-            contentType: file.type || "application/octet-stream",
+            contentType: file.type,
             size: file.size,
             visibility: "OWNER",
           });
         }
 
-        // save metadata
-        const saveRes = await fetch(
+        await fetch(
           `/api/home/${homeId}/reminders/${reminder.id}/attachments`,
           {
             method: "POST",
@@ -196,20 +178,13 @@ export function EditReminderModal({
             body: JSON.stringify(uploaded),
           }
         );
-
-        if (!saveRes.ok) {
-          throw new Error("Failed to save attachments");
-        }
       }
 
-      push("Reminder updated successfully");
+      push("Reminder updated");
       onCloseAction();
       router.refresh();
-    } catch (error) {
-      console.error("Failed to update reminder:", error);
-      push(
-        error instanceof Error ? error.message : "Failed to update reminder"
-      );
+    } catch (err) {
+      push("Failed to update reminder");
     } finally {
       setSaving(false);
     }
@@ -218,63 +193,65 @@ export function EditReminderModal({
   return (
     <div className="relative z-[100]">
       <Modal open={open} onCloseAction={onCloseAction} title="Edit Reminder">
-        {/* Content wrapper: constrain width + prevent horizontal scroll */}
-        <div className="w-full max-w-[520px] mx-auto max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden px-3 pb-4 pt-1 sm:px-4 sm:pb-5">
+        {/* Fix layout + mobile stability */}
+        <div className="w-full max-w-[520px] mx-auto max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden px-3 pb-4 pt-2 sm:px-4">
           <form onSubmit={handleSubmit} className="space-y-4">
-            <p className={`text-sm ${textMeta}`}>
-              Update reminder details and manage attachments.
-            </p>
+            <p className={`text-sm ${textMeta}`}>Update reminder details.</p>
 
-            {/* Title */}
+            {/* TITLE */}
             <label className="block">
               <span className={fieldLabel}>Title</span>
               <Input
                 value={form.title}
                 onChange={(e) => set("title", e.target.value)}
                 placeholder="e.g., Replace HVAC filter"
-                required
                 className="w-full"
+                required
               />
             </label>
 
-            {/* Due date */}
+            {/* DATE — FIXED FULL WIDTH */}
             <label className="block">
               <span className={fieldLabel}>Due Date</span>
               <input
                 type="date"
                 value={form.dueAt}
                 onChange={(e) => set("dueAt", e.target.value)}
+                className="
+                  w-full
+                  rounded-lg
+                  border border-white/20
+                  bg-white/10
+                  px-4 py-2
+                  text-white
+                  placeholder-white/50
+                  focus:border-purple-400
+                  focus:ring-2 focus:ring-purple-400/50
+                  focus:outline-none
+                  block
+                  box-border
+                "
+                style={{ WebkitAppearance: "none" }}
                 required
-                className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white placeholder-white/50 focus:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-400/50"
-                style={{
-                  width: '100%',
-                  maxWidth: '100%',
-                  minWidth: '0',
-                  boxSizing: 'border-box',
-                  WebkitAppearance: 'none',
-                  MozAppearance: 'textfield'
-                }}
               />
             </label>
 
-            {/* Notes */}
+            {/* NOTES */}
             <label className="block">
-              <span className={fieldLabel}>Notes (optional)</span>
+              <span className={fieldLabel}>Notes</span>
               <Textarea
                 rows={3}
                 value={form.note}
                 onChange={(e) => set("note", e.target.value)}
-                placeholder="Additional details…"
                 className="w-full"
               />
             </label>
 
-            {/* Existing attachments */}
+            {/* EXISTING ATTACHMENTS */}
             {existing.length > 0 && (
               <div className="space-y-2">
-                <div className="text-sm text-white/70">
-                  Existing attachments
-                </div>
+                <div className="text-sm text-white/70">Existing attachments</div>
+
                 <div className="space-y-1">
                   {existing.map((att) => {
                     const kb =
@@ -283,53 +260,61 @@ export function EditReminderModal({
                         : (Number(att.size) / 1024).toFixed(1);
 
                     return (
-                      <a
+                      <div
                         key={att.id}
-                        href={`/api/home/${homeId}/attachments/${att.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10"
+                        className="flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2"
                       >
-                        <span>📎</span>
-                        <span className="flex-1 truncate">
-                          {att.filename}
-                        </span>
-                        {kb && (
-                          <span className="text-xs text-white/50">
-                            {kb} KB
-                          </span>
-                        )}
-                      </a>
+                        <a
+                          href={`/api/home/${homeId}/attachments/${att.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex flex-1 items-center gap-2 text-sm hover:text-white"
+                        >
+                          <span>📎</span>
+                          <span className="truncate">{att.filename}</span>
+                          {kb && (
+                            <span className="text-xs text-white/50">
+                              {kb} KB
+                            </span>
+                          )}
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => removeExistingAttachment(att.id)}
+                          className="text-xs text-red-400 hover:text-red-300"
+                        >
+                          Remove
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
               </div>
             )}
 
-            {/* New attachments */}
+            {/* NEW ATTACHMENTS */}
             <label className="block">
-              <span className={fieldLabel}>Add Attachments (optional)</span>
+              <span className={fieldLabel}>Add Attachments</span>
               <input
                 type="file"
                 multiple
                 accept="image/*,.pdf"
                 onChange={(e) => onFiles(e.target.files)}
-                className="mt-1 block w-full text-white/85 file:mr-3 file:rounded-md file:border file:border-white/30 file:bg-white/10 file:px-3 file:py-1.5 file:text-white hover:file:bg-white/15"
+                className="mt-1 block w-full text-white file:border file:border-white/30 file:bg-white/10 file:px-3 file:py-1.5 file:rounded-md hover:file:bg-white/20"
               />
             </label>
 
-            {/* New previews */}
+            {/* PREVIEWS */}
             {previews.length > 0 && (
               <div className="space-y-2">
                 <div className="text-sm text-white/70">New attachments</div>
+
                 <div className="flex gap-2 overflow-x-auto pb-1">
-                  {previews.map((u, i) => (
-                    <div
-                      key={u}
-                      className="relative flex-shrink-0"
-                    >
+                  {previews.map((url, i) => (
+                    <div key={url} className="relative flex-shrink-0">
                       <Image
-                        src={u}
+                        src={url}
                         alt={`Preview ${i + 1}`}
                         width={80}
                         height={80}
@@ -338,7 +323,7 @@ export function EditReminderModal({
                       <button
                         type="button"
                         onClick={() => removeFile(i)}
-                        className="absolute -right-1 -top-1 rounded-full bg-red-500 px-1.5 text-xs text-white hover:bg-red-600"
+                        className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5"
                       >
                         ×
                       </button>
@@ -348,13 +333,9 @@ export function EditReminderModal({
               </div>
             )}
 
-            {/* Actions */}
+            {/* ACTIONS */}
             <div className="flex justify-end gap-2 pt-2">
-              <GhostButton
-                type="button"
-                onClick={onCloseAction}
-                disabled={saving}
-              >
+              <GhostButton type="button" onClick={onCloseAction} disabled={saving}>
                 Cancel
               </GhostButton>
               <Button type="submit" disabled={saving}>

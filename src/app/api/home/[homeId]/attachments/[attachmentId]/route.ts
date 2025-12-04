@@ -4,7 +4,7 @@ import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireHomeAccess } from "@/lib/authz";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION || "us-east-2",
@@ -94,6 +94,75 @@ export async function GET(
     });
     return NextResponse.json(
       { error: "Failed to access attachment" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ homeId: string; attachmentId: string }> }
+) {
+  const { homeId, attachmentId } = await params;
+
+  try {
+    const session = await getServerSession(authConfig);
+    if (!session?.user?.id) {
+      console.error("[Attachment DELETE] Unauthorized - no session");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Verify home access (only homeowner can delete)
+    await requireHomeAccess(homeId, session.user.id);
+
+    // Get the attachment
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: attachmentId },
+      select: {
+        id: true,
+        homeId: true,
+        key: true,
+      },
+    });
+
+    if (!attachment) {
+      console.error("[Attachment DELETE] Not found:", attachmentId);
+      return NextResponse.json({ error: "Attachment not found" }, { status: 404 });
+    }
+
+    if (attachment.homeId !== homeId) {
+      console.error("[Attachment DELETE] Home mismatch");
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    console.log("[Attachment DELETE] Deleting attachment:", attachmentId);
+
+    // Delete from database
+    await prisma.attachment.delete({
+      where: { id: attachmentId },
+    });
+
+    // Delete from S3
+    if (attachment.key) {
+      try {
+        await s3Client.send(
+          new DeleteObjectCommand({
+            Bucket: process.env.S3_BUCKET!,
+            Key: attachment.key,
+          })
+        );
+        console.log("[Attachment DELETE] Deleted from S3:", attachment.key);
+      } catch (s3Error) {
+        console.error("[Attachment DELETE] Failed to delete from S3:", s3Error);
+        // Continue anyway since DB record is deleted
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[Attachment DELETE] Failed:", error);
+    return NextResponse.json(
+      { error: "Failed to delete attachment" },
       { status: 500 }
     );
   }

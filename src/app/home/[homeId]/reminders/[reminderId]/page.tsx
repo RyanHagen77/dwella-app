@@ -70,10 +70,11 @@ export default async function ReminderDetailPage({
   );
   const isDueSoon = !isOverdue && daysUntilDue <= 7;
 
-  // Map attachments with bigint -> number
+  // Map attachments with bigint -> number and add url field
   const attachments = reminder.attachments.map((att) => ({
     ...att,
     size: att.size == null ? null : Number(att.size),
+    url: `/api/home/${homeId}/attachments/${att.id}`,
   }));
 
   return (
@@ -167,6 +168,7 @@ export default async function ReminderDetailPage({
                 title: reminder.title,
                 dueAt: reminder.dueAt,
                 note: reminder.note,
+                attachments: attachments,
               }}
             />
           </div>

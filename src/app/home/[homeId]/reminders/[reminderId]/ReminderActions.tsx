@@ -3,14 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ctaGhost } from "@/lib/glass";
-import { EditReminderModal } from "../_components/EditReminderModal";
-
-type ReminderData = {
-  id: string;
-  title: string;
-  dueAt: Date;
-  note: string | null;
-};
+import { EditReminderModal, type ReminderData } from "../_components/EditReminderModal";
 
 type Props = {
   reminderId: string;
