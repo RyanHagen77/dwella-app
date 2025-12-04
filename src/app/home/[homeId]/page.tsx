@@ -3,8 +3,7 @@
  *
  * - Hero with home photo + address + verification badge
  * - Property stats
- * - Needs Attention (pending work / requests / invitations / messages)
- * - Alerts (overdue reminders, expiring warranties)
+ * - Needs Attention (pending work / requests / invitations / messages / reminders / warranties)
  * - Connected pros
  * - Recent maintenance, reminders, warranties
  */
@@ -135,11 +134,11 @@ export default async function HomePage({
         },
       },
 
+      // 🔹 Only active reminders (archived/deleted excluded)
       reminders: {
         where: {
           archivedAt: null,
           deletedAt: null,
-          completedAt: null, // only if this field exists in your model
         },
         orderBy: { dueAt: "asc" },
         take: 10,
@@ -147,9 +146,9 @@ export default async function HomePage({
           id: true,
           title: true,
           dueAt: true,
-          // ...
         },
       },
+
       warranties: {
         orderBy: { expiresAt: "asc" },
         take: 5,
@@ -242,32 +241,26 @@ export default async function HomePage({
     cost: record.cost ? Number(record.cost) : null,
   }));
 
-  const today = new Date();
   const now = new Date();
+  const today = new Date(now);
   today.setHours(0, 0, 0, 0);
 
-  // If you have completed/archived flags, filter them out here.
-  // Adjust field names if they differ in your schema.
-const activeReminders = home.reminders.filter((r) => {
-  return !("completedAt" in r && r.completedAt) &&
-           !("archivedAt" in r && r.archivedAt) &&
-           !("deletedAt" in r && r.deletedAt);
-  });
+  const reminders = home.reminders as Reminder[];
 
-  const overdueReminders = activeReminders.filter((r: Reminder) => {
+  const overdueReminders = reminders.filter((r) => {
     const d = new Date(r.dueAt);
     d.setHours(0, 0, 0, 0);
     return d < today;
   });
 
-  const upcomingReminders = activeReminders.filter((r: Reminder) => {
+  const upcomingReminders = reminders.filter((r) => {
     const d = new Date(r.dueAt);
     d.setHours(0, 0, 0, 0);
     return d >= today;
   });
 
-  // For "Needs Attention" we want stuff due in the next 7 days (including today)
-  const dueSoonReminders = upcomingReminders.filter((r: Reminder) => {
+  // "Due soon" == within next 7 days including today
+  const dueSoonReminders = upcomingReminders.filter((r) => {
     const d = new Date(r.dueAt);
     d.setHours(0, 0, 0, 0);
     const daysUntil = Math.ceil(
@@ -276,7 +269,6 @@ const activeReminders = home.reminders.filter((r) => {
     return daysUntil >= 0 && daysUntil <= 7;
   });
 
-
   const expiringSoonWarranties = home.warranties.filter((w: Warranty) =>
     isWarrantyExpiringSoon(w.expiresAt, now)
   );
@@ -284,8 +276,6 @@ const activeReminders = home.reminders.filter((r) => {
   const connections = home.connections as ConnectionWithContractor[];
   const verificationStatus =
     home.verificationStatus as HomeVerificationStatus | null;
-
-
 
   return (
     <main className="relative min-h-screen text-white">
@@ -350,7 +340,7 @@ const activeReminders = home.reminders.filter((r) => {
             <HomeActions
               homeId={home.id}
               homeAddress={addrLine}
-              unreadMessages={0 /* still your prop; pill badge logic stays */}
+              unreadMessages={0}
             />
           </div>
         </section>
@@ -358,184 +348,185 @@ const activeReminders = home.reminders.filter((r) => {
         {/* Stats */}
         <PropertyStats homeId={home.id} stats={stats} />
 
-      {/* Unified Needs Your Attention (messages + reminders + other) */}
-      {(pendingWorkSubmissionsCount > 0 ||
-        pendingServiceRequestsCount > 0 ||
-        pendingInvitationsCount > 0 ||
-        overdueReminders.length > 0 ||
-        dueSoonReminders.length > 0 ||
-        expiringSoonWarranties.length > 0) && (
-        <section className={`${glass} border-l-4 border-orange-400`}>
-          <h2
-            className={`mb-4 text-lg font-semibold text-orange-400 ${heading}`}
-          >
-            ⚡ Needs Your Attention
-          </h2>
+        {/* Unified Needs Your Attention (messages + reminders + other) */}
+        {(pendingWorkSubmissionsCount > 0 ||
+          pendingServiceRequestsCount > 0 ||
+          pendingInvitationsCount > 0 ||
+          overdueReminders.length > 0 ||
+          dueSoonReminders.length > 0 ||
+          expiringSoonWarranties.length > 0) && (
+          <section className={`${glass} border-l-4 border-orange-400`}>
+            <h2
+              className={`mb-4 text-lg font-semibold text-orange-400 ${heading}`}
+            >
+              ⚡ Needs Your Attention
+            </h2>
 
-          <div className="space-y-3">
-            {/* Unread messages – always allowed to show on its own */}
-            <UnreadMessagesAlert homeId={home.id} />
+            <div className="space-y-3">
+              {/* Unread messages */}
+              <UnreadMessagesAlert homeId={home.id} />
 
-            {/* Pending completed work submissions */}
-            {pendingWorkSubmissionsCount > 0 && (
-              <Link
-                href={`/home/${home.id}/completed-work-submissions`}
-                className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">📋</span>
+              {/* Pending completed work submissions */}
+              {pendingWorkSubmissionsCount > 0 && (
+                <Link
+                  href={`/home/${home.id}/completed-work-submissions`}
+                  className="flex items-center justify-between rounded-lg bg.white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📋</span>
+                    <div>
+                      <p className="text-sm font-medium text.white">
+                        Review Completed Work
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {pendingWorkSubmissionsCount} submission
+                        {pendingWorkSubmissionsCount !== 1 ? "s" : ""} awaiting
+                        approval
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingWorkSubmissionsCount}
+                  </span>
+                </Link>
+              )}
+
+              {/* Pending service requests */}
+              {pendingServiceRequestsCount > 0 && (
+                <Link
+                  href={`/home/${home.id}/completed-work-submissions`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🔧</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Service Requests
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {pendingServiceRequestsCount} request
+                        {pendingServiceRequestsCount !== 1 ? "s" : ""} pending
+                        response
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingServiceRequestsCount}
+                  </span>
+                </Link>
+              )}
+
+              {/* Pending invitations */}
+              {pendingInvitationsCount > 0 && (
+                <Link
+                  href={`/home/${home.id}/invitations`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg.white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">✉️</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">
+                        Pending Invitations
+                      </p>
+                      <p className="text-xs text-white/60">
+                        {pendingInvitationsCount} invitation
+                        {pendingInvitationsCount !== 1 ? "s" : ""} awaiting
+                        response
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingInvitationsCount}
+                  </span>
+                </Link>
+              )}
+
+              {/* Overdue reminders */}
+              {overdueReminders.length > 0 && (
+                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
-                      Review Completed Work
+                      ⚠️ Overdue Reminders ({overdueReminders.length})
                     </p>
-                    <p className="text-xs text-white/60">
-                      {pendingWorkSubmissionsCount} submission
-                      {pendingWorkSubmissionsCount !== 1 ? "s" : ""} awaiting
-                      approval
-                    </p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                      {overdueReminders.slice(0, 3).map((r) => (
+                        <li key={r.id}>
+                          • {r.title} (due {formatDate(r.dueAt)})
+                        </li>
+                      ))}
+                      {overdueReminders.length > 3 && (
+                        <li>+{overdueReminders.length - 3} more…</li>
+                      )}
+                    </ul>
                   </div>
+                  <Link
+                    href={`/home/${home.id}/reminders?status=overdue`}
+                    className={`${ctaPrimary} text-xs whitespace-nowrap`}
+                  >
+                    View All
+                  </Link>
                 </div>
-                <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                  {pendingWorkSubmissionsCount}
-                </span>
-              </Link>
-            )}
+              )}
 
-            {/* Pending service requests */}
-            {pendingServiceRequestsCount > 0 && (
-              <Link
-                href={`/home/${home.id}/completed-work-submissions`}
-                className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">🔧</span>
+              {/* Due soon (next 7 days, incl. today) */}
+              {dueSoonReminders.length > 0 && (
+                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg.white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
-                      Service Requests
+                      ⏰ Upcoming Reminders (next 7 days)
                     </p>
-                    <p className="text-xs text-white/60">
-                      {pendingServiceRequestsCount} request
-                      {pendingServiceRequestsCount !== 1 ? "s" : ""} pending
-                      response
-                    </p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                      {dueSoonReminders.slice(0, 3).map((r) => (
+                        <li key={r.id}>
+                          • {r.title} (due {formatDate(r.dueAt)})
+                        </li>
+                      ))}
+                      {dueSoonReminders.length > 3 && (
+                        <li>+{dueSoonReminders.length - 3} more…</li>
+                      )}
+                    </ul>
                   </div>
+                  <Link
+                    href={`/home/${home.id}/reminders?status=upcoming`}
+                    className={`${ctaPrimary} text-xs whitespace-nowrap`}
+                  >
+                    View All
+                  </Link>
                 </div>
-                <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                  {pendingServiceRequestsCount}
-                </span>
-              </Link>
-            )}
+              )}
 
-            {/* Pending invitations */}
-            {pendingInvitationsCount > 0 && (
-              <Link
-                href={`/home/${home.id}/invitations`}
-                className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">✉️</span>
+              {/* Warranties expiring soon */}
+              {expiringSoonWarranties.length > 0 && (
+                <div className="flex items-start justify-between rounded-lg bg.white/5 p-3 transition hover:bg.white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
-                      Pending Invitations
+                      🛡️ Warranties Expiring Soon (
+                      {expiringSoonWarranties.length})
                     </p>
-                    <p className="text-xs text-white/60">
-                      {pendingInvitationsCount} invitation
-                      {pendingInvitationsCount !== 1 ? "s" : ""} awaiting
-                      response
-                    </p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                      {expiringSoonWarranties.slice(0, 3).map((w) => (
+                        <li key={w.id}>
+                          • {w.item}
+                          {w.expiresAt &&
+                            ` (expires ${formatDate(w.expiresAt)})`}
+                        </li>
+                      ))}
+                      {expiringSoonWarranties.length > 3 && (
+                        <li>+{expiringSoonWarranties.length - 3} more…</li>
+                      )}
+                    </ul>
                   </div>
+                  <Link
+                    href={`/home/${home.id}/warranties`}
+                    className={`${ctaPrimary} text-xs whitespace-nowrap`}
+                  >
+                    View All
+                  </Link>
                 </div>
-                <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                  {pendingInvitationsCount}
-                </span>
-              </Link>
-            )}
-
-            {/* Overdue reminders */}
-            {overdueReminders.length > 0 && (
-              <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    ⚠️ Overdue Reminders ({overdueReminders.length})
-                  </p>
-                  <ul className="mt-1 space-y-0.5 text-xs text-white/70">
-                    {overdueReminders.slice(0, 3).map((r) => (
-                      <li key={r.id}>
-                        • {r.title} (due {formatDate(r.dueAt)})
-                      </li>
-                    ))}
-                    {overdueReminders.length > 3 && (
-                      <li>+{overdueReminders.length - 3} more…</li>
-                    )}
-                  </ul>
-                </div>
-                <Link
-                  href={`/home/${home.id}/reminders?status=overdue`}
-                  className={`${ctaPrimary} text-xs whitespace-nowrap`}
-                >
-                  View All
-                </Link>
-              </div>
-            )}
-
-            {/* Due soon (next 7 days, including today) */}
-            {dueSoonReminders.length > 0 && (
-              <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    ⏰ Upcoming Reminders (next 7 days)
-                  </p>
-                  <ul className="mt-1 space-y-0.5 text-xs text-white/70">
-                    {dueSoonReminders.slice(0, 3).map((r) => (
-                      <li key={r.id}>
-                        • {r.title} (due {formatDate(r.dueAt)})
-                      </li>
-                    ))}
-                    {dueSoonReminders.length > 3 && (
-                      <li>+{dueSoonReminders.length - 3} more…</li>
-                    )}
-                  </ul>
-                </div>
-                <Link
-                  href={`/home/${home.id}/reminders?status=upcoming`}
-                  className={`${ctaPrimary} text-xs whitespace-nowrap`}
-                >
-                  View All
-                </Link>
-              </div>
-            )}
-
-            {/* Warranties expiring soon */}
-            {expiringSoonWarranties.length > 0 && (
-              <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
-                <div>
-                  <p className="text-sm font-medium text-white">
-                    🛡️ Warranties Expiring Soon (
-                    {expiringSoonWarranties.length})
-                  </p>
-                  <ul className="mt-1 space-y-0.5 text-xs text-white/70">
-                    {expiringSoonWarranties.slice(0, 3).map((w) => (
-                      <li key={w.id}>
-                        • {w.item}
-                        {w.expiresAt && ` (expires ${formatDate(w.expiresAt)})`}
-                      </li>
-                    ))}
-                    {expiringSoonWarranties.length > 3 && (
-                      <li>+{expiringSoonWarranties.length - 3} more…</li>
-                    )}
-                  </ul>
-                </div>
-                <Link
-                  href={`/home/${home.id}/warranties`}
-                  className={`${ctaPrimary} text-xs whitespace-nowrap`}
-                >
-                  View All
-                </Link>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
+              )}
+            </div>
+          </section>
+        )}
 
         {/* Main grid */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -547,7 +538,7 @@ const activeReminders = home.reminders.filter((r) => {
               connections={connections}
             />
 
-            {/* Recent Maintenance & Repairs — NO verification badge, +Add on right */}
+            {/* Recent Maintenance & Repairs */}
             <ClientCard
               title="Recent Maintenance & Repairs"
               viewAllLink={`/home/${home.id}/records`}
@@ -573,7 +564,7 @@ const activeReminders = home.reminders.filter((r) => {
 
           {/* Right column */}
           <div className="space-y-6">
-            {/* Upcoming Reminders — +Add on right */}
+            {/* Upcoming Reminders */}
             <ClientCard
               title="Upcoming Reminders"
               viewAllLink={`/home/${home.id}/reminders`}
@@ -598,7 +589,7 @@ const activeReminders = home.reminders.filter((r) => {
               )}
             </ClientCard>
 
-            {/* Active Warranties — +Add on right */}
+            {/* Active Warranties */}
             <ClientCard
               title="Active Warranties"
               viewAllLink={`/home/${home.id}/warranties`}
@@ -747,7 +738,9 @@ function WarrantyItem({
             {warranty.item}
           </h3>
           {warranty.provider && (
-            <p className="text-sm text-white/70">{warranty.provider}</p>
+            <p className="text-sm text-white/70">
+              {warranty.provider}
+            </p>
           )}
         </div>
         <div className="flex flex-col items-end gap-1">
