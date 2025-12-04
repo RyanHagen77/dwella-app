@@ -3,7 +3,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { glass, glassTight, textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
 import { Button, GhostButton } from "@/components/ui/Button";
 import { Input, fieldLabel } from "@/components/ui";
@@ -139,7 +138,7 @@ export default function BillingPage() {
   if (loading) {
     return (
       <main className="relative min-h-screen text-white">
-        <Bg />
+
         <div className="mx-auto max-w-7xl p-6 space-y-6">
           <div className="h-9 w-48 animate-pulse rounded-xl bg-white/10 backdrop-blur-sm" />
           <div className="h-40 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm" />
@@ -150,7 +149,6 @@ export default function BillingPage() {
 
   return (
     <main className="relative min-h-screen text-white">
-      <Bg />
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
 
@@ -195,8 +193,8 @@ export default function BillingPage() {
                           {inv.title} <span className={`ml-2 rounded-full border px-2 py-0.5 text-xs ${pill(inv.status)}`}>{inv.status}</span>
                         </p>
                         <p className={`truncate text-sm ${textMeta}`}>
-                          {inv.clientAddress} • Issued {fmt(inv.issueDate)} • Due {fmt(inv.dueDate)} {inv.jobId ? (
-                            <> • <Link className="underline" href={`/pro/record/${inv.jobId}`}>View Record</Link></>
+                          {inv.clientAddress} • Issued {fmt(inv.issueDate)} • Due {fmt(inv.dueDate)} {inv.serviceId ? (
+                            <> • <Link className="underline" href={`/pro/record/${inv.serviceId}`}>View Record</Link></>
                           ) : null}
                         </p>
                       </div>
@@ -245,22 +243,6 @@ export default function BillingPage() {
 
 /* ---------------- Components & helpers ---------------- */
 
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover md:object-[50%_35%] lg:object-[50%_30%]"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.6))]" />
-    </div>
-  );
-}
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <section className={`${glass} rounded-2xl p-4`}>

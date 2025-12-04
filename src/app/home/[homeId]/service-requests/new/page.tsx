@@ -7,7 +7,6 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { requireHomeAccess } from "@/lib/authz";
 import Link from "next/link";
-import Image from "next/image";
 import { glass, heading, textMeta } from "@/lib/glass";
 import { RequestWorkForm } from "../_components/RequestWorkForm";
 import { NoContractorsCard } from "../_components/NoContractorsCard";
@@ -84,7 +83,6 @@ export default async function RequestWorkPage({ params }: PageProps) {
   if (connections.length === 0) {
     return (
       <main className="relative min-h-screen text-white">
-        <Bg />
         <div className="mx-auto max-w-7xl p-6 space-y-6">
           {/* Breadcrumb */}
           <Breadcrumb
@@ -132,7 +130,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
 
   return (
     <main className="relative min-h-screen text-white">
-      <Bg />
+
       <div className="mx-auto max-w-4xl space-y-6 p-6">
         {/* Breadcrumb */}
         <Breadcrumb
@@ -184,22 +182,5 @@ export default async function RequestWorkPage({ params }: PageProps) {
         </div>
       </div>
     </main>
-  );
-}
-
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover object-center"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-    </div>
   );
 }
