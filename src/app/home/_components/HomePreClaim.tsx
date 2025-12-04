@@ -416,7 +416,7 @@ export default function HomePageSample() {
           <div className="space-y-6 lg:col-span-2">
             <div onClickCapture={requireClaim}>
               <ClientCard
-                title="Recent Maintenance & Repairs"
+                title="Recent Records"
                 viewAllLink="#"
                 homeId={property.id}
                 addType="record"

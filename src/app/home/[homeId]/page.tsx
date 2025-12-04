@@ -540,7 +540,7 @@ export default async function HomePage({
 
             {/* Recent Maintenance & Repairs */}
             <ClientCard
-              title="Recent Maintenance & Repairs"
+              title="Recent Records"
               viewAllLink={`/home/${home.id}/records`}
               homeId={home.id}
               addType="record"
