@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Audience = "home" | "pro";
@@ -32,7 +31,6 @@ export default function MainLanding() {
 
   return (
     <main className="relative min-h-screen text-white">
-      <Bg />
 
       {/* Top bar */}
       <header className={`${CONTAINER} pt-4`}>
@@ -595,23 +593,6 @@ function StatBadge({ value, label }: { value: string; label: string }) {
 /* ================================
    BACKGROUND + LOGO
    ================================ */
-
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover object-center"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/50" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.5))]" />
-    </div>
-  );
-}
 
 function MyDwellaLogo({ className }: { className?: string }) {
   return (

@@ -20,20 +20,30 @@ export function PropertyStats({
   homeId: string;
   stats: HomeStats;
 }) {
+  // collapsed by default on ALL breakpoints
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <section aria-labelledby="stats" className="space-y-4">
-      {/* Header with edit button */}
+    <section aria-labelledby="stats" className="space-y-3">
+      {/* Header with toggle + edit button */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center gap-2 md:cursor-default"
+          type="button"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          className="inline-flex items-center gap-2 text-left"
         >
-          <h2 className={`text-lg font-semibold ${heading}`}>Property Stats</h2>
+          <h2
+            id="stats"
+            className={`text-lg font-semibold ${heading}`}
+          >
+            Property Stats
+          </h2>
+          <span className="text-xs text-white/60">
+            {isExpanded ? "" : ""}
+          </span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className={`h-5 w-5 transition-transform md:hidden ${
+            className={`h-4 w-4 transition-transform ${
               isExpanded ? "rotate-180" : ""
             }`}
             fill="none"
@@ -48,14 +58,15 @@ export function PropertyStats({
             />
           </svg>
         </button>
+
         <EditStatsButton homeId={homeId} currentStats={stats} />
       </div>
 
-      {/* Stats grid - always visible on md+, collapsible on mobile */}
+      {/* Stats grid - toggled for ALL viewports */}
       <div
-        className={`grid-cols-2 gap-3 md:grid md:grid-cols-5 md:gap-4 ${
+        className={`${
           isExpanded ? "grid" : "hidden"
-        }`}
+        } grid-cols-2 gap-3 md:grid-cols-5 md:gap-4`}
       >
         <Stat
           label="Health Score"
@@ -100,7 +111,9 @@ function Stat({
   return (
     <div className={glass} title={hint}>
       <p className={`text-xs ${textMeta}`}>{label}</p>
-      <p className="mt-1 text-lg md:text-2xl font-bold text-white">{value}</p>
+      <p className="mt-1 text-lg md:text-2xl font-bold text-white">
+        {value}
+      </p>
     </div>
   );
 }
