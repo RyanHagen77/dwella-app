@@ -16,7 +16,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-import { glass, textMeta, ctaPrimary, heading } from "@/lib/glass";
+import { glass, textMeta, heading } from "@/lib/glass";
 import { HomeActions } from "@/app/home/_components/HomeActions";
 import { ClientCard } from "@/app/home/_components/ClientCard";
 import { HomePicker } from "@/app/home/_components/HomePicker";
@@ -449,7 +449,7 @@ export default async function HomePage({
               )}
 
               {overdueReminders.length > 0 && (
-                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
+                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
                       ⚠️ Overdue Reminders ({overdueReminders.length})
@@ -467,7 +467,7 @@ export default async function HomePage({
                   </div>
                   <Link
                     href={`/home/${home.id}/reminders`}
-                    className={`${ctaPrimary} text-xs whitespace-nowrap`}
+                    className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap"
                   >
                     View All
                   </Link>
@@ -475,7 +475,7 @@ export default async function HomePage({
               )}
 
               {dueSoonReminders.length > 0 && (
-                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
+                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
                       ⏰ Upcoming Reminders (next 7 days)
@@ -493,7 +493,7 @@ export default async function HomePage({
                   </div>
                   <Link
                     href={`/home/${home.id}/reminders`}
-                    className={`${ctaPrimary} text-xs whitespace-nowrap`}
+                    className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap"
                   >
                     View All
                   </Link>
@@ -501,7 +501,7 @@ export default async function HomePage({
               )}
 
               {expiringSoonWarranties.length > 0 && (
-                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
+                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
                       🛡️ Warranties Expiring Soon (
@@ -522,7 +522,7 @@ export default async function HomePage({
                   </div>
                   <Link
                     href={`/home/${home.id}/warranties`}
-                    className={`${ctaPrimary} text-xs whitespace-nowrap`}
+                    className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap"
                   >
                     View All
                   </Link>
