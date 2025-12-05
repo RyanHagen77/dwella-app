@@ -207,16 +207,18 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
               </span>
 
               {warranty.attachments.slice(0, 3).map((att) => (
-                <a
+                <button
                   key={att.id}
-                  href={`/api/home/${homeId}/attachments/${att.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
-                  className="hover:text-white/90 underline"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    window.open(`/api/home/${homeId}/attachments/${att.id}`, "_blank");
+                  }}
+                  className="underline hover:text-white/90"
                 >
                   {att.filename.length > 15 ? att.filename.slice(0, 12) + "..." : att.filename}
-                </a>
+                </button>
               ))}
 
               {warranty.attachments.length > 3 && <span>+{warranty.attachments.length - 3} more</span>}
