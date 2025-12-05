@@ -538,7 +538,7 @@ export default async function HomePage({
               connections={connections}
             />
 
-            {/* Recent Maintenance & Repairs */}
+            {/* Recent Records */}
             <ClientCard
               title="Recent Records"
               viewAllLink={`/home/${home.id}/records`}

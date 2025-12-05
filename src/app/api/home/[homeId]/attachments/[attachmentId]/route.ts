@@ -1,3 +1,5 @@
+// src/app/api/home/[homeId]/attachments/[attachmentId]/route.ts
+
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";

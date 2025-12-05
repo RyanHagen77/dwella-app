@@ -10,7 +10,7 @@ type RecordItem = {
   title: string;
   note: string | null;
   kind: string | null;
-  date: string | null; // serialized ISO string or null
+  date: string | null;
   vendor: string | null;
   cost: number | null;
   attachments: Array<{
@@ -19,6 +19,7 @@ type RecordItem = {
     url: string;
     mimeType: string;
     size: number;
+    uploadedBy: string;
   }>;
 };
 
@@ -100,14 +101,10 @@ export function RecordsPageClient({
 
   return (
     <>
-      {/* Filters */}
       <section className={glass}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {/* Search */}
           <div>
-            <label className="mb-2 block text-sm text-white/70">
-              Search
-            </label>
+            <label className="mb-2 block text-sm text-white/70">Search</label>
             <Input
               type="text"
               placeholder="Search by title, vendor, or notes..."
@@ -116,40 +113,20 @@ export function RecordsPageClient({
             />
           </div>
 
-          {/* Category Filter */}
           <div>
-            <label className="mb-2 block text-sm text-white/70">
-              Category
-            </label>
-            <Select
-              value={category}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-            >
+            <label className="mb-2 block text-sm text-white/70">Category</label>
+            <Select value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
               <option value="all">All ({records.length})</option>
-              <option value="maintenance">
-                Maintenance ({categoryCounts.maintenance || 0})
-              </option>
-              <option value="repair">
-                Repair ({categoryCounts.repair || 0})
-              </option>
-              <option value="upgrade">
-                Upgrade ({categoryCounts.upgrade || 0})
-              </option>
-              <option value="inspection">
-                Inspection ({categoryCounts.inspection || 0})
-              </option>
+              <option value="project">Project ({categoryCounts.project || 0})</option>
+              <option value="maintenance">Maintenance ({categoryCounts.maintenance || 0})</option>
+              <option value="repair">Repair ({categoryCounts.repair || 0})</option>
+              <option value="upgrade">Upgrade ({categoryCounts.upgrade || 0})</option>
             </Select>
           </div>
 
-          {/* Sort */}
           <div>
-            <label className="mb-2 block text-sm text-white/70">
-              Sort By
-            </label>
-            <Select
-              value={sort}
-              onChange={(e) => handleSortChange(e.target.value)}
-            >
+            <label className="mb-2 block text-sm text-white/70">Sort By</label>
+            <Select value={sort} onChange={(e) => handleSortChange(e.target.value)}>
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="cost-high">Highest Cost</option>
@@ -160,16 +137,12 @@ export function RecordsPageClient({
         </div>
       </section>
 
-      {/* Records List */}
       <section className={glass}>
         {records.length === 0 ? (
           <div className="py-16 text-center">
             <p className="mb-4 text-white/70">
-              {search || category !== "all"
-                ? "No records match your filters"
-                : "No maintenance records yet"}
+              {search || category !== "all" ? "No records match your filters" : "No maintenance records yet"}
             </p>
-            {/* No button / link here – user will use the + Add Record button in the header */}
           </div>
         ) : (
           <div className="space-y-3">
@@ -183,13 +156,7 @@ export function RecordsPageClient({
   );
 }
 
-function RecordCard({
-  record,
-  homeId,
-}: {
-  record: RecordItem;
-  homeId: string;
-}) {
+function RecordCard({ record, homeId }: { record: RecordItem; homeId: string }) {
   return (
     <a
       href={`/home/${homeId}/records/${record.id}`}
@@ -198,9 +165,7 @@ function RecordCard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h3 className="flex-1 text-lg font-medium text-white">
-              {record.title}
-            </h3>
+            <h3 className="flex-1 text-lg font-medium text-white">{record.title}</h3>
             {record.kind && (
               <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-blue-400/20 text-blue-300">
                 {record.kind}
@@ -212,11 +177,7 @@ function RecordCard({
             {record.date && (
               <span className="flex items-center gap-1">
                 <span className="text-base">📅</span>
-                {new Date(record.date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
+                {new Date(record.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
               </span>
             )}
             {record.vendor && (
@@ -233,19 +194,13 @@ function RecordCard({
             )}
           </div>
 
-          {record.note && (
-            <p className="mt-2 line-clamp-2 text-sm text-white/80">
-              {record.note}
-            </p>
-          )}
+          {record.note && <p className="mt-2 line-clamp-2 text-sm text-white/80">{record.note}</p>}
 
-          {/* Attachments */}
           {record.attachments && record.attachments.length > 0 && (
             <div className="mt-2 flex items-center gap-2 text-xs text-white/60">
               <span>📎</span>
               <span>
-                {record.attachments.length} attachment
-                {record.attachments.length > 1 ? "s" : ""}
+                {record.attachments.length} attachment{record.attachments.length > 1 ? "s" : ""}
               </span>
               {record.attachments.slice(0, 3).map((att) => (
                 <button
@@ -253,39 +208,21 @@ function RecordCard({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    window.open(
-                      `/api/home/${homeId}/attachments/${att.id}`,
-                      "_blank"
-                    );
+                    window.open(`/api/home/${homeId}/attachments/${att.id}`, "_blank");
                   }}
                   className="underline hover:text-white/90"
                 >
-                  {att.filename.length > 15
-                    ? att.filename.slice(0, 12) + "..."
-                    : att.filename}
+                  {att.filename.length > 15 ? att.filename.slice(0, 12) + "..." : att.filename}
                 </button>
               ))}
-              {record.attachments.length > 3 && (
-                <span>+{record.attachments.length - 3} more</span>
-              )}
+              {record.attachments.length > 3 && <span>+{record.attachments.length - 3} more</span>}
             </div>
           )}
         </div>
 
         <div className="flex items-center text-white/50">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            className="h-5 w-5"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M8.25 4.5l7.5 7.5-7.5 7.5"
-            />
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </div>
       </div>

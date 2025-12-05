@@ -174,7 +174,7 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction, defaultTyp
   }
 
   const typeLabels = {
-    record: "Maintenance Record",
+    record: "Record",
     reminder: "Reminder",
     warranty: "Warranty",
   };
@@ -199,8 +199,8 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction, defaultTyp
                 selected={recordType === "record"}
                 onClick={() => setRecordType("record")}
                 icon="🔧"
-                label="Maintenance Record"
-                description="Track repairs, upgrades, and maintenance"
+                label="Record"
+                description="Track projects, repairs, upgrades, and maintenance"
               />
               <TypeCard
                 selected={recordType === "reminder"}

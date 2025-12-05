@@ -1,4 +1,3 @@
-// app/stats/[homeId]/records/[recordId]/_components/RecordActions.tsx
 "use client";
 
 import { useState } from "react";
@@ -20,6 +19,7 @@ type RecordData = {
     url: string;
     mimeType: string;
     size: number;
+    uploadedBy: string;
   }>;
 };
 
@@ -46,7 +46,6 @@ export function RecordActions({ recordId, homeId, record }: Props) {
         throw new Error("Failed to delete record");
       }
 
-      // Redirect back to records list
       router.push(`/home/${homeId}/records`);
       router.refresh();
     } catch (error) {
@@ -72,7 +71,6 @@ export function RecordActions({ recordId, homeId, record }: Props) {
               handleDelete();
             } else {
               setShowConfirm(true);
-              // Reset after 3 seconds if not clicked
               setTimeout(() => setShowConfirm(false), 3000);
             }
           }}

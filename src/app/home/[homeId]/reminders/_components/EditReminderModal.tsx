@@ -180,7 +180,7 @@ export function EditReminderModal({
         );
       }
 
-      push("Reminder updated");
+      push("Reminder updated successfully", "success");
       onCloseAction();
       router.refresh();
     } catch (err) {

@@ -32,8 +32,9 @@ export default async function RecordDetailPage({ params }: PageProps) {
           filename: true,
           url: true,
           mimeType: true,
-          size: true, // likely BigInt in DB
+          size: true,
           createdAt: true,
+          uploadedBy: true,
         },
       },
     },
@@ -57,6 +58,18 @@ export default async function RecordDetailPage({ params }: PageProps) {
     home.city ? `, ${home.city}` : ""
   }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
+  // Normalize attachment sizes (BigInt -> number | null)
+  const attachments = record.attachments
+    .filter((a) => a.uploadedBy !== null)
+    .map((a) => ({
+      id: a.id,
+      filename: a.filename,
+      url: a.url,
+      mimeType: a.mimeType,
+      size: a.size == null ? 0 : Number(a.size),
+      uploadedBy: a.uploadedBy as string,
+    }));
+
   // Normalize for client (RecordActions)
   const serializedRecord = {
     id: record.id,
@@ -66,13 +79,8 @@ export default async function RecordDetailPage({ params }: PageProps) {
     vendor: record.vendor,
     cost: record.cost != null ? Number(record.cost) : null,
     note: record.note,
+    attachments: attachments,
   };
-
-  // Normalize attachment sizes (BigInt -> number | null)
-  const attachments = record.attachments.map((a) => ({
-    ...a,
-    size: a.size == null ? null : Number(a.size),
-  }));
 
   const imageAttachments = attachments.filter((a) =>
     a.mimeType?.startsWith("image/")
@@ -113,7 +121,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
           items={[
             { label: addrLine, href: `/home/${homeId}` },
             {
-              label: "Maintenance & Repairs",
+              label: "Records",
               href: `/home/${homeId}/records`,
             },
             { label: record.title },

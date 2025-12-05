@@ -98,6 +98,7 @@ export default async function RecordsPage({
           url: true,
           mimeType: true,
           size: true,
+          uploadedBy: true,
         },
       },
     },
@@ -108,10 +109,13 @@ export default async function RecordsPage({
     ...record,
     date: record.date ? record.date.toISOString() : null,
     cost: record.cost ? Number(record.cost) : null,
-    attachments: record.attachments.map((att) => ({
-      ...att,
-      size: Number(att.size),
-    })),
+    attachments: record.attachments
+      .filter((att) => att.uploadedBy !== null)
+      .map((att) => ({
+        ...att,
+        size: Number(att.size),
+        uploadedBy: att.uploadedBy as string,
+      })),
   }));
 
   // Get category counts for filters
@@ -136,7 +140,7 @@ export default async function RecordsPage({
           <Breadcrumb
             href={`/home/${homeId}`}
             label={addrLine}
-            current="Maintenance & Repairs"
+            current="Records"
           />
         </div>
 
@@ -166,7 +170,7 @@ export default async function RecordsPage({
               </Link>
               <div className="min-w-0 flex-1">
                 <h1 className={`text-2xl font-bold ${heading}`}>
-                  Maintenance &amp; Repairs
+                  Records
                 </h1>
                 <p className={`mt-1 text-sm ${textMeta}`}>
                   {records.length}{" "}
