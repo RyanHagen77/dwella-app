@@ -99,9 +99,9 @@ function Stat({
   hint?: string;
 }) {
   return (
-    <div className={glass} title={hint}>
-      <p className={`text-xs ${textMeta}`}>{label}</p>
-      <p className="mt-1 text-lg md:text-2xl font-bold text-white">
+    <div className={`${glass} p-4`} title={hint}>
+      <p className={`text-xs ${textMeta} whitespace-nowrap`}>{label}</p>
+      <p className="mt-2 text-lg lg:text-xl font-bold text-white">
         {value}
       </p>
     </div>

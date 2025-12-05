@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
-import { glass, heading, textMeta } from "@/lib/glass";
+import { heading, textMeta } from "@/lib/glass";
 
 type HomeStats = {
   healthScore: number | null;
@@ -32,7 +32,6 @@ export function EditStatsModal({
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    healthScore: currentStats.healthScore?.toString() || "",
     estValue: currentStats.estValue?.toString() || "",
     beds: currentStats.beds?.toString() || "",
     baths: currentStats.baths?.toString() || "",
@@ -47,7 +46,6 @@ export function EditStatsModal({
 
     try {
       const payload = {
-        healthScore: formData.healthScore ? Number(formData.healthScore) : null,
         estValue: formData.estValue ? Number(formData.estValue) : null,
         beds: formData.beds ? Number(formData.beds) : null,
         baths: formData.baths ? Number(formData.baths) : null,
@@ -86,24 +84,6 @@ export function EditStatsModal({
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Health Score */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-white">
-              Health Score (0-100)
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              value={formData.healthScore}
-              onChange={(e) =>
-                setFormData({ ...formData, healthScore: e.target.value })
-              }
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
-              placeholder="85"
-            />
-          </div>
-
           {/* Estimated Value */}
           <div>
             <label className="mb-1 block text-sm font-medium text-white">
