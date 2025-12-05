@@ -104,6 +104,23 @@ export default async function HomePage({
 
   await requireHomeAccess(homeId, session.user.id);
 
+  // Check how many homes the user has access to
+  const userHomesCount = await prisma.home.count({
+    where: {
+      OR: [
+        { ownerId: session.user.id },
+        {
+          connections: {
+            some: {
+              contractorId: session.user.id,
+              status: "ACTIVE",
+            },
+          },
+        },
+      ],
+    },
+  });
+
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: {
@@ -134,7 +151,6 @@ export default async function HomePage({
         },
       },
 
-      // 🔹 Only active reminders (archived/deleted excluded)
       reminders: {
         where: {
           archivedAt: null,
@@ -259,7 +275,6 @@ export default async function HomePage({
     return d >= today;
   });
 
-  // "Due soon" == within next 7 days including today
   const dueSoonReminders = upcomingReminders.filter((r) => {
     const d = new Date(r.dueAt);
     d.setHours(0, 0, 0, 0);
@@ -280,7 +295,6 @@ export default async function HomePage({
   return (
     <main className="relative min-h-screen text-white">
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-        {/* Hero card */}
         <section
           aria-labelledby="home-hero"
           className={`${glass} overflow-visible relative z-[20]`}
@@ -290,7 +304,6 @@ export default async function HomePage({
           </h2>
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
-              {/* Photo */}
               <div className="lg:col-span-2">
                 <Image
                   src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
@@ -301,13 +314,14 @@ export default async function HomePage({
                 />
               </div>
 
-              {/* Right side: picker + address + meta */}
               <div className="flex flex-col justify-between space-y-3">
                 <div className="space-y-3">
-                  <HomePicker
-                    currentHomeId={home.id}
-                    initialAddress={addrLine}
-                  />
+                  {userHomesCount > 1 && (
+                    <HomePicker
+                      currentHomeId={home.id}
+                      initialAddress={addrLine}
+                    />
+                  )}
 
                   <div className="flex flex-wrap items-center gap-3">
                     <h1 className={`text-2xl font-semibold ${heading}`}>
@@ -336,7 +350,6 @@ export default async function HomePage({
               </div>
             </div>
 
-            {/* Actions row */}
             <HomeActions
               homeId={home.id}
               homeAddress={addrLine}
@@ -345,10 +358,8 @@ export default async function HomePage({
           </div>
         </section>
 
-        {/* Stats */}
         <PropertyStats homeId={home.id} stats={stats} />
 
-        {/* Unified Needs Your Attention (messages + reminders + other) */}
         {(pendingWorkSubmissionsCount > 0 ||
           pendingServiceRequestsCount > 0 ||
           pendingInvitationsCount > 0 ||
@@ -363,19 +374,17 @@ export default async function HomePage({
             </h2>
 
             <div className="space-y-3">
-              {/* Unread messages */}
               <UnreadMessagesAlert homeId={home.id} />
 
-              {/* Pending completed work submissions */}
               {pendingWorkSubmissionsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
-                  className="flex items-center justify-between rounded-lg bg.white/5 p-3 transition hover:bg-white/10"
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">📋</span>
                     <div>
-                      <p className="text-sm font-medium text.white">
+                      <p className="text-sm font-medium text-white">
                         Review Completed Work
                       </p>
                       <p className="text-xs text-white/60">
@@ -391,7 +400,6 @@ export default async function HomePage({
                 </Link>
               )}
 
-              {/* Pending service requests */}
               {pendingServiceRequestsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/completed-work-submissions`}
@@ -416,11 +424,10 @@ export default async function HomePage({
                 </Link>
               )}
 
-              {/* Pending invitations */}
               {pendingInvitationsCount > 0 && (
                 <Link
                   href={`/home/${home.id}/invitations`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg.white/10"
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">✉️</span>
@@ -441,7 +448,6 @@ export default async function HomePage({
                 </Link>
               )}
 
-              {/* Overdue reminders */}
               {overdueReminders.length > 0 && (
                 <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
                   <div>
@@ -460,7 +466,7 @@ export default async function HomePage({
                     </ul>
                   </div>
                   <Link
-                    href={`/home/${home.id}/reminders?status=overdue`}
+                    href={`/home/${home.id}/reminders`}
                     className={`${ctaPrimary} text-xs whitespace-nowrap`}
                   >
                     View All
@@ -468,9 +474,8 @@ export default async function HomePage({
                 </div>
               )}
 
-              {/* Due soon (next 7 days, incl. today) */}
               {dueSoonReminders.length > 0 && (
-                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg.white/10">
+                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
                       ⏰ Upcoming Reminders (next 7 days)
@@ -487,7 +492,7 @@ export default async function HomePage({
                     </ul>
                   </div>
                   <Link
-                    href={`/home/${home.id}/reminders?status=upcoming`}
+                    href={`/home/${home.id}/reminders`}
                     className={`${ctaPrimary} text-xs whitespace-nowrap`}
                   >
                     View All
@@ -495,9 +500,8 @@ export default async function HomePage({
                 </div>
               )}
 
-              {/* Warranties expiring soon */}
               {expiringSoonWarranties.length > 0 && (
-                <div className="flex items-start justify-between rounded-lg bg.white/5 p-3 transition hover:bg.white/10">
+                <div className="flex items-start justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
                   <div>
                     <p className="text-sm font-medium text-white">
                       🛡️ Warranties Expiring Soon (
@@ -528,9 +532,7 @@ export default async function HomePage({
           </section>
         )}
 
-        {/* Main grid */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left column */}
           <div className="space-y-6 lg:col-span-2">
             <ConnectedPros
               homeId={home.id}
@@ -538,7 +540,6 @@ export default async function HomePage({
               connections={connections}
             />
 
-            {/* Recent Records */}
             <ClientCard
               title="Recent Records"
               viewAllLink={`/home/${home.id}/records`}
@@ -562,9 +563,7 @@ export default async function HomePage({
             </ClientCard>
           </div>
 
-          {/* Right column */}
           <div className="space-y-6">
-            {/* Upcoming Reminders */}
             <ClientCard
               title="Upcoming Reminders"
               viewAllLink={`/home/${home.id}/reminders`}
@@ -589,7 +588,6 @@ export default async function HomePage({
               )}
             </ClientCard>
 
-            {/* Active Warranties */}
             <ClientCard
               title="Active Warranties"
               viewAllLink={`/home/${home.id}/warranties`}
@@ -621,8 +619,6 @@ export default async function HomePage({
     </main>
   );
 }
-
-/* ------- Helpers ------- */
 
 function RecordItem({
   record,
