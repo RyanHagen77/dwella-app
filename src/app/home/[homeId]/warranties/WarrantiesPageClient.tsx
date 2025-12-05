@@ -23,7 +23,8 @@ export type WarrantyItem = {
     filename: string;
     url: string;
     mimeType: string;
-    size: number | null; // <-- allow null
+    size: number | null;
+    uploadedBy: string;
   }>;
 };
 
@@ -84,10 +85,8 @@ export function WarrantiesPageClient({
 
   return (
     <>
-      {/* Filters */}
       <section className={glass}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
           <div>
             <label className="block text-sm text-white/70 mb-2">Search</label>
             <Input
@@ -98,7 +97,6 @@ export function WarrantiesPageClient({
             />
           </div>
 
-          {/* Sort */}
           <div>
             <label className="block text-sm text-white/70 mb-2">Sort By</label>
             <Select value={sort} onChange={(e) => handleSortChange(e.target.value)}>
@@ -110,14 +108,11 @@ export function WarrantiesPageClient({
         </div>
       </section>
 
-      {/* Warranties List */}
       <section className={glass}>
         {warranties.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-white/70 mb-4">
-              {search
-                ? "No warranties match your search"
-                : "No warranties yet"}
+              {search ? "No warranties match your search" : "No warranties yet"}
             </p>
             <Link href={`/home/${homeId}`} className={ctaGhost}>
               {search ? "Clear Search" : "+ Add Your First Warranty"}
@@ -157,12 +152,11 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
     }
   }
 
-  const tint =
-    warranty.isExpired
-      ? "border-red-400/30 bg-red-500/5"
-      : warranty.isExpiringSoon
-      ? "border-yellow-400/30 bg-yellow-500/5"
-      : "";
+  const tint = warranty.isExpired
+    ? "border-red-400/30 bg-red-500/5"
+    : warranty.isExpiringSoon
+    ? "border-yellow-400/30 bg-yellow-500/5"
+    : "";
 
   return (
     <>
@@ -179,45 +173,19 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
         className={`${glassTight} ${tint} cursor-pointer flex items-start justify-between gap-4 transition-colors hover:bg-white/10`}
       >
         <div className="flex-1 min-w-0 space-y-2">
-          {/* Item name */}
-          <h3 className="font-medium text-white text-lg truncate">
-            {warranty.item}
-          </h3>
+          <h3 className="font-medium text-white text-lg truncate">{warranty.item}</h3>
 
-          {/* Provider and expiry */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            {warranty.provider && (
-              <span className="text-white/70">🏢 {warranty.provider}</span>
-            )}
-            {warranty.policyNo && (
-              <span className="text-white/70">📋 {warranty.policyNo}</span>
-            )}
-            <span
-              className={`font-medium ${
-                warranty.isExpired
-                  ? "text-red-400"
-                  : warranty.isExpiringSoon
-                  ? "text-yellow-400"
-                  : "text-white/90"
-              }`}
-            >
+            {warranty.provider && <span className="text-white/70">🏢 {warranty.provider}</span>}
+            {warranty.policyNo && <span className="text-white/70">📋 {warranty.policyNo}</span>}
+            <span className={`font-medium ${warranty.isExpired ? "text-red-400" : warranty.isExpiringSoon ? "text-yellow-400" : "text-white/90"}`}>
               📅 {warranty.formattedExpiry}
             </span>
 
             {warranty.expiresAt && (
-              <span
-                className={`text-xs ${
-                  warranty.isExpiringSoon
-                    ? "text-yellow-400"
-                    : warranty.isExpired
-                    ? "text-red-400"
-                    : "text-white/60"
-                }`}
-              >
+              <span className={`text-xs ${warranty.isExpiringSoon ? "text-yellow-400" : warranty.isExpired ? "text-red-400" : "text-white/60"}`}>
                 {warranty.isExpired ? (
-                  Math.abs(warranty.daysUntilExpiry) === 1
-                    ? "Expired 1 day ago"
-                    : `Expired ${Math.abs(warranty.daysUntilExpiry)} days ago`
+                  Math.abs(warranty.daysUntilExpiry) === 1 ? "Expired 1 day ago" : `Expired ${Math.abs(warranty.daysUntilExpiry)} days ago`
                 ) : warranty.daysUntilExpiry === 0 ? (
                   "Expires today"
                 ) : warranty.daysUntilExpiry === 1 ? (
@@ -229,20 +197,13 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
             )}
           </div>
 
-          {/* Note */}
-          {warranty.note && (
-            <p className="text-sm text-white/70 line-clamp-1">
-              {warranty.note}
-            </p>
-          )}
+          {warranty.note && <p className="text-sm text-white/70 line-clamp-1">{warranty.note}</p>}
 
-          {/* Attachments (safe now, no nested <a>) */}
           {warranty.attachments?.length > 0 && (
             <div className="flex items-center gap-2 text-xs text-white/60">
               <span>📎</span>
               <span>
-                {warranty.attachments.length} attachment
-                {warranty.attachments.length > 1 ? "s" : ""}
+                {warranty.attachments.length} attachment{warranty.attachments.length > 1 ? "s" : ""}
               </span>
 
               {warranty.attachments.slice(0, 3).map((att) => (
@@ -254,20 +215,15 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
                   onClick={(e) => e.stopPropagation()}
                   className="hover:text-white/90 underline"
                 >
-                  {att.filename.length > 15
-                    ? att.filename.slice(0, 12) + "..."
-                    : att.filename}
+                  {att.filename.length > 15 ? att.filename.slice(0, 12) + "..." : att.filename}
                 </a>
               ))}
 
-              {warranty.attachments.length > 3 && (
-                <span>+{warranty.attachments.length - 3} more</span>
-              )}
+              {warranty.attachments.length > 3 && <span>+{warranty.attachments.length - 3} more</span>}
             </div>
           )}
         </div>
 
-        {/* Actions and Badge */}
         <div className="flex-shrink-0 flex items-center gap-2">
           {warranty.isExpired && (
             <span className="inline-flex items-center px-2 py-1.5 rounded text-xs font-medium bg-red-400/20 text-red-300 border border-red-400/30">

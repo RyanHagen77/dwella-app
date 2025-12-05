@@ -74,6 +74,7 @@ export default async function WarrantiesPage({
           url: true,
           mimeType: true,
           size: true,
+          uploadedBy: true,
         },
       },
     },
@@ -117,13 +118,16 @@ export default async function WarrantiesPage({
       isExpiringSoon,
       daysUntilExpiry,
       formattedExpiry,
-      attachments: w.attachments.map((att) => ({
-        id: att.id,
-        filename: att.filename,
-        url: att.url,
-        mimeType: att.mimeType,
-        size: att.size == null ? null : Number(att.size),
-      })),
+      attachments: w.attachments
+        .filter((att) => att.uploadedBy !== null)
+        .map((att) => ({
+          id: att.id,
+          filename: att.filename,
+          url: att.url,
+          mimeType: att.mimeType,
+          size: att.size == null ? null : Number(att.size),
+          uploadedBy: att.uploadedBy as string,
+        })),
     };
   });
 

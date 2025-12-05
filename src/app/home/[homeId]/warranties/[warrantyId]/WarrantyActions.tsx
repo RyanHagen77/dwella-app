@@ -22,6 +22,7 @@ export type WarrantyDetail = {
     url: string;
     mimeType: string;
     size: number | null;
+    uploadedBy: string;
   }>;
 };
 

@@ -80,7 +80,16 @@ export default async function WarrantyDetailPage({
       deletedAt: null,
     },
     include: {
-      attachments: true,
+      attachments: {
+        select: {
+          id: true,
+          filename: true,
+          url: true,
+          mimeType: true,
+          size: true,
+          uploadedBy: true,
+        },
+      },
     },
   });
 
@@ -91,13 +100,28 @@ export default async function WarrantyDetailPage({
   const status = computeStatus(warranty.expiresAt);
   const formattedExpiry = formatExpiry(warranty.expiresAt);
 
-  const attachments = warranty.attachments.map((a) => ({
-    id: a.id,
-    filename: a.filename,
-    url: a.url,
-    mimeType: a.mimeType,
-    size: a.size == null ? null : Number(a.size), // bigint -> number
-  }));
+  const attachments = warranty.attachments
+    .filter((a) => a.uploadedBy !== null)
+    .map((a) => ({
+      id: a.id,
+      filename: a.filename,
+      url: a.url,
+      mimeType: a.mimeType,
+      size: a.size == null ? 0 : Number(a.size),
+      uploadedBy: a.uploadedBy as string,
+    }));
+
+  const serializedWarranty = {
+    id: warranty.id,
+    item: warranty.item,
+    provider: warranty.provider,
+    policyNo: warranty.policyNo,
+    expiresAt: warranty.expiresAt,
+    note: warranty.note,
+    formattedExpiry,
+    ...status,
+    attachments,
+  };
 
   return (
     <main className="relative min-h-screen text-white">
@@ -112,7 +136,6 @@ export default async function WarrantyDetailPage({
           ]}
         />
 
-        {/* Header (mirrors reminder header) */}
         <section className={glass}>
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -178,41 +201,19 @@ export default async function WarrantyDetailPage({
               </div>
             </div>
 
-            <WarrantyActions
-              homeId={homeId}
-              warranty={{
-                id: warranty.id,
-                item: warranty.item,
-                provider: warranty.provider,
-                policyNo: warranty.policyNo,
-                expiresAt: warranty.expiresAt,
-                note: warranty.note,
-                formattedExpiry,
-                ...status,
-                attachments,
-              }}
-            />
+            <WarrantyActions homeId={homeId} warranty={serializedWarranty} />
           </div>
         </section>
 
-        {/* Body (details + attachments) */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <section className={glass}>
-              <h2 className={`mb-4 text-lg font-medium ${heading}`}>
-                Details
-              </h2>
+              <h2 className={`mb-4 text-lg font-medium ${heading}`}>Details</h2>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <DetailField label="Item" value={warranty.item} />
-                <DetailField
-                  label="Provider"
-                  value={warranty.provider || "—"}
-                />
-                <DetailField
-                  label="Policy #"
-                  value={warranty.policyNo || "—"}
-                />
+                <DetailField label="Provider" value={warranty.provider || "—"} />
+                <DetailField label="Policy #" value={warranty.policyNo || "—"} />
                 <DetailField label="Expires" value={formattedExpiry} />
               </div>
 
@@ -227,7 +228,6 @@ export default async function WarrantyDetailPage({
                 </div>
               )}
 
-              {/* Attachments (same style as reminders) */}
               <div className="mt-4 border-t border-white/10 pt-4">
                 <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">
                   Attachments
@@ -269,7 +269,6 @@ export default async function WarrantyDetailPage({
             </section>
           </div>
 
-          {/* Right column – Metadata */}
           <div>
             <section className={glassTight}>
               <h3 className="mb-3 text-sm font-medium text-white/70">
