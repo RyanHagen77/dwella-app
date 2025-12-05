@@ -20,7 +20,7 @@ export function PropertyStats({
   homeId: string;
   stats: HomeStats;
 }) {
-  // collapsed by default on ALL breakpoints
+  // collapsed by default only on mobile
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -30,7 +30,7 @@ export function PropertyStats({
         <button
           type="button"
           onClick={() => setIsExpanded((prev) => !prev)}
-          className="inline-flex items-center gap-2 text-left"
+          className="inline-flex items-center gap-2 text-left lg:cursor-default"
         >
           <h2
             id="stats"
@@ -38,12 +38,9 @@ export function PropertyStats({
           >
             Property Stats
           </h2>
-          <span className="text-xs text-white/60">
-            {isExpanded ? "" : ""}
-          </span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className={`h-4 w-4 transition-transform ${
+            className={`h-4 w-4 transition-transform lg:hidden ${
               isExpanded ? "rotate-180" : ""
             }`}
             fill="none"
@@ -62,11 +59,11 @@ export function PropertyStats({
         <EditStatsButton homeId={homeId} currentStats={stats} />
       </div>
 
-      {/* Stats grid - toggled for ALL viewports */}
+      {/* Stats grid - always visible on desktop (lg+), toggled on mobile */}
       <div
         className={`${
           isExpanded ? "grid" : "hidden"
-        } grid-cols-2 gap-3 md:grid-cols-5 md:gap-4`}
+        } grid-cols-2 gap-3 lg:grid lg:grid-cols-5 lg:gap-4`}
       >
         <Stat
           label="Health Score"

@@ -16,7 +16,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-import { glass, textMeta, heading } from "@/lib/glass";
+import { glass, textMeta, ctaPrimary, heading } from "@/lib/glass";
 import { HomeActions } from "@/app/home/_components/HomeActions";
 import { ClientCard } from "@/app/home/_components/ClientCard";
 import { HomePicker } from "@/app/home/_components/HomePicker";
@@ -302,63 +302,61 @@ export default async function HomePage({
           <h2 id="home-hero" className="sr-only">
             Home overview
           </h2>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
-              <div className="lg:col-span-2">
-                <Image
-                  src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
-                  alt={addrLine}
-                  width={800}
-                  height={450}
-                  className="aspect-video w-full rounded-md object-cover"
-                />
-              </div>
-
-              <div className="flex flex-col justify-between space-y-3">
-                <div className="space-y-3">
-                  {userHomesCount > 1 && (
-                    <HomePicker
-                      currentHomeId={home.id}
-                      initialAddress={addrLine}
-                    />
-                  )}
-
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h1 className={`text-2xl font-semibold ${heading}`}>
-                      {addrLine}
-                    </h1>
-
-                    {verificationStatus && (
-                      <div className="flex items-center gap-2">
-                        <HomeVerificationBadge status={verificationStatus} />
-                        {verificationStatus === "UNVERIFIED" && (
-                          <Link
-                            href={`/home/${home.id}/verify`}
-                            className="text-xs text-indigo-300 hover:text-indigo-200"
-                          >
-                            Verify
-                          </Link>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <p className={`text-sm ${textMeta}`}>
-                    Last updated {formatDate(stats.lastUpdated)}
-                  </p>
-                </div>
-              </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+            <div>
+              <Image
+                src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
+                alt={addrLine}
+                width={800}
+                height={450}
+                className="aspect-video w-full rounded-md object-cover"
+              />
             </div>
 
-            <HomeActions
-              homeId={home.id}
-              homeAddress={addrLine}
-              unreadMessages={0}
-            />
+            <div className="flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                {userHomesCount > 1 && (
+                  <HomePicker
+                    currentHomeId={home.id}
+                    initialAddress={addrLine}
+                  />
+                )}
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className={`text-2xl font-semibold ${heading}`}>
+                    {addrLine}
+                  </h1>
+
+                  {verificationStatus && (
+                    <div className="flex items-center gap-2">
+                      <HomeVerificationBadge status={verificationStatus} />
+                      {verificationStatus === "UNVERIFIED" && (
+                        <Link
+                          href={`/home/${home.id}/verify`}
+                          className="text-xs text-indigo-300 hover:text-indigo-200"
+                        >
+                          Verify
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <p className={`text-sm ${textMeta}`}>
+                  Last updated {formatDate(stats.lastUpdated)}
+                </p>
+
+                <PropertyStats homeId={home.id} stats={stats} />
+              </div>
+
+              <HomeActions
+                homeId={home.id}
+                homeAddress={addrLine}
+                unreadMessages={0}
+              />
+            </div>
           </div>
         </section>
-
-        <PropertyStats homeId={home.id} stats={stats} />
 
         {(pendingWorkSubmissionsCount > 0 ||
           pendingServiceRequestsCount > 0 ||
