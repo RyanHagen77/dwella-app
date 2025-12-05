@@ -18,10 +18,10 @@ export default async function RemindersPage({
   searchParams,
 }: {
   params: Promise<{ homeId: string }>;
-  searchParams: Promise<{ search?: string; sort?: string }>;
+  searchParams: Promise<{ search?: string; sort?: string; status?: string }>;
 }) {
   const { homeId } = await params;
-  const { search, sort } = await searchParams;
+  const { search, sort, status } = await searchParams;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
@@ -47,9 +47,17 @@ export default async function RemindersPage({
 
   const where: {
     homeId: string;
-    archivedAt: null;
+    archivedAt?: null | { not: null };
     title?: { contains: string; mode: "insensitive" };
-  } = { homeId, archivedAt: null };
+  } = { homeId };
+
+  // Filter by status
+  if (status === "completed") {
+    where.archivedAt = { not: null };
+  } else if (status === "active" || !status) {
+    where.archivedAt = null;
+  }
+  // if status === "all", don't filter by archivedAt
 
   if (search) {
     where.title = { contains: search, mode: "insensitive" };
@@ -81,9 +89,6 @@ export default async function RemindersPage({
     },
   });
 
-  // ---------------------------
-  // STATUS MAPPING
-  // ---------------------------
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
@@ -99,7 +104,7 @@ export default async function RemindersPage({
     const isOverdue = !isCompleted && dueDate < now;
     const isDueSoon = !isCompleted && !isOverdue && daysUntil <= 7;
 
-    const status: ReminderItem["status"] = isCompleted
+    const reminderStatus: ReminderItem["status"] = isCompleted
       ? "completed"
       : isOverdue
       ? "overdue"
@@ -121,7 +126,7 @@ export default async function RemindersPage({
         day: "numeric",
         year: "numeric",
       }),
-      status,
+      status: reminderStatus,
       attachments: r.attachments.map((att) => ({
         id: att.id,
         filename: att.filename,
@@ -132,28 +137,13 @@ export default async function RemindersPage({
     };
   });
 
-  // ---------------------------
-  // COUNTS
-  // ---------------------------
   const activeReminders = remindersWithStatus.filter((r) => !r.isCompleted);
-
   const overdueCount = activeReminders.filter((r) => r.isOverdue).length;
-
-  const upcomingCount = activeReminders.filter(
-    (r) => !r.isOverdue
-  ).length;
-
+  const upcomingCount = activeReminders.filter((r) => !r.isOverdue).length;
   const completedCount = remindersWithStatus.filter((r) => r.isCompleted).length;
-
   const activeCount = remindersWithStatus.length - completedCount;
+  const next7DaysCount = activeReminders.filter((r) => !r.isOverdue && r.daysUntil <= 7).length;
 
-  const next7DaysCount = activeReminders.filter(
-    (r) => !r.isOverdue && r.daysUntil <= 7
-  ).length;
-
-  // ---------------------------
-  // PAGE RENDER
-  // ---------------------------
   return (
     <main className="min-h-screen text-white">
       <div className="fixed inset-0 -z-50">
@@ -203,9 +193,7 @@ export default async function RemindersPage({
                 <h1 className={`text-2xl font-bold ${heading}`}>Reminders</h1>
                 <p className={`mt-1 text-sm ${textMeta}`}>
                   {remindersWithStatus.length}{" "}
-                  {remindersWithStatus.length === 1
-                    ? "reminder"
-                    : "reminders"}
+                  {remindersWithStatus.length === 1 ? "reminder" : "reminders"}
                 </p>
               </div>
             </div>
@@ -219,7 +207,6 @@ export default async function RemindersPage({
           </div>
         </section>
 
-        {/* STATS */}
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
           <StatCard label="Total" value={remindersWithStatus.length} />
           <StatCard
@@ -235,12 +222,12 @@ export default async function RemindersPage({
           />
         </section>
 
-        {/* CLIENT PAGE */}
         <RemindersPageClient
           reminders={remindersWithStatus}
           homeId={homeId}
           initialSearch={search}
           initialSort={sort}
+          initialStatus={status}
           overdueCount={overdueCount}
           upcomingCount={upcomingCount}
           completedCount={completedCount}
