@@ -63,15 +63,8 @@ export function PropertyStats({
       <div
         className={`${
           isExpanded ? "grid" : "hidden"
-        } grid-cols-2 gap-3 lg:grid lg:grid-cols-5 lg:gap-4`}
+        } grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}
       >
-        <Stat
-          label="Health Score"
-          value={
-            stats.healthScore != null ? `${stats.healthScore}/100` : "—"
-          }
-          hint="A 0–100 score based on recent maintenance."
-        />
         <Stat
           label="Est. Value"
           value={
