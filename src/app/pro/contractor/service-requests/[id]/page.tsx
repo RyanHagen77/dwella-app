@@ -195,7 +195,7 @@ export default async function ContractorServiceRequestDetailPage({
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">
           <Link
-            href="/pro/contractor"
+            href="/pro/contractor/dashboard"
             className="text-white/70 hover:text-white transition-colors"
           >
             Dashboard
