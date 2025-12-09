@@ -1,9 +1,11 @@
+// app/pro/contractor/apply/page.tsx
 "use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 
 type ContractorApplyForm = {
   name: string;
@@ -42,7 +44,6 @@ export default function ContractorApplyPage() {
     setError("");
 
     try {
-      // Convert comma-separated strings to arrays
       const payload = {
         ...formData,
         specialties: formData.specialties
@@ -69,7 +70,29 @@ export default function ContractorApplyPage() {
         );
       }
 
-      router.push("/pro/contractor/pending");
+      // Auto sign-in with the credentials they just provided
+      const result = await signIn("credentials", {
+        redirect: false,
+        callbackUrl: "/post-auth",
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (result?.error) {
+        setError(
+          "Your application was submitted, but automatic sign-in failed. Please log in with your email and password."
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (result?.url) {
+        router.push(result.url);
+        return;
+      }
+
+      // Fallback: if no URL from signIn, send them to login
+      router.push("/login");
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Something went wrong";
@@ -99,7 +122,7 @@ export default function ContractorApplyPage() {
         <div className="mb-6 flex items-center justify-between">
           <Link
             href="/apply"
-            className="inline-flex items-center gap-1 text-xs sm:text-sm text-white/70 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm text-white/70 transition-colors hover:text-white"
           >
             <span aria-hidden>←</span>
             <span>Back to account types</span>
@@ -108,11 +131,12 @@ export default function ContractorApplyPage() {
         </div>
 
         {/* Title + intro */}
-        <h1 className="mb-1 text-xl sm:text-2xl font-semibold tracking-tight text-white">
+        <h1 className="mb-1 text-xl font-semibold tracking-tight text-white sm:text-2xl">
           Apply as a contractor
         </h1>
         <p className="mb-5 text-sm text-white/75">
-          Join MyDwella and start building a verified record of work for the homes you serve.
+          Join MyDwella and start building a verified record of work for the
+          homes you serve.
         </p>
 
         {/* Why join box */}
@@ -122,25 +146,27 @@ export default function ContractorApplyPage() {
           </h2>
           <ul className="space-y-1.5">
             <li className="flex items-start gap-2.5">
-              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+              <span className="mt-[1px] flex-shrink-0 text-base text-[#33C17D]">
                 ✓
               </span>
               <span>Connect and stay connected with homes you serve.</span>
             </li>
             <li className="flex items-start gap-2.5">
-              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+              <span className="mt-[1px] flex-shrink-0 text-base text-[#33C17D]">
                 ✓
               </span>
-              <span>Receive service requests, and provide a quote seamlessly.</span>
+              <span>
+                Receive service requests, and provide a quote seamlessly.
+              </span>
             </li>
             <li className="flex items-start gap-2.5">
-              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+              <span className="mt-[1px] flex-shrink-0 text-base text-[#33C17D]">
                 ✓
               </span>
-              <span>Store photo's, notes and warranty info.</span>
+              <span>Store photos, notes and warranty info.</span>
             </li>
             <li className="flex items-start gap-2.5">
-              <span className="mt-[1px] text-[#33C17D] text-base flex-shrink-0">
+              <span className="mt-[1px] flex-shrink-0 text-base text-[#33C17D]">
                 ✓
               </span>
               <span>Get discovered when homes change hands.</span>
@@ -149,55 +175,49 @@ export default function ContractorApplyPage() {
         </div>
 
         {/* Pricing box */}
-<div className="mb-6 rounded-xl border border-[#33C17D]/30 bg-gradient-to-br from-[#33C17D]/10 to-transparent p-5 sm:p-6">
-  <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-    <div>
-      {/* Launch Label */}
-      <h2 className="text-sm font-semibold text-white/90 mb-1">
-        Limited Launch Pricing
-      </h2>
-      <p className="text-xs text-white/70 mb-3">
-        First 50 contractors lock this rate in forever
-      </p>
+        <div className="mb-6 rounded-xl border border-[#33C17D]/30 bg-gradient-to-br from-[#33C17D]/10 to-transparent p-5 sm:p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="mb-1 text-sm font-semibold text-white/90">
+                Limited Launch Pricing
+              </h2>
+              <p className="mb-3 text-xs text-white/70">
+                First 50 contractors lock this rate in forever
+              </p>
 
-      {/* Monthly price */}
-      <div className="flex items-baseline gap-2">
-        <span className="text-3xl sm:text-4xl font-bold text-white">
-          $39
-        </span>
-        <span className="text-white/70 text-sm">/ month</span>
-      </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-white sm:text-4xl">
+                  $39
+                </span>
+                <span className="text-sm text-white/70">/ month</span>
+              </div>
 
-      {/* Annual savings */}
-      <div className="mt-1 flex items-center gap-2">
-        <span className="rounded-full bg-[#33C17D]/20 px-2 py-0.5 text-xs font-medium text-[#33C17D]">
-          Save 20%
-        </span>
-        <span className="text-xs text-white/60">
-          when paid annually ($374/yr)
-        </span>
-      </div>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="rounded-full bg-[#33C17D]/20 px-2 py-0.5 text-xs font-medium text-[#33C17D]">
+                  Save 20%
+                </span>
+                <span className="text-xs text-white/60">
+                  when paid annually ($374/yr)
+                </span>
+              </div>
 
-      {/* Free tier */}
-      <p className="mt-2 text-xs text-white/75">
-        Free up to 10 clients • Up to 250 clients included
-      </p>
+              <p className="mt-2 text-xs text-white/75">
+                Free up to 10 clients • Up to 250 clients included
+              </p>
 
-      {/* Value bullets */}
-      <ul className="mt-3 space-y-1 text-xs text-white/75">
-        <li>• Verified documentation of every job</li>
-        <li>• Automated warranty & maintenance reminders</li>
-        <li>• Homeowner messaging & service requests</li>
-        <li>• 1 monthly marketing email to your entire client list</li>
-      </ul>
+              <ul className="mt-3 space-y-1 text-xs text-white/75">
+                <li>• Verified documentation of every job</li>
+                <li>• Automated warranty &amp; maintenance reminders</li>
+                <li>• Homeowner messaging &amp; service requests</li>
+                <li>• 1 monthly marketing email to your entire client list</li>
+              </ul>
 
-      {/* Badge */}
-      <div className="mt-3 inline-flex rounded-full bg-[#33C17D]/15 px-3 py-1 text-xs font-medium text-[#33C17D]">
-        Founder rate – never increases
-      </div>
-    </div>
-  </div>
-</div>
+              <div className="mt-3 inline-flex rounded-full bg-[#33C17D]/15 px-3 py-1 text-xs font-medium text-[#33C17D]">
+                Founder rate – never increases
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Error */}
         {error && (
@@ -215,7 +235,7 @@ export default function ContractorApplyPage() {
             </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   Full name <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -231,7 +251,7 @@ export default function ContractorApplyPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   Email <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -247,7 +267,7 @@ export default function ContractorApplyPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   Password <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -265,7 +285,7 @@ export default function ContractorApplyPage() {
               </div>
 
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   Phone number <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -289,7 +309,7 @@ export default function ContractorApplyPage() {
             </h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   Business name <span className="text-red-400">*</span>
                 </label>
                 <input
@@ -308,9 +328,11 @@ export default function ContractorApplyPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   License number{" "}
-                  <span className="text-white/60">(optional but recommended)</span>
+                  <span className="text-white/60">
+                    (optional but recommended)
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -330,7 +352,7 @@ export default function ContractorApplyPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   Website <span className="text-white/60">(optional)</span>
                 </label>
                 <input
@@ -345,7 +367,7 @@ export default function ContractorApplyPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   Specialties <span className="text-white/60">(optional)</span>
                 </label>
                 <input
@@ -366,8 +388,9 @@ export default function ContractorApplyPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
-                  Service areas <span className="text-white/60">(optional)</span>
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
+                  Service areas{" "}
+                  <span className="text-white/60">(optional)</span>
                 </label>
                 <input
                   type="text"
@@ -387,7 +410,7 @@ export default function ContractorApplyPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs sm:text-sm font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
                   About your business{" "}
                   <span className="text-white/60">(optional)</span>
                 </label>
@@ -397,7 +420,7 @@ export default function ContractorApplyPage() {
                     setFormData({ ...formData, bio: e.target.value })
                   }
                   rows={4}
-                  className="w-full rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70 resize-none"
+                  className="w-full resize-none rounded-lg border border-white/20 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
                   placeholder="Tell us about your experience, services, and what makes you stand out..."
                 />
               </div>
@@ -409,7 +432,7 @@ export default function ContractorApplyPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-xl bg-[rgba(243,90,31,0.95)] px-6 py-3 text-sm sm:text-base font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
+              className="w-full rounded-xl bg-[rgba(243,90,31,0.95)] px-6 py-3 text-sm font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60 sm:text-base"
             >
               {loading ? "Submitting..." : "Submit application"}
             </button>

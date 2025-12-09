@@ -49,6 +49,8 @@ export async function POST(req: NextRequest) {
         passwordHash: hashedPassword,
         role: "PRO",
         proStatus: "PENDING",
+        // ✅ Auto-verify contractor email so they can log in
+        emailVerified: new Date(),
         proProfile: {
           create: {
             type: "CONTRACTOR",

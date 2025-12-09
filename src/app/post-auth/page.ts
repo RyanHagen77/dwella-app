@@ -39,22 +39,25 @@ export default async function PostAuth() {
     redirect("/admin");
   }
 
-  /** --------------------------
-   *  PRO Users
-   * --------------------------- */
+/** --------------------------
+ *  PRO Users
+ * --------------------------- */
 if (user?.role === "PRO") {
   switch (user.proStatus) {
     case "PENDING":
-      return redirect("/pro/dashboard");
+      // show the "under review" experience
+      return redirect("/pro/contractor/pending");
 
     case "APPROVED":
-      return redirect("/pro/dashboard");
+      // actual working dashboard
+      return redirect("/pro/contractor/dashboard");
 
     case "REJECTED":
       return redirect("/pro/rejected");
 
     default:
-      return redirect("/pro/dashboard");
+      // if for some reason proStatus is null, treat like pending
+      return redirect("/pro/contractor/pending");
   }
 }
 
