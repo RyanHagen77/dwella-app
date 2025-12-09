@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
@@ -141,19 +140,6 @@ export default async function WarrantiesPage({
 
   return (
     <main className="min-h-screen text-white">
-      <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-      </div>
-
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         <nav className="flex items-center gap-2 text-sm">
           <Link

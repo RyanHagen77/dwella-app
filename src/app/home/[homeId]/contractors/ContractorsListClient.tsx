@@ -9,7 +9,7 @@ type ContractorConnection = {
   id: string;
   createdAt: string;
   archivedAt: string | null;
-  lastWorkDate: string | null;
+  lastServiceDate: string | null;
   contractorId: string;
   contractor: {
     id: string;
@@ -18,7 +18,7 @@ type ContractorConnection = {
     image: string | null;
     businessName: string | null;
   } | null;
-  verifiedWorkCount: number;
+  verifiedServiceCount: number;
   totalSpent: number;
 };
 
@@ -92,8 +92,8 @@ function ContractorCard({
   const name =
     contractor?.businessName || contractor?.name || contractor?.email || "Contractor";
 
-  const lastWorkDate = connection.lastWorkDate
-    ? new Date(connection.lastWorkDate).toLocaleDateString("en-US", {
+  const lastServiceDate = connection.lastServiceDate
+    ? new Date(connection.lastServiceDate).toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -181,12 +181,12 @@ function ContractorCard({
               Connected {createdAtLabel}
             </span>
 
-            {lastWorkDate && (
-              <span>Last work: {lastWorkDate}</span>
+            {lastServiceDate && (
+              <span>Last work: {lastServiceDate}</span>
             )}
 
             <span>
-              Verified jobs: {connection.verifiedWorkCount}
+              Verified jobs: {connection.verifiedServiceCount}
             </span>
 
             {connection.totalSpent > 0 && (

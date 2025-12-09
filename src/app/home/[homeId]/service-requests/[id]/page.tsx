@@ -4,7 +4,7 @@
  * View single job request, accept quotes, cancel request
  * WITH PHOTO GALLERY
  *
- * Location: app/stats/[homeId]/service-requests/[workId]/page.tsx
+ * Location: app/stats/[homeId]/service-requests/[serviceId]/page.tsx
  */
 
 export const dynamic = "force-dynamic";
@@ -71,11 +71,11 @@ export default async function ServiceRequestDetailPage({ params }: PageProps) {
           items: true,
         },
       },
-      workRecord: {
+      serviceRecord: {
         select: {
           id: true,
-          workType: true,
-          workDate: true,
+          serviceType: true,
+          serviceDate: true,
           status: true,
           cost: true,
         },
@@ -166,7 +166,7 @@ export default async function ServiceRequestDetailPage({ params }: PageProps) {
         <Breadcrumb
           items={[
             { label: addrLine, href: `/home/${homeId}` },
-            { label: "Requests & Submissions", href: `/home/${homeId}/completed-work-submissions` },
+            { label: "Requests & Submissions", href: `/home/${homeId}/completed-service-submissions` },
             { label: serviceRequest.title },
           ]}
         />
@@ -176,7 +176,7 @@ export default async function ServiceRequestDetailPage({ params }: PageProps) {
           <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
             <div className="flex flex-1 min-w-0 items-center gap-3">
               <Link
-                href={`/home/${homeId}/completed-work-submissions`}
+                href={`/home/${homeId}/completed-service-submissions`}
                 className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
                 aria-label="Back to job requests"
               >
@@ -394,30 +394,30 @@ export default async function ServiceRequestDetailPage({ params }: PageProps) {
             )}
 
             {/* Work Record */}
-            {serviceRequest.workRecord && (
+            {serviceRequest.serviceRecord && (
               <section className={glass}>
                 <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
                   Work Completed
                 </h2>
                 <Link
-                  href={`/home/${homeId}/work/${serviceRequest.workRecord.id}`}
+                  href={`/home/${homeId}/work/${serviceRequest.serviceRecord.id}`}
                   className="block rounded-lg border border-white/10 bg-white/5 p-4 hover:bg-white/10"
                 >
                   <p className="font-medium text-white">
-                    {serviceRequest.workRecord.workType}
+                    {serviceRequest.serviceRecord.serviceType}
                   </p>
-                  {serviceRequest.workRecord.workDate && (
+                  {serviceRequest.serviceRecord.serviceDate && (
                     <p className={`text-sm ${textMeta}`}>
                       Completed:{" "}
                       {format(
-                        new Date(serviceRequest.workRecord.workDate),
+                        new Date(serviceRequest.serviceRecord.serviceDate),
                         "MMM d, yyyy"
                       )}
                     </p>
                   )}
-                  {serviceRequest.workRecord.cost && (
+                  {serviceRequest.serviceRecord.cost && (
                     <p className="mt-2 text-lg font-semibold text-white">
-                      ${Number(serviceRequest.workRecord.cost).toLocaleString()}
+                      ${Number(serviceRequest.serviceRecord.cost).toLocaleString()}
                     </p>
                   )}
                 </Link>

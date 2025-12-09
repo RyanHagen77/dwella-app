@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       },
     });
 
-    // Update user status to pending-document-completed-work-submissions-records
+    // Update user status to pending-document-completed-service-submissions-records
     await prisma.user.update({
       where: { id: userId },
       data: {
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       proProfile,
-      message: "Application submitted! We'll verify-document-completed-work-submissions-records your license and review shortly.",
+      message: "Application submitted! We'll verify-document-completed-service-submissions-records your license and review shortly.",
     });
   } catch (error) {
     console.error("Error submitting realtor application:", error);

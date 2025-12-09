@@ -1,8 +1,8 @@
 /**
- * HOMEOWNER PENDING JOB REQUESTS COUNT
+ * HOMEOWNER PENDING SERVICE REQUESTS COUNT
  *
  * GET /api/stats/[homeId]/service-requests/pending
- * Returns count of job requests awaiting contractor response
+ * Returns count of service requests awaiting contractor response
  *
  * Used by homeowner dashboard badge
  */
@@ -34,7 +34,7 @@ export async function GET(
 
     const userId = session.user.id;
 
-    // Count job requests awaiting contractor response or homeowner to accept quote
+    // Count service requests awaiting contractor response or homeowner to accept quote
     const pendingCount = await prisma.serviceRequest.count({
       where: {
         homeId,

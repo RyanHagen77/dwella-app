@@ -1,4 +1,4 @@
-// app/api/invitations/[workId]/cancel/route.ts
+// app/api/invitations/[serviceId]/cancel/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";

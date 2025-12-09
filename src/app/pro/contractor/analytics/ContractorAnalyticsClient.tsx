@@ -62,10 +62,10 @@ export default function ContractorAnalyticsClient(
           </div>
           <div className="flex gap-2">
             <Link
-              href="/pro/contractor/work-records/new"
+              href="/pro/contractor/service-records/new"
               className={`${ctaPrimary} px-4 py-2 text-sm`}
             >
-              + Document Work
+              + Document Services
             </Link>
             <InviteHomeownerButton />
           </div>
@@ -120,16 +120,16 @@ export default function ContractorAnalyticsClient(
             />
             <FunnelStep
               step="2"
-              title="Document Work"
+              title="Document Service"
               description="Log installs, repairs, and inspections as work records."
-              href="/pro/contractor/work-records/new"
-              cta="Document work"
+              href="/pro/contractor/service-records/new"
+              cta="Document services"
             />
             <FunnelStep
               step="3"
               title="Get Verified"
               description="Ask homeowners to verify your records and leave reviews."
-              href="/pro/contractor/work-records"
+              href="/pro/contractor/service-records"
               cta="View records"
             />
           </div>
@@ -180,7 +180,7 @@ export default function ContractorAnalyticsClient(
           />
           <ProfileStrengthRow
             label="Recent activity"
-            value="No recent work records"
+            value="No recent service records"
             progress={sampleRecencyScore}
           />
           <ProfileStrengthRow
@@ -226,7 +226,7 @@ export default function ContractorAnalyticsClient(
               Invite a homeowner
             </Link>
             <Link
-              href="/pro/contractor/work-records/new"
+              href="/pro/contractor/service-records/new"
               className={`${ctaGhost} px-4 py-2 text-sm`}
             >
               Log a recent job

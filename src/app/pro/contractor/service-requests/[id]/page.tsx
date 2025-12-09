@@ -3,7 +3,7 @@
  *
  * View job request from homeowner, submit quote
  *
- * Location: app/contractor/service-requests/[workId]/page.tsx
+ * Location: app/contractor/service-requests/[serviceId]/page.tsx
  */
 
 export const dynamic = "force-dynamic";
@@ -36,7 +36,7 @@ type ServiceRequestForContractorActions = {
   id: string;
   status: string;
   quote: { id: string } | null;
-  workRecord: { id: string } | null;
+  serviceRecord: { id: string } | null;
   contractorNotes: string | null;
 };
 
@@ -93,11 +93,11 @@ export default async function ContractorServiceRequestDetailPage({
           items: true,
         },
       },
-      workRecord: {
+      serviceRecord: {
         select: {
           id: true,
-          workType: true,
-          workDate: true,
+          serviceType: true,
+          serviceDate: true,
           status: true,
           cost: true,
         },
@@ -127,8 +127,8 @@ export default async function ContractorServiceRequestDetailPage({
     id: serviceRequest.id,
     status: serviceRequest.status,
     quote: serviceRequest.quote ? { id: serviceRequest.quote.id } : null,
-    workRecord: serviceRequest.workRecord
-      ? { id: serviceRequest.workRecord.id }
+    serviceRecord: serviceRequest.serviceRecord
+      ? { id: serviceRequest.serviceRecord.id }
       : null,
     contractorNotes: serviceRequest.contractorNotes,
   };
@@ -205,7 +205,7 @@ export default async function ContractorServiceRequestDetailPage({
             href="/pro/contractor/service-requests"
             className="text-white/70 hover:text-white transition-colors"
           >
-            Job Requests
+            Service Requests
           </Link>
           <span className="text-white/50">/</span>
           <span className="text-white truncate max-w-[50%]">
@@ -220,7 +220,7 @@ export default async function ContractorServiceRequestDetailPage({
               <Link
                 href="/pro/contractor/service-requests"
                 className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                aria-label="Back to job requests"
+                aria-label="Back to service requests"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -442,30 +442,30 @@ export default async function ContractorServiceRequestDetailPage({
             )}
 
             {/* Work Record */}
-            {serviceRequest.workRecord && (
+            {serviceRequest.serviceRecord && (
               <section className={glass}>
                 <h2 className={`mb-3 text-lg font-semibold ${heading}`}>
                   Work Completed
                 </h2>
                 <Link
-                  href={`/pro/contractor/work/${serviceRequest.workRecord.id}`}
+                  href={`/pro/contractor/work/${serviceRequest.serviceRecord.id}`}
                   className={`${glassTight} block hover:bg-white/10`}
                 >
                   <p className="font-medium text-white">
-                    {serviceRequest.workRecord.workType}
+                    {serviceRequest.serviceRecord.serviceType}
                   </p>
-                  {serviceRequest.workRecord.workDate && (
+                  {serviceRequest.serviceRecord.serviceDate && (
                     <p className={`mt-1 text-sm ${textMeta}`}>
                       Completed:{" "}
                       {format(
-                        new Date(serviceRequest.workRecord.workDate),
+                        new Date(serviceRequest.serviceRecord.serviceDate),
                         "MMM d, yyyy"
                       )}
                     </p>
                   )}
-                  {serviceRequest.workRecord.cost && (
+                  {serviceRequest.serviceRecord.cost && (
                     <p className="mt-2 text-lg font-semibold text-white">
-                      ${Number(serviceRequest.workRecord.cost).toLocaleString()}
+                      ${Number(serviceRequest.serviceRecord.cost).toLocaleString()}
                     </p>
                   )}
                 </Link>

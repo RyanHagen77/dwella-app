@@ -36,7 +36,7 @@ export async function GET() {
         // Get counts for dashboard
         _count: {
           select: {
-            workRecords: true,
+            serviceRecords: true,
             reminders: true,
             warranties: true,
           },

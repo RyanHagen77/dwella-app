@@ -215,7 +215,7 @@ export function HomeActions({
 
         {/* Request Service → list page */}
         <Link
-          href={`/home/${homeId}/completed-work-submissions`}
+          href={`/home/${homeId}/completed-service-submissions`}
           className={`${ctaGhost} text-sm`}
         >
           🔧 Request Service

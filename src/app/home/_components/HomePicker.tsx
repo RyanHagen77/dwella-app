@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { ClaimHomeModal } from "./ClaimHomeModal";
 import { UnreadMessageBadge } from "@/components/ui/UnreadMessageBadge";
 import { UnreadInvitationsBadge } from "@/components/ui//UnreadInvitationsBadge";
-import { PendingWorkBadge } from "@/components/ui/PendingWorkBadge";
+import { PendingServiceBadge } from "@/components/ui/PendingServiceBadge";
 
 type Home = {
   id: string;
@@ -19,7 +19,7 @@ type HomeStats = {
   homeId: string;
   unreadMessages: number;
   pendingInvitations: number;
-  pendingWork: number;
+  pendingService: number;
 };
 
 export function HomePicker({
@@ -58,15 +58,15 @@ export function HomePicker({
       try {
         // Fetch stats for each stats
         const statsPromises = homes.map(async (home) => {
-          const [messagesRes, invitesRes, workRes] = await Promise.all([
+          const [messagesRes, invitesRes, serviceRes] = await Promise.all([
             fetch(`/api/home/${home.id}/messages/unread`),
             fetch(`/api/home/${home.id}/invitations?status=PENDING`),
-            fetch(`/api/home/${home.id}/completed-work-submissions/pending`), // ← Fixed this line
+            fetch(`/api/home/${home.id}/completed-service-submissions/pending`), // ← Fixed this line
           ]);
 
           const messagesData = messagesRes.ok ? await messagesRes.json() : {total: 0};
           const invitesData = invitesRes.ok ? await invitesRes.json() : {};
-          const workData = workRes.ok ? await workRes.json() : {total: 0}; // ← Changed totalPending to total
+          const serviceData = serviceRes.ok ? await serviceRes.json() : {total: 0}; // ← Changed totalPending to total
 
           const pendingInvites =
               (invitesData.sentInvitations?.filter((inv: { status: string }) => inv.status === 'PENDING').length || 0) +
@@ -78,7 +78,7 @@ export function HomePicker({
             homeId: home.id,
             unreadMessages: messagesData.total || 0,
             pendingInvitations: pendingInvites,
-            pendingWork: workData.total || 0, // ← Changed totalPending to total
+            pendingService: serviceData.total || 0, // ← Changed totalPending to total
           };
         });
 
@@ -130,7 +130,7 @@ export function HomePicker({
       homeId,
       unreadMessages: 0,
       pendingInvitations: 0,
-      pendingWork: 0,
+      pendingService: 0,
     };
   }
 
@@ -154,7 +154,7 @@ export function HomePicker({
           {/* Badges */}
           <UnreadMessageBadge />
           <UnreadInvitationsBadge/>
-          <PendingWorkBadge />
+          <PendingServiceBadge />
 
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -195,7 +195,7 @@ export function HomePicker({
                 {homes.map((home) => {
                   const isCurrent = home.id === currentHomeId;
                   const stats = getStatsForHome(home.id);
-                  const hasActivity = stats.unreadMessages > 0 || stats.pendingInvitations > 0 || stats.pendingWork > 0;
+                  const hasActivity = stats.unreadMessages > 0 || stats.pendingInvitations > 0 || stats.pendingService > 0;
 
                   return (
                     <button
@@ -233,9 +233,9 @@ export function HomePicker({
                                 {stats.pendingInvitations}
                               </span>
                             )}
-                            {stats.pendingWork > 0 && (
+                            {stats.pendingService > 0 && (
                               <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[#33C17D] px-2 text-xs font-bold text-white">
-                                {stats.pendingWork}
+                                {stats.pendingService}
                               </span>
                             )}
                           </div>

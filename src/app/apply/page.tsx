@@ -82,7 +82,7 @@ export default function ApplySelectPage() {
                 <span className="mt-[2px] text-[#33C17D] text-base flex-shrink-0">
                   ✓
                 </span>
-                <span>Receive job requests and send quotes.</span>
+                <span>Receive service requests and send quotes.</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <span className="mt-[2px] text-[#33C17D] text-base flex-shrink-0">

@@ -30,12 +30,12 @@ type Property = {
   isArchived: boolean;
   archivedAt: string | null;
   serviceCount: number;
-  lastWorkDate: string | null;
-  lastWorkTitle: string | null;
+  lastServiceDate: string | null;
+  lastServiceTitle: string | null;
   imageUrl: string | null;
-  verifiedWorkCount: number;
+  verifiedServiceCount: number;
   totalSpent: number | null;
-  daysSinceLastWork: number | null;
+  daysSinceLastService: number | null;
   // Opportunities
   expiringWarranties: Array<{
     item: string;
@@ -98,7 +98,7 @@ export function PropertiesClient({
           0
       ).length,
       needsAttention: properties.filter(
-        (p) => !p.lastWorkDate || (p.daysSinceLastWork ?? 999) > 180
+        (p) => !p.lastServiceDate || (p.daysSinceLastService ?? 999) > 180
       ).length,
       pending: properties.filter((p) => (p.pendingRequests?.length || 0) > 0)
         .length,
@@ -120,7 +120,7 @@ export function PropertiesClient({
         );
       } else if (filter === "needs-attention") {
         list = list.filter(
-          (p) => !p.lastWorkDate || (p.daysSinceLastWork ?? 999) > 180
+          (p) => !p.lastServiceDate || (p.daysSinceLastService ?? 999) > 180
         );
       } else if (filter === "pending") {
         list = list.filter((p) => (p.pendingRequests?.length || 0) > 0);
@@ -166,15 +166,15 @@ export function PropertiesClient({
       if (aOpps > bOpps) return -1;
       if (bOpps > aOpps) return 1;
 
-      // Then by last work date (most recent first)
-      if (a.lastWorkDate && b.lastWorkDate) {
+      // Then by last service date (most recent first)
+      if (a.lastServiceDate && b.lastServiceDate) {
         return (
-          new Date(b.lastWorkDate).getTime() -
-          new Date(a.lastWorkDate).getTime()
+          new Date(b.lastServiceDate).getTime() -
+          new Date(a.lastServiceDate).getTime()
         );
       }
-      if (a.lastWorkDate) return -1;
-      if (b.lastWorkDate) return 1;
+      if (a.lastServiceDate) return -1;
+      if (b.lastServiceDate) return 1;
 
       return 0;
     });
@@ -331,7 +331,7 @@ function PropertyCard({ property }: { property: Property }) {
     0;
   const hasPendingRequests = (property.pendingRequests?.length || 0) > 0;
   const needsAttention =
-    !property.lastWorkDate || (property.daysSinceLastWork ?? 999) > 180;
+    !property.lastServiceDate || (property.daysSinceLastService ?? 999) > 180;
 
   // Determine card border color based on status
   let borderColor = "border-white/10";
@@ -505,8 +505,8 @@ function PropertyCard({ property }: { property: Property }) {
               <div className="flex items-center gap-2">
                 <span className="text-yellow-300 text-xs">💡</span>
                 <span className="text-xs text-yellow-200">
-                  {property.daysSinceLastWork
-                    ? `${property.daysSinceLastWork} days since last contact`
+                  {property.daysSinceLastService
+                    ? `${property.daysSinceLastService} days since last contact`
                     : "No recent contact"}
                 </span>
               </div>
@@ -517,14 +517,14 @@ function PropertyCard({ property }: { property: Property }) {
 
       {/* Stats */}
       <div className="flex items-center gap-3 text-xs text-white/60 mb-2">
-        {property.verifiedWorkCount > 0 && (
-          <span>✓ {property.verifiedWorkCount} verified</span>
+        {property.verifiedServiceCount > 0 && (
+          <span>✓ {property.verifiedServiceCount} verified</span>
         )}
-        {!property.isArchived && property.daysSinceLastWork !== null && (
+        {!property.isArchived && property.daysSinceLastService !== null && (
           <span>
-            {property.daysSinceLastWork === 0
+            {property.daysSinceLastService === 0
               ? "Today"
-              : `${property.daysSinceLastWork}d ago`}
+              : `${property.daysSinceLastService}d ago`}
           </span>
         )}
         {property.totalSpent && property.totalSpent > 0 && (
@@ -535,9 +535,9 @@ function PropertyCard({ property }: { property: Property }) {
       </div>
 
       {/* Last work */}
-      {property.lastWorkTitle && (
+      {property.lastServiceTitle && (
         <div className={`text-xs ${textMeta} line-clamp-1`}>
-          {property.isArchived ? "Last work" : "Recent"}: {property.lastWorkTitle}
+          {property.isArchived ? "Last service" : "Recent"}: {property.lastServiceTitle}
         </div>
       )}
     </Link>

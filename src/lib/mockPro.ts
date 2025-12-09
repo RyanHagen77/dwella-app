@@ -20,7 +20,7 @@ export async function buildProDataFromAddress(address: string): Promise<ProData>
   const verified = !!primary.verified;
   const rating = primary.rating ?? 4.6;
 
-  // derive a few document-completed-work-submissions-records-records from homeowner records (future → active)
+  // derive a few document-completed-service-submissions-records-records from homeowner records (future → active)
   const today = new Date();
   const addDays = (n:number)=>{ const d=new Date(today); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 
@@ -30,7 +30,7 @@ export async function buildProDataFromAddress(address: string): Promise<ProData>
     { id:"j3", title:"Warranty Check", clientAddress: address, due: addDays(10), status:"in_progress" as const, estAmount:120 },
   ];
 
-  // past document-completed-work-submissions-records-records from homeowner records
+  // past document-completed-service-submissions-records-records from homeowner records
   const recs = records.slice(0,3).map(r=>({
     id: r.id, title: r.category, date: r.date, address, amount: r.cost
   }));

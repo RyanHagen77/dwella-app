@@ -1,4 +1,4 @@
-// app/stats/[homeId]/invitations/page.tsx
+// app/home/[homeId]/invitations/page.tsx
 export const dynamic = "force-dynamic";
 
 import { getServerSession } from "next-auth";
@@ -12,9 +12,9 @@ import HomeInvitationsClient from "./HomeInvitationsClient";
 export default async function HomeInvitationsPage({
   params,
 }: {
-  params: { homeId: string };
+  params: Promise<{ homeId: string }>;
 }) {
-  const { homeId } = params;
+  const { homeId } = await params;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) {

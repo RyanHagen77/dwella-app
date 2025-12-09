@@ -76,7 +76,7 @@ export default async function PropertiesPage() {
               dueAt: true,
             },
           },
-          // Get pending job requests
+          // Get pending service requests
           serviceRequests: {
             where: {
               contractorId: userId,
@@ -99,7 +99,7 @@ export default async function PropertiesPage() {
   // Get work records
   const homeIds = connections.map((c) => c.homeId);
 
-  const workRecords = await prisma.workRecord.findMany({
+  const serviceRecords = await prisma.serviceRecord.findMany({
     where: {
       contractorId: userId,
       homeId: { in: homeIds },
@@ -107,12 +107,12 @@ export default async function PropertiesPage() {
     select: {
       id: true,
       homeId: true,
-      workDate: true,
-      workType: true,
+      serviceDate: true,
+      serviceType: true,
       description: true,
     },
     orderBy: {
-      workDate: "desc",
+      serviceDate: "desc",
     },
   });
 
@@ -121,14 +121,14 @@ export default async function PropertiesPage() {
 
   const properties = connections.map((conn) => {
     const home = conn.home;
-    const records = workRecords.filter((r) => r.homeId === conn.homeId);
-    const lastWork = records.length > 0 ? records[0] : null;
+    const records = serviceRecords.filter((r) => r.homeId === conn.homeId);
+    const lastService = records.length > 0 ? records[0] : null;
     const isArchived = conn.status === "ARCHIVED";
 
     // Calculate relationship metrics
-    const daysSinceLastWork = conn.lastWorkDate
+    const daysSinceLastService = conn.lastServiceDate
       ? Math.floor(
-          (now - new Date(conn.lastWorkDate).getTime()) / (1000 * 60 * 60 * 24)
+          (now - new Date(conn.lastServiceDate).getTime()) / (1000 * 60 * 60 * 24)
         )
       : null;
 
@@ -176,12 +176,12 @@ export default async function PropertiesPage() {
       connectionStatus: conn.status,
       isArchived,
       archivedAt: conn.archivedAt?.toISOString() || null,
-      verifiedWorkCount: conn.verifiedWorkCount,
+      verifiedServiceCount: conn.verifiedServiceCount,
       totalSpent: Number(conn.totalSpent) || null,
       serviceCount: records.length,
-      lastWorkDate: lastWork?.workDate?.toISOString() ?? null,
-      lastWorkTitle: lastWork?.workType ?? lastWork?.description ?? null,
-      daysSinceLastWork,
+      lastServiceDate: lastService?.serviceDate?.toISOString() ?? null,
+      lastServiceTitle: lastService?.serviceType ?? lastService?.description ?? null,
+      daysSinceLastService,
       imageUrl: home?.photos?.[0] ?? null,
       expiringWarranties,
       upcomingReminders,

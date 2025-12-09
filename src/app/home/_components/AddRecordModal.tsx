@@ -262,7 +262,7 @@ export function AddRecordModal({ open, onCloseAction, onCreateAction, defaultTyp
 
             <div className="flex justify-between items-center">
               <span className={`text-sm ${textMeta}`}>
-                {recordType === "record" && "Photos of document-completed-work-submissions-records-records, receipts, etc."}
+                {recordType === "record" && "Photos of document-completed-service-submissions-records-records, receipts, etc."}
                 {recordType === "reminder" && "Supporting documents"}
                 {recordType === "warranty" && "Warranty documents, manuals, receipts"}
               </span>

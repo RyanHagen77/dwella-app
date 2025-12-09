@@ -50,7 +50,7 @@ export default async function ContractorDetailPage({
       createdAt: true,
       updatedAt: true,
       totalSpent: true,
-      lastWorkDate: true,
+      lastServiceDate: true,
       contractorId: true,
       contractor: {
         select: {
@@ -87,17 +87,17 @@ export default async function ContractorDetailPage({
 
   const contractor = connection.contractor;
 
-  const workRecords = await prisma.workRecord.findMany({
+  const serviceRecords = await prisma.serviceRecord.findMany({
     where: {
       homeId,
       contractorId: contractor.id,
     },
-    orderBy: { workDate: "desc" },
+    orderBy: { serviceDate: "desc" },
     select: {
       id: true,
-      workType: true,
+      serviceType: true,
       description: true,
-      workDate: true,
+      serviceDate: true,
       cost: true,
       isVerified: true,
       status: true,
@@ -114,7 +114,7 @@ export default async function ContractorDetailPage({
     },
   });
 
-  const jobRequests = await prisma.serviceRequest.findMany({
+  const serviceRequests = await prisma.serviceRequest.findMany({
     where: {
       homeId,
       contractorId: contractor.id,
@@ -138,17 +138,17 @@ export default async function ContractorDetailPage({
           status: true,
         },
       },
-      workRecord: {
+      serviceRecord: {
         select: {
           id: true,
           status: true,
-          workDate: true,
+          serviceDate: true,
         },
       },
     },
   });
 
-  const pendingWorkSubmissions = await prisma.workSubmission.findMany({
+  const pendingServiceSubmissions = await prisma.serviceSubmission.findMany({
     where: {
       homeId,
       contractorId: contractor.id,
@@ -157,9 +157,9 @@ export default async function ContractorDetailPage({
     orderBy: { createdAt: "desc" },
     select: {
       id: true,
-      workType: true,
+      serviceType: true,
       description: true,
-      workDate: true,
+      serviceDate: true,
       createdAt: true,
       attachments: {
         select: {
@@ -177,15 +177,15 @@ export default async function ContractorDetailPage({
     home.city ? `, ${home.city}` : ""
   }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
-  const verifiedRecords = workRecords.filter((r) => r.isVerified);
-  const verifiedJobsCount = verifiedRecords.length;
-  const totalJobsCount = workRecords.length;
+  const verifiedRecords = serviceRecords.filter((r) => r.isVerified);
+  const verifiedServicesCount = verifiedRecords.length;
+  const totalServicesCount = serviceRecords.length;
   const totalSpent = verifiedRecords.reduce(
     (sum, r) => sum + (r.cost ? Number(r.cost) : 0),
     0
   );
 
-  const activeRequestsCount = jobRequests.filter((r) =>
+  const activeRequestsCount = serviceRequests.filter((r) =>
     ["PENDING", "QUOTED", "ACCEPTED", "IN_PROGRESS"].includes(r.status)
   ).length;
 
@@ -209,14 +209,14 @@ export default async function ContractorDetailPage({
     createdAt: connection.createdAt.toISOString(),
     updatedAt: connection.updatedAt.toISOString(),
     totalSpent,
-    lastWorkDate: connection.lastWorkDate?.toISOString() || null,
+    lastServiceDate: connection.lastServiceDate?.toISOString() || null,
   };
 
-  const workRecordsData = workRecords.map((record) => ({
+  const serviceRecordsData = serviceRecords.map((record) => ({
     id: record.id,
-    workType: record.workType,
+    serviceType: record.serviceType,
     description: record.description,
-    workDate: record.workDate.toISOString(),
+    serviceDate: record.serviceDate.toISOString(),
     cost: record.cost ? Number(record.cost) : null,
     isVerified: record.isVerified,
     status: record.status,
@@ -228,7 +228,7 @@ export default async function ContractorDetailPage({
     finalRecordId: record.finalRecordId,
   }));
 
-  const serviceRequestsData = jobRequests.map((req) => ({
+  const serviceRequestsData = serviceRequests.map((req) => ({
     id: req.id,
     title: req.title,
     description: req.description,
@@ -246,20 +246,20 @@ export default async function ContractorDetailPage({
           status: req.quote.status,
         }
       : null,
-    workRecord: req.workRecord
+    serviceRecord: req.serviceRecord
       ? {
-          id: req.workRecord.id,
-          status: req.workRecord.status,
-          workDate: req.workRecord.workDate.toISOString(),
+          id: req.serviceRecord.id,
+          status: req.serviceRecord.status,
+          serviceDate: req.serviceRecord.serviceDate.toISOString(),
         }
       : null,
   }));
 
-  const pendingFromSubmissions = pendingWorkSubmissions.map((sub) => ({
+  const pendingFromSubmissions = pendingServiceSubmissions.map((sub) => ({
     id: sub.id,
-    workType: sub.workType,
+    serviceType: sub.serviceType,
     description: sub.description,
-    workDate: sub.workDate.toISOString(),
+    serviceDate: sub.serviceDate.toISOString(),
     createdAt: sub.createdAt.toISOString(),
     attachmentCount: sub.attachments.length,
     hasImages: sub.attachments.some((a) =>
@@ -267,13 +267,13 @@ export default async function ContractorDetailPage({
     ),
   }));
 
-  const pendingFromRecords = workRecordsData
+  const pendingFromRecords = serviceRecordsData
     .filter((r) => ["DOCUMENTED_UNVERIFIED"].includes(r.status))
     .map((r) => ({
       id: r.id,
-      workType: r.workType,
+      serviceType: r.serviceType,
       description: r.description,
-      workDate: r.workDate,
+      serviceDate: r.serviceDate,
       createdAt: r.createdAt,
       attachmentCount: r.attachmentCount,
       hasImages: r.hasImages,
@@ -459,8 +459,8 @@ export default async function ContractorDetailPage({
 
         {/* Stats */}
         <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <StatCard label="Total Jobs" value={totalJobsCount} />
-          <StatCard label="Verified Jobs" value={verifiedJobsCount} />
+          <StatCard label="Total Jobs" value={totalServicesCount} />
+          <StatCard label="Verified Jobs" value={verifiedServicesCount} />
           <StatCard
             label="Total Spent"
             value={
@@ -479,7 +479,7 @@ export default async function ContractorDetailPage({
         <ContractorDetailTabs
           homeId={homeId}
           connectionId={connectionData.id}
-          workRecords={workRecordsData}
+          serviceRecords={serviceRecordsData}
           serviceRequests={serviceRequestsData}
           pendingSubmissions={pendingSubmissionsData}
           activeRequestsCount={activeRequestsCount}

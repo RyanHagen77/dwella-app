@@ -64,7 +64,7 @@ export function MessageInput({ connectionId }: Props) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message... (Press Enter to send)"
+            placeholder="Type a message..."
             rows={1}
             className="flex-1 rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-orange-500/50 resize-none min-h-[48px] max-h-[200px]"
             disabled={sending}

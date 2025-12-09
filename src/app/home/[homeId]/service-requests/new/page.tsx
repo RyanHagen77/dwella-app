@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 import { requireHomeAccess } from "@/lib/authz";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
-import { RequestWorkForm } from "../_components/RequestWorkForm";
+import { RequestServiceForm } from "../_components/RequestServiceForm";
 import { NoContractorsCard } from "../_components/NoContractorsCard";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
@@ -17,7 +17,7 @@ type PageProps = {
   params: Promise<{ homeId: string }>;
 };
 
-export default async function RequestWorkPage({ params }: PageProps) {
+export default async function RequestServicePage({ params }: PageProps) {
   const { homeId } = await params;
   const session = await getServerSession(authConfig);
 
@@ -76,7 +76,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
       },
     },
     orderBy: {
-      lastWorkDate: "desc", // can order by this even if it's not selected
+      lastServiceDate: "desc", // can order by this even if it's not selected
     },
   });
 
@@ -88,7 +88,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
           <Breadcrumb
             items={[
               { label: homeAddress, href: `/home/${homeId}` },
-              { label: "Requests & Submissions", href: `/home/${homeId}/completed-work-submissions` },
+              { label: "Requests & Submissions", href: `/home/${homeId}/completed-service-submissions` },
               { label: "Request Service" },
             ]}
           />
@@ -97,7 +97,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <Link
-                  href={`/home/${homeId}/completed-work-submissions`}
+                  href={`/home/${homeId}/completed-service-submissions`}
                   className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
                   aria-label="Back to requests"
                 >
@@ -136,7 +136,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
         <Breadcrumb
           items={[
             { label: homeAddress, href: `/home/${homeId}` },
-            { label: "Requests & Submissions", href: `/home/${homeId}/completed-work-submissions` },
+            { label: "Requests & Submissions", href: `/home/${homeId}/completed-service-submissions` },
             { label: "Request Service" },
           ]}
         />
@@ -146,7 +146,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3 flex-1 min-w-0">
               <Link
-                href={`/home/${homeId}/completed-work-submissions`}
+                href={`/home/${homeId}/completed-service-submissions`}
                 className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
                 aria-label="Back to requests"
               >
@@ -175,7 +175,7 @@ export default async function RequestWorkPage({ params }: PageProps) {
 
         {/* Form */}
         <div className={glass}>
-          <RequestWorkForm
+          <RequestServiceForm
             homeId={homeId}
             connections={connections}
           />

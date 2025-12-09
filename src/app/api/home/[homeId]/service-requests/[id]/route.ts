@@ -1,11 +1,11 @@
 /**
  * INDIVIDUAL JOB REQUEST API (HOMEOWNER)
  *
- * GET /api/stats/[homeId]/service-requests/[workId] - Get single job request
- * PATCH /api/stats/[homeId]/service-requests/[workId] - Update job request (accept quote, cancel, etc.)
- * DELETE /api/stats/[homeId]/service-requests/[workId] - Delete/cancel job request
+ * GET /api/stats/[homeId]/service-requests/[serviceId] - Get single job request
+ * PATCH /api/stats/[homeId]/service-requests/[serviceId] - Update job request (accept quote, cancel, etc.)
+ * DELETE /api/stats/[homeId]/service-requests/[serviceId] - Delete/cancel job request
  *
- * Location: app/api/stats/[homeId]/service-requests/[workId]/route.ts
+ * Location: app/api/stats/[homeId]/service-requests/[serviceId]/route.ts
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -68,9 +68,9 @@ export async function GET(
         connection: {
           select: {
             id: true,
-            verifiedWorkCount: true,
+            verifiedServiceCount: true,
             totalSpent: true,
-            lastWorkDate: true,
+            lastServiceDate: true,
           },
         },
         quote: {
@@ -78,11 +78,11 @@ export async function GET(
             items: true,
           },
         },
-        workRecord: {
+        serviceRecord: {
           select: {
             id: true,
-            workType: true,
-            workDate: true,
+            serviceType: true,
+            serviceDate: true,
             status: true,
             cost: true,
           },
@@ -138,11 +138,11 @@ export async function GET(
             })),
           }
         : null,
-      workRecord: serviceRequest.workRecord
+      serviceRecord: serviceRequest.serviceRecord
         ? {
-            ...serviceRequest.workRecord,
-            cost: serviceRequest.workRecord.cost
-              ? Number(serviceRequest.workRecord.cost)
+            ...serviceRequest.serviceRecord,
+            cost: serviceRequest.serviceRecord.cost
+              ? Number(serviceRequest.serviceRecord.cost)
               : null,
           }
         : null,

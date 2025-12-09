@@ -103,7 +103,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "This property is not in MyHomeDox yet. The homeowner must add/claim the stats first.",
+            "This property is not in MyDwella yet. The homeowner must add/claim the stats first.",
         },
         { status: 400 }
       );

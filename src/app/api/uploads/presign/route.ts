@@ -21,7 +21,7 @@ export const runtime = "nodejs";
 /**
  * POST /api/uploads/presign
  * Generate presigned URL for uploads
- * Works for both homeowners (records/reminders/warranties/service-requests) and contractors (document-completed-work-submissions records)
+ * Works for both homeowners (records/reminders/warranties/service-requests) and contractors (document-completed-service-submissions records)
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -73,9 +73,9 @@ export async function POST(req: Request) {
         );
       }
 
-      // Verify document-completed-work-submissions record if provided
+      // Verify document-completed-service-submissions record if provided
       if (recordId) {
-        const workRecord = await prisma.workRecord.findFirst({
+        const serviceRecord = await prisma.serviceRecord.findFirst({
           where: {
             id: recordId,
             homeId,
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
           },
         });
 
-        if (!workRecord) {
+        if (!serviceRecord) {
           return NextResponse.json(
             { error: "Work record not found or access denied" },
             { status: 403 }

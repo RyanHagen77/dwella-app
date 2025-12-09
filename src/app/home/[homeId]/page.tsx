@@ -16,7 +16,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-import { glass, textMeta, ctaPrimary, heading } from "@/lib/glass";
+import { glass, textMeta, heading } from "@/lib/glass";
 import { HomeActions } from "@/app/home/_components/HomeActions";
 import { ClientCard } from "@/app/home/_components/ClientCard";
 import { HomePicker } from "@/app/home/_components/HomePicker";
@@ -64,7 +64,7 @@ type Warranty = {
 type ConnectionWithContractor = {
   id: string;
   createdAt: Date;
-  verifiedWorkCount: number;
+  verifiedServiceCount: number;
   contractor: {
     id: string;
     name: string | null;
@@ -182,7 +182,7 @@ export default async function HomePage({
         select: {
           id: true,
           createdAt: true,
-          verifiedWorkCount: true,
+          verifiedServiceCount: true,
           contractor: {
             select: {
               id: true,
@@ -203,7 +203,7 @@ export default async function HomePage({
 
   if (!home) notFound();
 
-  const pendingWorkSubmissionsCount = await prisma.workRecord.count({
+  const pendingServiceSubmissionsCount = await prisma.serviceRecord.count({
     where: {
       homeId,
       isVerified: false,
@@ -358,7 +358,7 @@ export default async function HomePage({
           </div>
         </section>
 
-        {(pendingWorkSubmissionsCount > 0 ||
+        {(pendingServiceSubmissionsCount > 0 ||
           pendingServiceRequestsCount > 0 ||
           pendingInvitationsCount > 0 ||
           overdueReminders.length > 0 ||
@@ -374,9 +374,9 @@ export default async function HomePage({
             <div className="space-y-3">
               <UnreadMessagesAlert homeId={home.id} />
 
-              {pendingWorkSubmissionsCount > 0 && (
+              {pendingServiceSubmissionsCount > 0 && (
                 <Link
-                  href={`/home/${home.id}/completed-work-submissions`}
+                  href={`/home/${home.id}/completed-service-submissions`}
                   className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
                 >
                   <div className="flex items-center gap-3">
@@ -386,21 +386,21 @@ export default async function HomePage({
                         Review Completed Work
                       </p>
                       <p className="text-xs text-white/60">
-                        {pendingWorkSubmissionsCount} submission
-                        {pendingWorkSubmissionsCount !== 1 ? "s" : ""} awaiting
+                        {pendingServiceSubmissionsCount} submission
+                        {pendingServiceSubmissionsCount !== 1 ? "s" : ""} awaiting
                         approval
                       </p>
                     </div>
                   </div>
                   <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingWorkSubmissionsCount}
+                    {pendingServiceSubmissionsCount}
                   </span>
                 </Link>
               )}
 
               {pendingServiceRequestsCount > 0 && (
                 <Link
-                  href={`/home/${home.id}/completed-work-submissions`}
+                  href={`/home/${home.id}/completed-service-submissions`}
                   className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
                 >
                   <div className="flex items-center gap-3">
@@ -447,12 +447,12 @@ export default async function HomePage({
               )}
 
               {overdueReminders.length > 0 && (
-                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
+                <div className="flex items-center justify-between rounded-lg bg_WHITE/5 p-3 transition hover:bg-white/10">
                   <div>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text_WHITE">
                       ⚠️ Overdue Reminders ({overdueReminders.length})
                     </p>
-                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                    <ul className="mt-1 space-y-0.5 text-xs text_WHITE/70">
                       {overdueReminders.slice(0, 3).map((r) => (
                         <li key={r.id}>
                           • {r.title} (due {formatDate(r.dueAt)})
@@ -473,12 +473,12 @@ export default async function HomePage({
               )}
 
               {dueSoonReminders.length > 0 && (
-                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
+                <div className="flex items-center justify-between rounded-lg bg_WHITE/5 p-3 transition hover:bg_WHITE/10">
                   <div>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text_WHITE">
                       ⏰ Upcoming Reminders (next 7 days)
                     </p>
-                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                    <ul className="mt-1 space-y-0.5 text-xs text_WHITE/70">
                       {dueSoonReminders.slice(0, 3).map((r) => (
                         <li key={r.id}>
                           • {r.title} (due {formatDate(r.dueAt)})
@@ -499,13 +499,13 @@ export default async function HomePage({
               )}
 
               {expiringSoonWarranties.length > 0 && (
-                <div className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10">
+                <div className="flex items-center justify-between rounded-lg bg_WHITE/5 p-3 transition hover:bg_WHITE/10">
                   <div>
-                    <p className="text-sm font-medium text-white">
+                    <p className="text-sm font-medium text_WHITE">
                       🛡️ Warranties Expiring Soon (
                       {expiringSoonWarranties.length})
                     </p>
-                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                    <ul className="mt-1 space-y-0.5 text-xs text_WHITE/70">
                       {expiringSoonWarranties.slice(0, 3).map((w) => (
                         <li key={w.id}>
                           • {w.item}
@@ -726,7 +726,7 @@ function WarrantyItem({
       href={`/home/${homeId}/warranties/${warranty.id}`}
       className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
     >
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify_between gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-medium text-white">
             {warranty.item}

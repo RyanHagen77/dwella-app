@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 
 import { glass, glassTight, textMeta, heading } from "@/lib/glass";
@@ -44,7 +43,7 @@ export default async function ContractorsPage({
       id: true,
       createdAt: true,
       archivedAt: true,
-      lastWorkDate: true,
+      lastServiceDate: true,
       contractorId: true,
       contractor: {
         select: {
@@ -70,7 +69,7 @@ export default async function ContractorsPage({
       id: true,
       createdAt: true,
       archivedAt: true,
-      lastWorkDate: true,
+      lastServiceDate: true,
       contractorId: true,
       contractor: {
         select: {
@@ -89,7 +88,7 @@ export default async function ContractorsPage({
   });
 
   // Fetch verified work records for stats
-  const workRecords = await prisma.workRecord.findMany({
+  const serviceRecords = await prisma.serviceRecord.findMany({
     where: { homeId, isVerified: true },
     select: {
       id: true,
@@ -101,13 +100,13 @@ export default async function ContractorsPage({
   const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
 
   // Count verified work per contractor and sum costs
-  const verifiedWorkByContractor = new Map<string, number>();
+  const verifiedServiceByContractor = new Map<string, number>();
   const spentByContractor = new Map<string, number>();
 
-  for (const record of workRecords) {
+  for (const record of serviceRecords) {
     if (record.contractorId) {
-      const count = verifiedWorkByContractor.get(record.contractorId) || 0;
-      verifiedWorkByContractor.set(record.contractorId, count + 1);
+      const count = verifiedServiceByContractor.get(record.contractorId) || 0;
+      verifiedServiceByContractor.set(record.contractorId, count + 1);
 
       const cost = record.cost ? Number(record.cost) : 0;
       const currentSpent = spentByContractor.get(record.contractorId) || 0;
@@ -120,7 +119,7 @@ export default async function ContractorsPage({
     id: conn.id,
     createdAt: conn.createdAt.toISOString(),
     archivedAt: conn.archivedAt?.toISOString() || null,
-    lastWorkDate: conn.lastWorkDate?.toISOString() || null,
+    lastServiceDate: conn.lastServiceDate?.toISOString() || null,
     contractorId: conn.contractorId || "",
     contractor: conn.contractor
       ? {
@@ -131,7 +130,7 @@ export default async function ContractorsPage({
           businessName: conn.contractor.proProfile?.businessName || null,
         }
       : null,
-    verifiedWorkCount: verifiedWorkByContractor.get(conn.contractorId || "") || 0,
+    verifiedServiceCount: verifiedServiceByContractor.get(conn.contractorId || "") || 0,
     totalSpent: spentByContractor.get(conn.contractorId || "") || 0,
   });
 
@@ -140,29 +139,15 @@ export default async function ContractorsPage({
 
   // Calculate stats (based on active connections only)
   const totalContractors = activeConnectionsRaw.length;
-  const totalVerifiedServices = workRecords.length;
+  const totalVerifiedServices = serviceRecords.length;
   const totalSpentAmount = Array.from(spentByContractor.values()).reduce(
     (sum, amount) => sum + amount,
     0
   );
-  const activeContractors = activeConnectionsRaw.filter((conn) => conn.lastWorkDate).length;
+  const activeContractors = activeConnectionsRaw.filter((conn) => conn.lastServiceDate).length;
 
   return (
     <main className="relative min-h-screen text-white">
-      {/* Background */}
-      <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-      </div>
-
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
         <Breadcrumb href={`/home/${homeId}`} label={addrLine} current="Contractors" />

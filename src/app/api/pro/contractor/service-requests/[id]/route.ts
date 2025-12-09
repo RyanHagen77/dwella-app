@@ -1,10 +1,10 @@
 /**
  * INDIVIDUAL JOB REQUEST API (CONTRACTOR)
  *
- * GET /api/pro/contractor/service-requests/[workId] - Get single job request
- * PATCH /api/pro/contractor/service-requests/[workId] - Update job request (respond, decline, etc.)
+ * GET /api/pro/contractor/service-requests/[serviceId] - Get single job request
+ * PATCH /api/pro/contractor/service-requests/[serviceId] - Update job request (respond, decline, etc.)
  *
- * Location: app/api/pro/contractor/service-requests/[workId]/route.ts
+ * Location: app/api/pro/contractor/service-requests/[serviceId]/route.ts
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -63,9 +63,9 @@ export async function GET(
           select: {
             id: true,
             notes: true,
-            verifiedWorkCount: true,
+            verifiedServiceCount: true,
             totalSpent: true,
-            lastWorkDate: true,
+            lastServiceDate: true,
           },
         },
         quote: {
@@ -73,11 +73,11 @@ export async function GET(
             items: true,
           },
         },
-        workRecord: {
+        serviceRecord: {
           select: {
             id: true,
-            workType: true,
-            workDate: true,
+            serviceType: true,
+            serviceDate: true,
             status: true,
           },
         },

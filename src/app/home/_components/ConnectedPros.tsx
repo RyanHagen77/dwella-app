@@ -9,7 +9,7 @@ import { InviteProModal } from "@/app/home/[homeId]/invitations/_components/Invi
 type ConnectionWithContractor = {
   id: string;
   createdAt: Date;
-  verifiedWorkCount: number;
+  verifiedServiceCount: number;
   contractor: {
     id: string;
     name: string | null;
@@ -125,9 +125,9 @@ function ContractorCard({
       {/* Info */}
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-white truncate">{displayName}</p>
-        {connection.verifiedWorkCount > 0 ? (
+        {connection.verifiedServiceCount > 0 ? (
           <p className="text-xs text-green-400">
-            ✓ {connection.verifiedWorkCount} verified job{connection.verifiedWorkCount !== 1 ? 's' : ''}
+            ✓ {connection.verifiedServiceCount} verified service{connection.verifiedServiceCount !== 1 ? 's' : ''}
           </p>
         ) : (
           <p className="text-xs text-white/50">Connected</p>

@@ -101,20 +101,6 @@ export default async function RecordDetailPage({ params }: PageProps) {
 
   return (
     <main className="relative min-h-screen text-white">
-      {/* Background */}
-      <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-      </div>
-
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         {/* Breadcrumb */}
         <Breadcrumb

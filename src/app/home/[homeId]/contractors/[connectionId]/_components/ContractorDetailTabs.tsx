@@ -2,11 +2,11 @@
 import Link from "next/link";
 import { glass, textMeta } from "@/lib/glass";
 
-type WorkRecord = {
+type ServiceRecord = {
   id: string;
-  workType: string;
+  serviceType: string;
   description: string | null;
-  workDate: string;
+  serviceDate: string;
   cost: number | null;
   isVerified: boolean;
   status: string;
@@ -32,18 +32,18 @@ type ServiceRequest = {
     totalAmount: number;
     status: string;
   } | null;
-  workRecord: {
+  serviceRecord: {
     id: string;
     status: string;
-    workDate: string;
+    serviceDate: string;
   } | null;
 };
 
 type PendingSubmission = {
   id: string;
-  workType: string;
+  serviceType: string;
   description: string | null;
-  workDate: string;
+  serviceDate: string;
   createdAt: string;
   attachmentCount: number;
   hasImages: boolean;
@@ -54,7 +54,7 @@ type Tab = "work-history" | "requests" | "pending";
 export function ContractorDetailTabs({
   homeId,
   connectionId,
-  workRecords,
+  serviceRecords,
   serviceRequests,
   pendingSubmissions,
   activeRequestsCount,
@@ -63,7 +63,7 @@ export function ContractorDetailTabs({
 }: {
   homeId: string;
   connectionId: string;
-  workRecords: WorkRecord[];
+  serviceRecords: ServiceRecord[];
   serviceRequests: ServiceRequest[];
   pendingSubmissions: PendingSubmission[];
   activeRequestsCount: number;
@@ -87,7 +87,7 @@ export function ContractorDetailTabs({
             }`}
           >
             Work History
-            {workRecords.length > 0 && ` (${workRecords.length})`}
+            {serviceRecords.length > 0 && ` (${serviceRecords.length})`}
           </Link>
 
           <Link
@@ -98,7 +98,7 @@ export function ContractorDetailTabs({
                 : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
             }`}
           >
-            Job Requests
+            Service Requests
             {activeRequestsCount > 0 && ` (${activeRequestsCount})`}
           </Link>
 
@@ -119,7 +119,7 @@ export function ContractorDetailTabs({
       {/* Content */}
       <section className={glass}>
         {activeTab === "work-history" && (
-          <WorkHistoryTab workRecords={workRecords} homeId={homeId} />
+          <ServiceHistoryTab serviceRecords={serviceRecords} homeId={homeId} />
         )}
         {activeTab === "requests" && (
           <ServiceRequestsTab serviceRequests={serviceRequests} homeId={homeId} />
@@ -137,14 +137,14 @@ export function ContractorDetailTabs({
 
 /* ---------- Work History Tab ---------- */
 
-function WorkHistoryTab({
-  workRecords,
+function ServiceHistoryTab({
+  serviceRecords,
   homeId,
 }: {
-  workRecords: WorkRecord[];
+  serviceRecords: ServiceRecord[];
   homeId: string;
 }) {
-  if (workRecords.length === 0) {
+  if (serviceRecords.length === 0) {
     return (
       <div className="py-10 text-center text-white/80">
         <div className="mb-4 text-5xl">📋</div>
@@ -203,7 +203,7 @@ function WorkHistoryTab({
 
   return (
     <div className="space-y-4">
-      {workRecords.map((record) => {
+      {serviceRecords.map((record) => {
         const needsApproval = isPendingApproval(
           record.status,
           record.isVerified
@@ -212,7 +212,7 @@ function WorkHistoryTab({
         const href =
           record.isVerified && record.finalRecordId
             ? `/home/${homeId}/records/${record.finalRecordId}`
-            : `/home/${homeId}/completed-work-submissions`;
+            : `/home/${homeId}/completed-service-submissions`;
 
         return (
           <Link
@@ -228,7 +228,7 @@ function WorkHistoryTab({
               <div className="flex-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   <h3 className="text-lg font-semibold text-white">
-                    {record.workType}
+                    {record.serviceType}
                   </h3>
                   {getStatusBadge(record.status, record.isVerified)}
                 </div>
@@ -249,7 +249,7 @@ function WorkHistoryTab({
 
             <div className="flex flex-wrap items-center gap-4 text-sm text-white/60">
               <span>
-                {new Date(record.workDate).toLocaleDateString("en-US", {
+                {new Date(record.serviceDate).toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -412,13 +412,13 @@ function ServiceRequestsTab({
               </div>
             )}
 
-            {service.workRecord && (
+            {service.serviceRecord && (
               <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
                 <p className="text-sm font-medium text-green-300">
                   Work Scheduled
                 </p>
                 <p className="text-sm text-white/80">
-                  {new Date(service.workRecord.workDate).toLocaleDateString(
+                  {new Date(service.serviceRecord.serviceDate).toLocaleDateString(
                     "en-US",
                     {
                       month: "short",
@@ -426,7 +426,7 @@ function ServiceRequestsTab({
                       year: "numeric",
                     }
                   )}{" "}
-                  • {service.workRecord.status.replace(/_/g, " ")}
+                  • {service.serviceRecord.status.replace(/_/g, " ")}
                 </p>
               </div>
             )}
@@ -464,14 +464,14 @@ function PendingApprovalsTab({
       {pendingSubmissions.map((submission) => (
         <Link
           key={submission.id}
-          href={`/home/${homeId}/completed-work-submissions`}
+          href={`/home/${homeId}/completed-service-submissions`}
           className="block rounded-xl border border-orange-500/30 bg-orange-500/5 p-6 transition-colors hover:bg-orange-500/10"
         >
           <div className="mb-3 flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="mb-2 flex items-center gap-2">
                 <h3 className="text-lg font-semibold text-white">
-                  {submission.workType}
+                  {submission.serviceType}
                 </h3>
                 <span className="inline-block rounded-full border border-orange-500/30 bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-300">
                   Awaiting Approval
@@ -488,7 +488,7 @@ function PendingApprovalsTab({
           <div className="flex flex-wrap items-center gap-4 text-sm text-white/60">
             <span>
               Work Date:{" "}
-              {new Date(submission.workDate).toLocaleDateString("en-US", {
+              {new Date(submission.serviceDate).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",

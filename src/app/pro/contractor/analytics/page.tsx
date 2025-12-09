@@ -5,7 +5,6 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import Image from "next/image";
 import ContractorAnalyticsClient from "./ContractorAnalyticsClient";
 
 export default async function ContractorAnalyticsPage() {
@@ -48,7 +47,6 @@ export default async function ContractorAnalyticsPage() {
 
   return (
     <main className="relative min-h-screen text-white">
-      <Bg />
       <div className="mx-auto max-w-7xl p-6">
         <ContractorAnalyticsClient
           businessName={proProfile?.businessName || null}
@@ -59,22 +57,5 @@ export default async function ContractorAnalyticsPage() {
         />
       </div>
     </main>
-  );
-}
-
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover object-center"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-    </div>
   );
 }

@@ -561,7 +561,7 @@ function SampleClientActions({
   // In sample mode, we don’t show counts (or you could hardcode demo counts here)
   const unreadMessagesCount = 0;
   const pendingInvitationsCount = 0;
-  const pendingWorkCount = 0;
+  const pendingServiceCount = 0;
 
   return (
     <div className="flex flex-col gap-4 pt-4 sm:pt-2">
@@ -602,16 +602,16 @@ function SampleClientActions({
       >
         <span className="truncate">I want to...</span>
 
-        {(pendingInvitationsCount > 0 || pendingWorkCount > 0) && (
+        {(pendingInvitationsCount > 0 || pendingServiceCount > 0) && (
           <span className="absolute right-3 flex items-center gap-1.5">
             {pendingInvitationsCount > 0 && (
               <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
                 {pendingInvitationsCount}
               </span>
             )}
-            {pendingWorkCount > 0 && (
+            {pendingServiceCount > 0 && (
               <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#33C17D] px-1.5 text-xs font-bold text-white">
-                {pendingWorkCount}
+                {pendingServiceCount}
               </span>
             )}
           </span>

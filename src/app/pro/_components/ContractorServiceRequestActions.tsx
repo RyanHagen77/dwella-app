@@ -8,7 +8,7 @@ type ServiceRequestForContractor = {
   id: string;
   status: string;
   quote: { id: string } | null;
-  workRecord: { id: string } | null;
+  serviceRecord: { id: string } | null;
   contractorNotes: string | null;
 };
 
@@ -74,7 +74,7 @@ export function ContractorServiceRequestActions({
           </button>
         )}
 
-        {isAccepted && !serviceRequest.workRecord && (
+        {isAccepted && !serviceRequest.serviceRecord && (
           <button
             type="button"
             onClick={() => router.push(`/contractor/service-requests/${serviceRequest.id}/start-work`)}

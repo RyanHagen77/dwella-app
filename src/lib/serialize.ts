@@ -28,7 +28,7 @@ export function serializeConnections<T extends { totalSpent?: unknown }>(
 }
 
 /**
- * Serialize a JobRequest object for client components
+ * Serialize a ServiceRequest object for client components
  */
 export function serializeServiceRequest<
   T extends {
@@ -105,29 +105,29 @@ export function serializeQuote<
 }
 
 /**
- * Serialize a WorkRecord object for client components
+ * Serialize a ServiceRecord object for client components
  */
-export function serializeWorkRecord<T extends { cost?: unknown }>(
-  workRecord: T
+export function serializeServiceRecord<T extends { cost?: unknown }>(
+  serviceRecord: T
 ): T & { cost: number | null } {
   return {
-    ...workRecord,
+    ...serviceRecord,
     cost:
-      workRecord.cost && typeof workRecord.cost === "object"
-        ? Number(workRecord.cost)
-        : workRecord.cost != null
-        ? Number(workRecord.cost)
+      serviceRecord.cost && typeof serviceRecord.cost === "object"
+        ? Number(serviceRecord.cost)
+        : serviceRecord.cost != null
+        ? Number(serviceRecord.cost)
         : null,
   };
 }
 
 /**
- * Serialize an array of WorkRecord objects
+ * Serialize an array of ServiceRecord objects
  */
-export function serializeWorkRecords<T extends { cost?: unknown }>(
-  workRecords: T[]
+export function serializeServiceRecords<T extends { cost?: unknown }>(
+  serviceRecord: T[]
 ): Array<T & { cost: number | null }> {
-  return workRecords.map(serializeWorkRecord);
+  return serviceRecord.map(serializeServiceRecord);
 }
 
 /**

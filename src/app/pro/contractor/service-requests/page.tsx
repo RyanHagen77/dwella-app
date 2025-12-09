@@ -1,7 +1,7 @@
 /**
  * SERVICE REQUESTS LIST PAGE (CONTRACTOR)
  *
- * View all job requests assigned to this contractor
+ * View all service requests assigned to this contractor
  *
  * Location: app/contractor/service-requests/page.tsx
  */
@@ -65,7 +65,7 @@ export default async function ContractorServiceRequestsPage() {
     redirect("/");
   }
 
-  // Fetch all job requests for this contractor
+  // Fetch all service requests for this contractor
   const serviceRequests = await prisma.serviceRequest.findMany({
     where: {
       contractorId: session.user.id,
@@ -188,10 +188,10 @@ export default async function ContractorServiceRequestsPage() {
 
               <div className="min-w-0">
                 <h1 className={`text-2xl font-bold ${heading}`}>
-                  Job Requests
+                  Service Requests
                 </h1>
                 <p className={`mt-1 text-sm ${textMeta}`}>
-                  Manage job requests from homeowners.
+                  Manage service requests from homeowners.
                 </p>
                 <p className={`mt-1 text-xs ${textMeta}`}>
                   {serviceRequests.length} total request
@@ -215,9 +215,9 @@ export default async function ContractorServiceRequestsPage() {
         {serviceRequests.length === 0 && (
           <section className={glass}>
             <div className="py-12 text-center">
-              <p className={`text-lg ${textMeta}`}>No job requests yet.</p>
+              <p className={`text-lg ${textMeta}`}>No service requests yet.</p>
               <p className={`mt-2 text-sm ${textMeta}`}>
-                Job requests from homeowners will appear here.
+                Service requests from homeowners will appear here.
               </p>
             </div>
           </section>

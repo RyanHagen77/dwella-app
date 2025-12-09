@@ -48,7 +48,7 @@ export default function InviteClientPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to [workId] invitation");
+        throw new Error(data.error || "Failed to [serviceId] invitation");
       }
 
       setSuccess(true);
@@ -101,7 +101,7 @@ export default function InviteClientPage() {
         </button>
         <h1 className="text-3xl font-bold text-gray-900">Invite Client</h1>
         <p className="text-gray-600 mt-2">
-          Invite your clients to MyHomeDox and stay connected in one place
+          Invite your clients to MyDwella and stay connected in one place
         </p>
       </div>
 
@@ -166,7 +166,7 @@ export default function InviteClientPage() {
             }
             rows={4}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Hi! I'd like to invite you to MyHomeDox where we can stay connected, track our work together, and I can send you quotes all in one place."
+            placeholder="Hi! I'd like to invite you to MyDwella where we can stay connected, track our work together, and I can send you quotes all in one place."
           />
         </div>
 

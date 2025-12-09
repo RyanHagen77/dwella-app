@@ -1,8 +1,8 @@
 /**
- * JOB REQUESTS API
+ * SERVICE REQUESTS API
  *
- * POST /api/service-requests - Create new job request (homeowner)
- * GET /api/service-requests - List job requests (filtered by role)
+ * POST /api/service-requests - Create new service request (homeowner)
+ * GET /api/service-requests - List service requests (filtered by role)
  *
  * Location: app/api/service-requests/route.ts
  */
@@ -12,7 +12,7 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// GET - List job requests
+// GET - List service requests
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authConfig);
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const homeId = searchParams.get("homeId");
     const status = searchParams.get("status");
 
-    // CONTRACTORS: Get job requests sent TO them
+    // CONTRACTORS: Get service requests sent TO them
     if (userRole === "PRO") {
       const where: any = {
         contractorId: userId,
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ serviceRequests });
     }
 
-    // HOMEOWNERS: Get job requests they sent
+    // HOMEOWNERS: Get service requests they sent
     let where: any = {
       homeownerId: userId,
     };
@@ -120,9 +120,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ serviceRequests });
   } catch (error) {
-    console.error("Error fetching job requests:", error);
+    console.error("Error fetching service requests:", error);
     return NextResponse.json(
-      { error: "Failed to fetch job requests" },
+      { error: "Failed to fetch service requests" },
       { status: 500 }
     );
   }
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     if (session.user.role === "PRO") {
       return NextResponse.json(
-        { error: "Contractors cannot create job requests" },
+        { error: "Contractors cannot create service requests" },
         { status: 403 }
       );
     }

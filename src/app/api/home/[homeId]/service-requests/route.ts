@@ -1,8 +1,8 @@
 /**
  * HOMEOWNER REQUESTED JOBS API
  *
- * GET /api/stats/[homeId]/service-requests - List job requests for this stats
- * POST /api/stats/[homeId]/service-requests - Create new job request
+ * GET /api/stats/[homeId]/service-requests - List service requests for this stats
+ * POST /api/stats/[homeId]/service-requests - Create new service request
  *
  * Location: app/api/stats/[homeId]/service-requests/route.ts
  */
@@ -18,7 +18,7 @@ export const runtime = "nodejs";
 
 type RouteParams = { homeId: string };
 
-// GET - List job requests for this stats
+// GET - List service requests for this stats
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<RouteParams> }
@@ -69,7 +69,7 @@ export async function GET(
         connection: {
           select: {
             id: true,
-            verifiedWorkCount: true,
+            verifiedServiceCount: true,
             totalSpent: true,
           },
         },
@@ -81,11 +81,11 @@ export async function GET(
             expiresAt: true,
           },
         },
-        workRecord: {
+        serviceRecord: {
           select: {
             id: true,
             status: true,
-            workDate: true,
+            serviceDate: true,
           },
         },
       },
@@ -96,9 +96,9 @@ export async function GET(
 
     return NextResponse.json({ serviceRequests });
   } catch (error) {
-    console.error("Error fetching job requests:", error);
+    console.error("Error fetching service requests:", error);
     return NextResponse.json(
-      { error: "Failed to fetch job requests" },
+      { error: "Failed to fetch service requests" },
       { status: 500 }
     );
   }
@@ -120,7 +120,7 @@ export async function POST(
 
     if (session.user.role === "PRO") {
       return NextResponse.json(
-        { error: "Contractors cannot create job requests" },
+        { error: "Contractors cannot create service requests" },
         { status: 403 }
       );
     }

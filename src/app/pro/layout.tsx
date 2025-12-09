@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import GlobalProHeader from "@/app/pro/_components/GlobalProHeader";
-import { ContractorContextBar } from "@/app/pro/_components/ContractorContextBar";
 
 export default async function ProLayout({
   children,
@@ -24,8 +23,6 @@ export default async function ProLayout({
       {/* Global pro header (no stats adding) */}
       <GlobalProHeader />
 
-      {/* Pro-specific nav pills */}
-      <ContractorContextBar />
 
       {/* Pending Warning Banner */}
       {isPending && (

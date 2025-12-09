@@ -13,7 +13,7 @@ export default async function ProPendingPage() {
           Application Under Review
         </h1>
         <p className="mb-4 text-gray-700">
-          Thank you for applying for a professional account on MyHomeDox!
+          Thank you for applying for a professional account on MyDwella!
         </p>
         <p className="text-gray-600">
           We're reviewing your application and will send you an email once your account is approved.

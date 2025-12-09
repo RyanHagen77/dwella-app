@@ -66,23 +66,23 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           id: true,
           status: true,
           createdAt: true,
-          verifiedWorkCount: true,
+          verifiedServiceCount: true,
           totalSpent: true,
-          lastWorkDate: true,
+          lastServiceDate: true,
           archivedAt: true,
         },
       },
-      workRecords: {
+      serviceRecords: {
         where: {
           contractorId: session.user.id,
         },
         orderBy: {
-          workDate: "desc",
+          serviceDate: "desc",
         },
         select: {
           id: true,
-          workType: true,
-          workDate: true,
+          serviceType: true,
+          serviceDate: true,
           cost: true,
           status: true,
           description: true,
@@ -177,22 +177,15 @@ export default async function PropertyDetailPage({ params }: PageProps) {
     .filter(Boolean)
     .join(", ");
 
-  // Use property photo if available
-  let headerImageUrl: string | null = null;
-  if (property.photos && property.photos.length > 0) {
-    const key = extractS3Key(property.photos[0]);
-    headerImageUrl = await getSignedGetUrl(key);
-  }
-
   // Calculate relationship metrics
   const now = Date.now();
   const daysSinceConnection = Math.floor(
     (now - new Date(connection.createdAt).getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  const daysSinceLastWork = connection.lastWorkDate
+  const daysSinceLastService = connection.lastServiceDate
     ? Math.floor(
-        (now - new Date(connection.lastWorkDate).getTime()) /
+        (now - new Date(connection.lastServiceDate).getTime()) /
           (1000 * 60 * 60 * 24)
       )
     : null;
@@ -200,9 +193,9 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const relationshipHealth: "excellent" | "good" | "needs-attention" =
     isArchived
       ? "needs-attention"
-      : !daysSinceLastWork || daysSinceLastWork > 180
+      : !daysSinceLastService || daysSinceLastService > 180
       ? "needs-attention"
-      : daysSinceLastWork < 90
+      : daysSinceLastService < 90
       ? "excellent"
       : "good";
 
@@ -330,8 +323,6 @@ export default async function PropertyDetailPage({ params }: PageProps) {
 
   return (
     <main className="relative min-h-screen text-white">
-      <Bg imageUrl={headerImageUrl} />
-
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
         <Breadcrumb
@@ -430,7 +421,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
           />
           <StatCard
             label="Verified Jobs"
-            value={connection.verifiedWorkCount}
+            value={connection.verifiedServiceCount}
             subtext={`$${totalRevenue.toLocaleString()} total`}
           />
           <StatCard
@@ -591,18 +582,18 @@ export default async function PropertyDetailPage({ params }: PageProps) {
               </section>
             )}
 
-            {/* Job Requests */}
+            {/* Service Requests */}
             <section className={glass}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-lg font-semibold ${heading}`}>
-                  Job Requests ({property.serviceRequests.length})
+                  Service Requests ({property.serviceRequests.length})
                 </h2>
               </div>
 
               {property.serviceRequests.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="mb-3 text-4xl">📋</div>
-                  <p className={textMeta}>No job requests</p>
+                  <p className={textMeta}>No service requests</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -676,19 +667,19 @@ export default async function PropertyDetailPage({ params }: PageProps) {
             <section className={glass}>
               <div className="mb-4 flex items-center justify-between">
                 <h2 className={`text-lg font-semibold ${heading}`}>
-                  Work History ({property.workRecords.length})
+                  Work History ({property.serviceRecords.length})
                 </h2>
               </div>
 
-              {property.workRecords.length === 0 ? (
+              {property.serviceRecords.length === 0 ? (
                 <div className="py-8 text-center">
                   <div className="mb-3 text-4xl">🔧</div>
-                  <p className={textMeta}>No documented work</p>
+                  <p className={textMeta}>No documented service</p>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {property.workRecords.map((work) => (
-                    <WorkRecordCard key={work.id} work={work} />
+                  {property.serviceRecords.map((service) => (
+                    <ServiceRecordCard key={service.id} service={service} />
                   ))}
                 </div>
               )}
@@ -762,15 +753,15 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                   <div className="flex justify-between text-sm">
                     <span className={textMeta}>Last Contact</span>
                     <span className="text-white">
-                      {daysSinceLastWork !== null
-                        ? `${daysSinceLastWork} days ago`
+                      {daysSinceLastService !== null
+                        ? `${daysSinceLastService} days ago`
                         : "Never"}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className={textMeta}>Verified Jobs</span>
                     <span className="text-white">
-                      {connection.verifiedWorkCount}
+                      {connection.verifiedServiceCount}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -805,7 +796,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
 
                   {/* Document work */}
                   <Link
-                    href={`/pro/contractor/work-records/new?homeId=${id}`}
+                    href={`/pro/contractor/service-records/new?homeId=${id}`}
                     className={`${glassTight} flex items-center gap-3 px-3 py-2 hover:bg-white/10 transition`}
                   >
                     <span className="text-xl">📝</span>
@@ -819,7 +810,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     href={`/pro/messages/${connection.id}${
                       expiringWarranties[0]
                         ? `?topic=warranty&item=${encodeURIComponent(expiringWarranties[0].item)}`
-                        : daysSinceLastWork && daysSinceLastWork > 90
+                        : daysSinceLastService && daysSinceLastService > 90
                         ? "?topic=checkin"
                         : ""
                     }`}
@@ -829,7 +820,7 @@ export default async function PropertyDetailPage({ params }: PageProps) {
                     <span className="text-sm text-white">
                       {expiringWarranties[0]
                         ? "Message About Warranty"
-                        : daysSinceLastWork && daysSinceLastWork > 90
+                        : daysSinceLastService && daysSinceLastService > 90
                         ? "Send Check-in"
                         : "Send Message"}
                     </span>
@@ -888,13 +879,13 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   );
 }
 
-async function WorkRecordCard({
-  work,
+async function ServiceRecordCard({
+  service,
 }: {
-  work: {
+  service: {
     id: string;
-    workType: string;
-    workDate: Date | null;
+    serviceType: string;
+    serviceDate: Date | null;
     cost: { toNumber: () => number } | null;
     status: string;
     description: string | null;
@@ -904,21 +895,21 @@ async function WorkRecordCard({
 }) {
   // Sign first photo if available
   let photoUrl: string | null = null;
-  if (work.photos && work.photos.length > 0) {
-    const key = extractS3Key(work.photos[0]);
+  if (service.photos && service.photos.length > 0) {
+    const key = extractS3Key(service.photos[0]);
     photoUrl = await getSignedGetUrl(key);
   }
 
   return (
     <Link
-      href={`/pro/contractor/work/${work.id}`}
+      href={`/pro/contractor/work/${service.id}`}
       className="flex gap-4 rounded-lg border border-white/10 bg-white/5 p-4 transition hover:bg-white/10"
     >
       {photoUrl && (
         <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg">
           <Image
             src={photoUrl}
-            alt={work.workType}
+            alt={service.serviceType}
             fill
             className="object-cover"
             sizes="80px"
@@ -926,26 +917,26 @@ async function WorkRecordCard({
         </div>
       )}
       <div className="flex-1">
-        <h3 className="font-semibold text-white">{work.workType}</h3>
-        {work.description && (
+        <h3 className="font-semibold text-white">{service.serviceType}</h3>
+        {service.description && (
           <p className={`mt-1 line-clamp-2 text-sm ${textMeta}`}>
-            {work.description}
+            {service.description}
           </p>
         )}
         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-white/60">
-          {work.workDate && (
-            <span>📅 {format(new Date(work.workDate), "MMM d, yyyy")}</span>
+          {service.serviceDate && (
+            <span>📅 {format(new Date(service.serviceDate), "MMM d, yyyy")}</span>
           )}
-          {work.cost && (
+          {service.cost && (
             <span className="font-semibold text-white">
               $
-              {typeof work.cost === "object" && "toNumber" in work.cost
-                ? work.cost.toNumber().toLocaleString()
-                : Number(work.cost).toLocaleString()}
+              {typeof service.cost === "object" && "toNumber" in service.cost
+                ? service.cost.toNumber().toLocaleString()
+                : Number(service.cost).toLocaleString()}
             </span>
           )}
-          {work.photos && work.photos.length > 0 && (
-            <span>📷 {work.photos.length}</span>
+          {service.photos && service.photos.length > 0 && (
+            <span>📷 {service.photos.length}</span>
           )}
         </div>
       </div>
@@ -988,23 +979,6 @@ function StatCard({
       {subtext && (
         <div className="mt-0.5 text-xs text-white/60">{subtext}</div>
       )}
-    </div>
-  );
-}
-
-function Bg({ imageUrl }: { imageUrl: string | null }) {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src={imageUrl || "/myhomedox_home3.webp"}
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover object-center"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
     </div>
   );
 }

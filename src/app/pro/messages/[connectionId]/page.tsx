@@ -118,7 +118,6 @@ export default async function ProChatPage({
 
   return (
     <main className="relative min-h-screen text-white">
-      <Bg />
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Breadcrumb */}
@@ -246,22 +245,5 @@ export default async function ProChatPage({
         </section>
       </div>
     </main>
-  );
-}
-
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover object-center"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-    </div>
   );
 }

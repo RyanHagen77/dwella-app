@@ -1,8 +1,8 @@
 /**
- * CONTRACTOR PENDING JOB REQUESTS COUNT
+ * CONTRACTOR PENDING SERVICE REQUESTS COUNT
  *
  * GET /api/pro/contractor/service-requests/pending
- * Returns count of job requests needing contractor response
+ * Returns count of service requests needing contractor response
  *
  * Used by contractor dashboard badge
  */
@@ -28,7 +28,7 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Count job requests that need contractor response
+    // Count service requests that need contractor response
     const pendingCount = await prisma.serviceRequest.count({
       where: {
         contractorId: userId,
@@ -40,9 +40,9 @@ export async function GET() {
 
     return NextResponse.json({ total: pendingCount });
   } catch (error) {
-    console.error("Error fetching pending job requests:", error);
+    console.error("Error fetching pending service requests:", error);
     return NextResponse.json(
-      { error: "Failed to fetch pending job requests" },
+      { error: "Failed to fetch pending service requests" },
       { status: 500 }
     );
   }
