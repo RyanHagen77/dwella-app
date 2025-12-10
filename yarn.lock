@@ -1845,6 +1845,13 @@ acorn-jsx@^5.3.2:
   resolved "https://registry.npmjs.org/acorn/-/acorn-8.15.0.tgz"
   integrity sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==
 
+agent-base@6:
+  version "6.0.2"
+  resolved "https://registry.npmjs.org/agent-base/-/agent-base-6.0.2.tgz"
+  integrity sha512-RZNwNclF7+MS/8bDg70amg32dyeZGZxiDuQmZxKLAlQjr3jGyLx+4Kkk58UO7D2QdgFIQCovuSuZESne6RG6XQ==
+  dependencies:
+    debug "4"
+
 ajv@^6.12.4:
   version "6.12.6"
   resolved "https://registry.npmjs.org/ajv/-/ajv-6.12.6.tgz"
@@ -2035,7 +2042,7 @@ axe-core@^4.10.0:
   resolved "https://registry.npmjs.org/axe-core/-/axe-core-4.11.0.tgz"
   integrity sha512-ilYanEU8vxxBexpJd8cWM4ElSQq4QctCLKih0TSfjIfCQTeyH/6zVrmIJfLPrKTKJRbiG+cfnZbQIjAlJmF1jQ==
 
-axios@^1.7.4:
+axios@^1.12.0, axios@^1.7.4:
   version "1.13.2"
   resolved "https://registry.npmjs.org/axios/-/axios-1.13.2.tgz"
   integrity sha512-VPk9ebNqPcy5lRGuSlKx752IlDatOjT9paPlm8A7yOuW2Fbvp4X3JznJtT4f0GzGLLiWE9W8onz51SqLYwzGaA==
@@ -2326,6 +2333,11 @@ date-fns@^4.1.0:
   resolved "https://registry.npmjs.org/date-fns/-/date-fns-4.1.0.tgz"
   integrity sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==
 
+dayjs@^1.11.9:
+  version "1.11.19"
+  resolved "https://registry.npmjs.org/dayjs/-/dayjs-1.11.19.tgz"
+  integrity sha512-t5EcLVS6QPBNqM2z8fakk/NKel+Xzshgt8FFKAn+qwlD1pzZWxh0nVCrvFK7ZDb6XucZeF9z8C7CBWTRIVApAw==
+
 debug@^3.2.7:
   version "3.2.7"
   resolved "https://registry.npmjs.org/debug/-/debug-3.2.7.tgz"
@@ -2333,7 +2345,7 @@ debug@^3.2.7:
   dependencies:
     ms "^2.1.1"
 
-debug@^4.3.1, debug@^4.3.2, debug@^4.3.4, debug@^4.4.0:
+debug@^4.3.1, debug@^4.3.2, debug@^4.3.4, debug@^4.4.0, debug@4:
   version "4.4.3"
   resolved "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz"
   integrity sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==
@@ -3142,6 +3154,14 @@ hasown@^2.0.2:
   dependencies:
     function-bind "^1.1.2"
 
+https-proxy-agent@^5.0.0:
+  version "5.0.1"
+  resolved "https://registry.npmjs.org/https-proxy-agent/-/https-proxy-agent-5.0.1.tgz"
+  integrity sha512-dFcAjpTQFgoLMzC2VwU+C/CbS7uRL0lWmxDITmqm7C+7F0Odmj6s9l6alZc6AELXhrnggM2CeWSXHGOdX2YtwA==
+  dependencies:
+    agent-base "6"
+    debug "4"
+
 ignore@^5.2.0:
   version "5.3.2"
   resolved "https://registry.npmjs.org/ignore/-/ignore-5.3.2.tgz"
@@ -3487,7 +3507,7 @@ jsonwebtoken@^9.0.2:
     object.assign "^4.1.4"
     object.values "^1.1.6"
 
-jwa@^1.4.1:
+jwa@^1.4.2:
   version "1.4.2"
   resolved "https://registry.npmjs.org/jwa/-/jwa-1.4.2.tgz"
   integrity sha512-eeH5JO+21J78qMvTIDdBXidBd6nG2kZjg5Ohz/1fpa28Z4CcsWUzJ1ZZyFq/3z3N17aZy+ZuBoHljASbL1WfOw==
@@ -3497,11 +3517,11 @@ jwa@^1.4.1:
     safe-buffer "^5.0.1"
 
 jws@^3.2.2:
-  version "3.2.2"
-  resolved "https://registry.npmjs.org/jws/-/jws-3.2.2.tgz"
-  integrity sha512-YHlZCB6lMTllWDtSPHz/ZXTsi8S00usEV6v1tjq8tOUZzw7DpSDWVXjXDre6ed1w/pd495ODpHZYSdkRTsa0HA==
+  version "3.2.3"
+  resolved "https://registry.npmjs.org/jws/-/jws-3.2.3.tgz"
+  integrity sha512-byiJ0FLRdLdSVSReO/U4E7RoEyOCKnEnEPMjq3HxWtvzLsV08/i5RQKsFVNkCldrCaPr2vDNAOMsfs8T/Hze7g==
   dependencies:
-    jwa "^1.4.1"
+    jwa "^1.4.2"
     safe-buffer "^5.0.1"
 
 keyv@^4.5.4:
@@ -4145,6 +4165,13 @@ pusher@^5.2.0:
     tweetnacl "^1.0.0"
     tweetnacl-util "^0.15.0"
 
+qs@^6.9.4:
+  version "6.14.0"
+  resolved "https://registry.npmjs.org/qs/-/qs-6.14.0.tgz"
+  integrity sha512-YWWTjgABSKcvs/nWBi9PycY/JiPJqOD4JA6o9Sej2AtvSGarXxKC3OQSk4pAarbdQlKAh5D4FCQkJNkW+GAn3w==
+  dependencies:
+    side-channel "^1.1.0"
+
 querystringify@^2.1.1:
   version "2.2.0"
   resolved "https://registry.npmjs.org/querystringify/-/querystringify-2.2.0.tgz"
@@ -4314,6 +4341,11 @@ scheduler@^0.27.0:
   version "0.27.0"
   resolved "https://registry.npmjs.org/scheduler/-/scheduler-0.27.0.tgz"
   integrity sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==
+
+scmp@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.npmjs.org/scmp/-/scmp-2.1.0.tgz"
+  integrity sha512-o/mRQGk9Rcer/jEEw/yw4mwo3EU/NvYvp577/Btqrym9Qy5/MdWGBqipbALgd2lrdWTJ5/gqDusxfnQBxOxT2Q==
 
 semver@^6.3.1:
   version "6.3.1"
@@ -4745,6 +4777,19 @@ tweetnacl@^1.0.0, tweetnacl@^1.0.3:
   resolved "https://registry.npmjs.org/tweetnacl/-/tweetnacl-1.0.3.tgz"
   integrity sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==
 
+twilio@^5.10.7:
+  version "5.10.7"
+  resolved "https://registry.npmjs.org/twilio/-/twilio-5.10.7.tgz"
+  integrity sha512-pELNeyQqkJMW/UkbcdNGDfOjMyt1FXoYOKXBDqOViHmcdJ04cq8Ty3VsrEAabi97YesK3T2v5KP5XKPY8uUx9w==
+  dependencies:
+    axios "^1.12.0"
+    dayjs "^1.11.9"
+    https-proxy-agent "^5.0.0"
+    jsonwebtoken "^9.0.2"
+    qs "^6.9.4"
+    scmp "^2.1.0"
+    xmlbuilder "^13.0.2"
+
 type-check@^0.4.0, type-check@~0.4.0:
   version "0.4.0"
   resolved "https://registry.npmjs.org/type-check/-/type-check-0.4.0.tgz"
@@ -4977,6 +5022,11 @@ wrap-ansi@^8.1.0:
     ansi-styles "^6.1.0"
     string-width "^5.0.1"
     strip-ansi "^7.0.1"
+
+xmlbuilder@^13.0.2:
+  version "13.0.2"
+  resolved "https://registry.npmjs.org/xmlbuilder/-/xmlbuilder-13.0.2.tgz"
+  integrity sha512-Eux0i2QdDYKbdbA6AM6xE4m6ZTZr4G4xF9kahI2ukSEMCzwce2eX9WlTI5J3s+NU7hpasFsr8hWIONae7LluAQ==
 
 yallist@^4.0.0:
   version "4.0.0"

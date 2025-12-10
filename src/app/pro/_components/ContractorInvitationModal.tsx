@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui";
 import AddressVerification from "@/components/AddressVerification";
-import { useToast } from "@/components/ui/Toast"; // Update path if different
+import { useToast } from "@/components/ui/Toast";
 
 type ContractorInvitationModalProps = {
   open: boolean;
@@ -26,6 +26,7 @@ export function ContractorInvitationModal({
 }: ContractorInvitationModalProps) {
   const [step, setStep] = useState<"email" | "address" | "message">("email");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [verifiedAddress, setVerifiedAddress] =
     useState<VerifiedAddress | null>(null);
   const [message, setMessage] = useState("");
@@ -34,64 +35,70 @@ export function ContractorInvitationModal({
 
   if (!open) return null;
 
-// app/pro/contractor/invitations/ContractorInvitationModal.tsx
+  // Format phone number as user types
+  function formatPhone(value: string) {
+    const digits = value.replace(/\D/g, "");
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+  }
 
-async function handleSubmit() {
-  if (!verifiedAddress || !email) return;
+  async function handleSubmit() {
+    if (!verifiedAddress || !email) return;
 
-  setLoading(true);
+    setLoading(true);
 
-  try {
-    const fullAddress = `${verifiedAddress.street}${
-      verifiedAddress.unit ? ` ${verifiedAddress.unit}` : ""
-    }, ${verifiedAddress.city}, ${verifiedAddress.state} ${
-      verifiedAddress.zip
-    }`;
+    try {
+      const fullAddress = `${verifiedAddress.street}${
+        verifiedAddress.unit ? ` ${verifiedAddress.unit}` : ""
+      }, ${verifiedAddress.city}, ${verifiedAddress.state} ${
+        verifiedAddress.zip
+      }`;
 
-    const response = await fetch("/api/invitations/pro-to-home", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: email.trim(),  // ✅ Changed from invitedEmail to email
-        homeAddress: fullAddress,
-        message: message || undefined,
-      }),
-    });
+      const response = await fetch("/api/invitations/pro-to-home", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          phone: phone ? phone.replace(/\D/g, "") : undefined,
+          homeAddress: fullAddress,
+          message: message || undefined,
+        }),
+      });
 
-    const payload = await response.json().catch(() => null);
+      const payload = await response.json().catch(() => null);
 
-    if (!response.ok) {
-      const msg =
-        (payload && (payload.error as string)) ||
-        "Failed to send invitation";
+      if (!response.ok) {
+        const msg =
+          (payload && (payload.error as string)) ||
+          "Failed to send invitation";
 
-      // Known validation / duplicate cases: just show messages, don't throw
-      if (response.status === 400 || response.status === 409) {
+        if (response.status === 400 || response.status === 409) {
+          toast(msg);
+          return;
+        }
+
+        console.error("Invite API error:", payload);
         toast(msg);
         return;
       }
 
-      // Unknown server error
-      console.error("Invite API error:", payload);
-      toast(msg);
-      return;
+      // success
+      toast("Invitation sent successfully!");
+      onCloseAction();
+      // reset internal state
+      setStep("email");
+      setEmail("");
+      setPhone("");
+      setVerifiedAddress(null);
+      setMessage("");
+    } catch (error) {
+      console.error("Error sending invitation:", error);
+      toast("Something went wrong sending the invitation. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    // success
-    toast("Invitation sent successfully!");
-    onCloseAction();
-    // reset internal state
-    setStep("email");
-    setEmail("");
-    setVerifiedAddress(null);
-    setMessage("");
-  } catch (error) {
-    console.error("Error sending invitation:", error);
-    toast("Something went wrong sending the invitation. Please try again.");
-  } finally {
-    setLoading(false);
   }
-}
 
   return (
     <Modal open={open} onCloseAction={onCloseAction}>
@@ -113,7 +120,7 @@ async function handleSubmit() {
           <StepDot active={step === "message"} label="3" />
         </div>
 
-        {/* Step 1: Email */}
+        {/* Step 1: Email & Phone */}
         {step === "email" && (
           <div className="space-y-4">
             <div>
@@ -128,6 +135,23 @@ async function handleSubmit() {
                 autoFocus
               />
             </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-white">
+                Phone Number <span className="text-white/50">(Optional)</span>
+              </label>
+              <Input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(formatPhone(e.target.value))}
+                placeholder="(555) 123-4567"
+                maxLength={14}
+              />
+              <p className="mt-1 text-xs text-white/60">
+                We&apos;ll send a text message with the invitation link
+              </p>
+            </div>
+
             <div className="flex justify-end gap-2">
               <button
                 type="button"

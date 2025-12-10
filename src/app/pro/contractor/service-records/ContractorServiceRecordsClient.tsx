@@ -67,10 +67,8 @@ export default function ContractorServiceRecordsClient({
     }
 
     return list.sort((a, b) => {
-      // Pending first
       if (!a.isVerified && b.isVerified) return -1;
       if (a.isVerified && !b.isVerified) return 1;
-      // Then by date (newest first)
       return (
         new Date(b.serviceDate).getTime() - new Date(a.serviceDate).getTime()
       );
@@ -87,7 +85,8 @@ export default function ContractorServiceRecordsClient({
               Service Records
             </h1>
             <p className={`mt-1 ${textMeta}`}>
-              Track and manage all documented service for your clients.
+              Track and manage all documented service across your properties —
+              whether or not the homeowner is connected.
             </p>
           </div>
           <div className="flex gap-2">
@@ -141,7 +140,7 @@ export default function ContractorServiceRecordsClient({
             <p className={`mb-4 ${textMeta}`}>
               {q || filter !== "all"
                 ? "No service records match your filters."
-                : "Start documenting completed service on your connected properties."}
+                : "Start documenting completed service for any property you work on."}
             </p>
             {q || filter !== "all" ? (
               <button
@@ -171,10 +170,8 @@ export default function ContractorServiceRecordsClient({
         )}
       </section>
 
-      {/* Invite Modal (only opens if you decide to use it) */}
-      {inviteOpen && (
-        <InviteHomeownerModal onClose={() => setInviteOpen(false)} />
-      )}
+      {/* Invite Modal (if you still want an inline version) */}
+      {inviteOpen && <InviteHomeownerModal onClose={() => setInviteOpen(false)} />}
     </div>
   );
 }
@@ -211,7 +208,9 @@ function ServiceRecordItem({ record }: { record: ServiceRecord }) {
             </p>
 
             {record.description && (
-              <p className={`mt-2 line-clamp-2 text-sm italic ${textMeta}`}>
+              <p
+                className={`mt-2 line-clamp-2 text-sm italic ${textMeta}`}
+              >
                 {record.description}
               </p>
             )}
@@ -301,7 +300,8 @@ function Chip({
   );
 }
 
-// Invite Homeowner Modal with address verification
+// (Optional) This modal is redundant with InviteHomeownerButton,
+// but keeping it if you still want a local invite flow.
 function InviteHomeownerModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<"email" | "address" | "message">("email");
   const [email, setEmail] = useState("");
@@ -339,8 +339,8 @@ function InviteHomeownerModal({ onClose }: { onClose: () => void }) {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to send invitation");
+        const error = await response.json().catch(() => null);
+        throw new Error(error?.error || "Failed to send invitation");
       }
 
       alert("Invitation sent successfully!");
@@ -434,7 +434,7 @@ function InviteHomeownerModal({ onClose }: { onClose: () => void }) {
         {step === "message" && (
           <div className="space-y-4">
             <div className="rounded-lg border border-white/20 bg-white/5 p-3">
-              <p className="mb-1 text-xs text:white/60">Verified Address:</p>
+              <p className="mb-1 text-xs text-white/60">Verified Address:</p>
               <p className="text-sm font-medium text-white">
                 {verifiedAddress?.street}
                 {verifiedAddress?.unit && ` ${verifiedAddress.unit}`}

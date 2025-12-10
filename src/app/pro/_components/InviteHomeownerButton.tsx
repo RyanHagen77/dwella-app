@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ctaGhost } from "@/lib/glass";
-import { ContractorInvitationModal } from "@/app/pro/contractor/invitations/ContractorInvitationModal";
+import { ContractorInvitationModal } from "./ContractorInvitationModal";
 
 export function InviteHomeownerButton({
   className,

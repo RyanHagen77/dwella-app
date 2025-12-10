@@ -15,6 +15,7 @@ import {
   ctaPrimary,
   ctaGhost,
 } from "@/lib/glass";
+import { useToast } from "@/components/ui/Toast";
 
 /** Shapes matching what page.tsx includes.
  *  - receivedInvitations include inviter + stats
@@ -75,7 +76,10 @@ export default function ContractorInvitationsClient({
   sentInvitations: SentInvitation[];
 }) {
   const router = useRouter();
+  const { push: toast } = useToast();
+
   const [processing, setProcessing] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedInvitation, setSelectedInvitation] = useState<string | null>(
     null
@@ -170,6 +174,41 @@ export default function ContractorInvitationsClient({
       );
     } finally {
       setProcessing(null);
+    }
+  }
+
+  async function handleResend(invitation: SentInvitation) {
+    setResendingId(invitation.id);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/invitations/${invitation.id}/resend`,
+        { method: "POST" }
+      );
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        const msg =
+          (payload && (payload.error as string)) ||
+          "Failed to resend invitation";
+        toast(msg);
+        setError(msg);
+        return;
+      }
+
+      toast("Invitation email resent.");
+    } catch (e) {
+      console.error("Error resending invitation:", e);
+      const msg =
+        e instanceof Error
+          ? e.message
+          : "Something went wrong resending the invitation.";
+      toast(msg);
+      setError(msg);
+    } finally {
+      setResendingId(null);
     }
   }
 
@@ -391,7 +430,7 @@ export default function ContractorInvitationsClient({
               {pendingSent.map((inv) => (
                 <div
                   key={inv.id}
-                  className={`${glassTight} flex items-center justify-between`}
+                  className={`${glassTight} flex items-center justify-between gap-3`}
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white truncate">
@@ -407,9 +446,20 @@ export default function ContractorInvitationsClient({
                       Sent {new Date(inv.createdAt).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="rounded-full px-3 py-1 text-xs font-semibold bg-yellow-500/20 text-yellow-200 border border-yellow-500/40">
-                    PENDING
-                  </span>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="rounded-full px-3 py-1 text-xs font-semibold bg-yellow-500/20 text-yellow-200 border border-yellow-500/40">
+                      PENDING
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleResend(inv)}
+                      disabled={resendingId === inv.id}
+                      className="rounded-full border border-white/25 bg-white/5 px-3 py-1 text-xs text-white/80 hover:bg-white/10 disabled:opacity-50"
+                    >
+                      {resendingId === inv.id ? "Resending..." : "Resend email"}
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

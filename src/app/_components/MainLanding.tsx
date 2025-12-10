@@ -31,7 +31,6 @@ export default function MainLanding() {
 
   return (
     <main className="relative min-h-screen text-white">
-
       {/* Top bar */}
       <header className={`${CONTAINER} pt-4`}>
         <div className="flex items-center justify-between">
@@ -216,11 +215,11 @@ function SocialProof({
           <p className="text-lg md:text-xl text-white italic leading-relaxed">
             {quote}
           </p>
-          <p className="mt-4 text-white/70">— {byline}</p>
+          <p className="mt-4 text-white/70">{byline}</p>
         </div>
         <div className="flex-shrink-0 text-center md:text-right">
           <div
-            className={`text-4xl font-bold ${
+            className={`text-3xl md:text-4xl font-bold ${
               statTone === "green" ? "text-green-400" : "text-orange-400"
             }`}
           >
@@ -262,32 +261,34 @@ function FinalCta({
 }
 
 /* ================================
-   HOMEOWNER HERO
+   HOMEOWNER HERO – FRICTIONLESS + HONEST
    ================================ */
+
 function HomeownerHero({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <>
       <HeroHeader
         headline={
           <>
-            Not just records.
+            Your contractor already
             <br />
-            <span className="text-orange-400">Verified proof</span> of every
+            <span className="text-orange-400">documented your work.</span>
             <br />
-            upgrade to your home.
+            Claim your home to unlock it.
           </>
         }
         subhead={
           <>
-            Homes with documented maintenance history sell for{" "}
-            <span className="text-white font-semibold">5-10% more</span>.
-            MyDwella keeps verified records from the contractors who did the
-            work—ready when you refinance, insure, or sell.
+            MyDwella lets contractors keep a clear record of the work they do
+            at your home—photos, receipts, model numbers, and warranty details.
+            When they&apos;ve documented jobs at your address, you can claim your
+            home and see those records in one place instead of scattered across
+            emails and paper folders.
           </>
         }
-        primaryCta="Start Your Home Record — Free"
+        primaryCta="Claim Your Home — Free"
         secondaryCta="See How It Works"
-        trustNote="Free for homeowners. No credit card required."
+        trustNote="Free for homeowners. If your contractors use MyDwella, their work appears automatically once you claim your home."
         onPrimary={() => router.push("/register")}
         onSecondary={() => router.push("/demo")}
       />
@@ -295,22 +296,22 @@ function HomeownerHero({ router }: { router: ReturnType<typeof useRouter> }) {
       <ValueProps
         items={[
           {
-            emoji: "✅",
-            title: "Contractor-Verified Records",
+            emoji: "📂",
+            title: "One Home, One Record",
             description:
-              "Your HVAC guy, plumber, and electrician add work directly to your stats's record. Photos, receipts, warranties—all verified by the pros who did it.",
+              "Your home’s history lives in a single place: upgrades, repairs, and maintenance, all tied to your address instead of random folders.",
           },
           {
-            emoji: "📈",
-            title: "Increase Your Home Value",
+            emoji: "🧰",
+            title: "Details from the Pros",
             description:
-              "When you sell, buyers see PROOF of every upgrade. No more 'trust me, we replaced the roof.' Show them the verified documentation.",
+              "Contractors can add what they installed and when—photos, equipment details, and notes—so you’re not guessing later.",
           },
           {
-            emoji: "🔔",
-            title: "Never Miss Maintenance",
+            emoji: "🔍",
+            title: "Ready When Someone Asks",
             description:
-              "HVAC filter due in 30 days. Water heater warranty expires in 6 months. We remind you—and connect you with pros who can help.",
+              "When a lender, insurer, or buyer wants to know what’s been done to the home, you can open MyDwella instead of digging through old emails.",
           },
         ]}
       />
@@ -320,28 +321,29 @@ function HomeownerHero({ router }: { router: ReturnType<typeof useRouter> }) {
           {
             step: "1",
             title: "Claim Your Home",
-            description: "Add your property and verify ownership in 2 minutes.",
+            description:
+              "Search your address and verify it’s yours. If any contractor has already documented work, it shows up automatically.",
           },
           {
             step: "2",
-            title: "Invite Your Contractors",
+            title: "Explore Your Work History",
             description:
-              "Connect with pros you've worked with. They verify your past work.",
+              "See jobs, receipts, and notes in a clear timeline. Add your own photos or documents for projects you’ve tracked yourself.",
           },
           {
             step: "3",
-            title: "Build Your Home's Story",
+            title: "Invite Pros (Optional)",
             description:
-              "Every repair, upgrade, and warranty—documented and ready when you need it.",
+              "Share a link with trusted contractors so future work gets added directly to your home’s record as it happens.",
           },
         ]}
       />
 
       <SocialProof
-        quote="“We listed with 4 years of verified maintenance records. Buyers loved it. Sold in 5 days, $22K over asking.”"
-        byline="Sarah M., Denver CO"
-        statValue="$22K"
-        statLabel="over asking price"
+        quote="We built MyDwella so that when someone asks, “What’s actually been done to this home?” you can answer with a clear record, not a guess."
+        byline="Why MyDwella exists"
+        statValue="Peace of mind"
+        statLabel="for big decisions about your home"
         statTone="orange"
       />
 
@@ -350,11 +352,13 @@ function HomeownerHero({ router }: { router: ReturnType<typeof useRouter> }) {
           <>
             Your home is your biggest investment.
             <br />
-            <span className="text-orange-400">Document it like one.</span>
+            <span className="text-orange-400">
+              Give its history a place to live.
+            </span>
           </>
         }
-        cta="Get Started Free"
-        note="Join 2,000+ homeowners protecting their investment"
+        cta="Claim Your Home Free"
+        note="No credit card required. Your record grows as you and your contractors add to it."
         onClick={() => router.push("/register")}
       />
     </>
@@ -362,61 +366,69 @@ function HomeownerHero({ router }: { router: ReturnType<typeof useRouter> }) {
 }
 
 /* ================================
-   PRO HERO
+   PRO HERO – CLEAR, NO HYPE
    ================================ */
+
 function ProHero({ router }: { router: ReturnType<typeof useRouter> }) {
   return (
     <>
       <HeroHeader
         headline={
           <>
-            You did great work.
+            Document every job.
             <br />
-            <span className="text-orange-400">Then you never heard</span>
-            <br />
-            from them again.
+            <span className="text-orange-400">
+              Be the one they think of first.
+            </span>
           </>
         }
         subhead={
           <>
-            73% of your revenue should come from repeat clients and referrals.
-            But most contractors lose touch after the job is done.{" "}
-            <span className="text-white font-semibold">MyDwella fixes that.</span>
+            MyDwella turns each job into a clear record your client can return
+            to: what you did, what you installed, and what to expect next. When
+            they look up their home later, your name is attached to real work,
+            not just a business card they might have lost.
           </>
         }
-        primaryCta="Start Free — First 10 Clients Free"
-        secondaryCta="See How It Works"
-        trustNote="Free for your first 10 clients. Then $49/month for unlimited."
+        primaryCta="Apply as a Pro"
+        secondaryCta="See Pro Walkthrough"
+        trustNote="We’re rolling MyDwella out with a focused group of contractors first."
         onPrimary={() => router.push("/apply")}
         onSecondary={() => router.push("/demo")}
       />
 
-      {/* Stats Bar */}
+      {/* Conceptual “timeline” badges rather than fake stats */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
-        <StatBadge value="$8,400" label="Avg additional revenue/year" />
-        <StatBadge value="73%" label="Revenue from repeat clients" />
-        <StatBadge value="2 min" label="To document a job" />
+        <StatBadge value="On the job" label="You install, repair, or maintain" />
+        <StatBadge
+          value="In the record"
+          label="You log what you did in a few minutes"
+        />
+        <StatBadge
+          value="Later on"
+          label="They see your name when they need help again"
+        />
       </section>
 
       <ValueProps
         items={[
           {
-            emoji: "🔔",
-            title: "Never Miss a Warranty Renewal",
+            emoji: "📝",
+            title: "Simple Job Documentation",
             description:
-              "Sarah's HVAC warranty expires in 90 days. Mike's water heater is due for service. You'll know before they do—and reach out first.",
+              "After each visit, add a record with what you did, parts or equipment used, and any notes your client should have for later.",
           },
           {
-            emoji: "💰",
-            title: "Turn Past Clients into Revenue",
+            emoji: "📲",
+            title: "Shared with the Homeowner",
             description:
-              "You've done 47 jobs this year. That's $50,000+ in future warranty and maintenance work. Stop leaving money on the table.",
+              "Your work lives in their MyDwella home record, not buried in an invoice PDF. When they look up their home, they see you attached to real jobs.",
           },
           {
             emoji: "🤝",
-            title: "Stay Top of Mind",
+            title: "Natural Reasons to Follow Up",
             description:
-              "When their friend needs a contractor, who do they recommend? The one who stayed connected. That's you.",
+              "Because jobs are logged with real dates and details, it’s easier to plan check-ins, reminders, and seasonal outreach that actually makes sense.",
           },
         ]}
       />
@@ -425,79 +437,40 @@ function ProHero({ router }: { router: ReturnType<typeof useRouter> }) {
         steps={[
           {
             step: "1",
-            title: "Document Your Work",
+            title: "Log the Job",
             description:
-              "Add completed jobs with photos, receipts, and warranty info. Takes 2 minutes.",
+              "Right after a visit, create a job record with photos, notes, and key details. It only takes a few minutes once you’re used to it.",
           },
           {
             step: "2",
-            title: "We Track Everything",
+            title: "Connect it to the Home",
             description:
-              "Warranties expiring, maintenance due, clients going quiet. We watch it all.",
+              "Tie the job to your client’s address. When they claim their home, your work appears in their history automatically.",
           },
           {
             step: "3",
-            title: "You Get the Call",
+            title: "Use the History You’ve Built",
             description:
-              "When it's time for service, they call you—not someone they found on Google.",
+              "Look back at your own records when planning outreach or responding to questions. You and the homeowner are literally on the same page.",
           },
         ]}
       />
 
       <SocialProof
-        quote="“I installed 50 water heaters last year. MyDwella reminded me when 12 warranties were expiring. That’s $18,000 I would have lost to competitors.”"
-        byline="Mike R., Johnson Plumbing"
-        statValue="$18K"
-        statLabel="saved from lost renewals"
+        quote="Instead of hoping clients keep your paperwork, you leave a living record attached to their home. When they’re ready for the next step, they can see exactly who helped them last time."
+        byline="The kind of relationship MyDwella is designed to support"
+        statValue="Real context"
+        statLabel="for every future call, visit, or quote"
         statTone="green"
       />
 
-      {/* Comparison */}
-      <section className="space-y-6">
-        <h2 className={`${H2} text-center`}>
-          Without MyDwella vs. With MyDwella
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-2xl border border-red-500/30 bg-red-500/5 p-6 backdrop-blur-md">
-            <div className="text-red-400 font-semibold mb-4 flex items-center gap-2">
-              <span>❌</span> Without MyDwella
-            </div>
-            <ul className="space-y-3 text-white/80 text-sm">
-              <li>• Install HVAC system, job done, move on</li>
-              <li>• 2 years pass, warranty expires</li>
-              <li>• Customer doesn&apos;t remember you</li>
-              <li>• They Google &ldquo;HVAC repair near me&rdquo;</li>
-              <li>• Someone else gets the $3,000 job</li>
-            </ul>
-            <div className="mt-4 text-red-400 font-semibold">
-              Lost: $3,000+ per client
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-green-500/30 bg-green-500/5 p-6 backdrop-blur-md">
-            <div className="text-green-400 font-semibold mb-4 flex items-center gap-2">
-              <span>✅</span> With MyDwella
-            </div>
-            <ul className="space-y-3 text-white/80 text-sm">
-              <li>• Install HVAC, document it in 2 minutes</li>
-              <li>• 90 days before warranty expires, you get notified</li>
-              <li>• You reach out: &ldquo;Hey Sarah, time for a check-up&rdquo;</li>
-              <li>• She says: &ldquo;Wow, thanks for remembering!&rdquo;</li>
-              <li>• You get the $3,000 renewal + referrals</li>
-            </ul>
-            <div className="mt-4 text-green-400 font-semibold">
-              Earned: $3,000+ per client, every time
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing */}
+      {/* Pricing – product fact, not performance claim */}
       <section className="text-center space-y-8">
         <div className="space-y-2">
-          <h2 className={H2}>Simple Pricing</h2>
+          <h2 className={H2}>Straightforward Pricing for Pros</h2>
           <p className="text-white/70">
-            One warranty renewal pays for a year of MyDwella.
+            A simple subscription for contractors who want their work to speak
+            for them long after the truck leaves the driveway.
           </p>
         </div>
 
@@ -506,19 +479,16 @@ function ProHero({ router }: { router: ReturnType<typeof useRouter> }) {
           <div className="text-white/60 mt-1">/month</div>
           <ul className="mt-6 space-y-2 text-left text-white/80">
             <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span> Unlimited clients
+              <span className="text-green-400">✓</span> Document as many jobs
+              as you need
             </li>
             <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span> Warranty &amp; reminder tracking
+              <span className="text-green-400">✓</span> Homeowner-visible
+              records with your name on them
             </li>
             <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span> Client messaging
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span> Opportunity alerts
-            </li>
-            <li className="flex items-center gap-2">
-              <span className="text-green-400">✓</span> Verified work records
+              <span className="text-green-400">✓</span> Tools built for
+              follow-ups based on real work, not cold outreach
             </li>
           </ul>
           <button
@@ -526,10 +496,11 @@ function ProHero({ router }: { router: ReturnType<typeof useRouter> }) {
             className="mt-8 w-full rounded-full bg-orange-500 px-8 py-3 text-base font-semibold text-white shadow-lg shadow-orange-500/30 hover:bg-orange-600 transition"
             type="button"
           >
-            Start Free Trial
+            Apply to Join
           </button>
           <p className="mt-3 text-xs text-white/50">
-            First 10 clients free. No credit card required.
+            We’ll reach out with details as we expand to more service areas and
+            trades.
           </p>
         </div>
       </section>
@@ -591,7 +562,7 @@ function StatBadge({ value, label }: { value: string; label: string }) {
 }
 
 /* ================================
-   BACKGROUND + LOGO
+   LOGO
    ================================ */
 
 function MyDwellaLogo({ className }: { className?: string }) {

@@ -456,6 +456,135 @@ export async function sendInvitationEmail({
   return result;
 }
 
+// Home record invitation email (contractor → homeowner using /home-invite/:token)
+interface HomeRecordInvitationEmailParams {
+  to: string;
+  homeownerName?: string | null;
+  contractorName: string;
+  homeAddress?: string | null;
+  message?: string | null;
+  token: string;
+}
+
+export async function sendHomeRecordInvitationEmail({
+  to,
+  homeownerName,
+  contractorName,
+  homeAddress,
+  message,
+  token,
+}: HomeRecordInvitationEmailParams) {
+  const inviteUrl = `${APP_BASE_URL}/home-invite/${encodeURIComponent(token)}`;
+  const displayHome =
+    homeAddress && homeAddress.trim().length > 0
+      ? homeAddress.trim()
+      : "your home";
+
+  const greeting =
+    homeownerName && homeownerName.trim().length > 0
+      ? `Hi ${homeownerName.trim()}`
+      : "Hi there";
+
+  const subject = `${contractorName} documented work at ${displayHome}`;
+
+  const text = [
+    `${greeting},`,
+    "",
+    `${contractorName} uses MyDwella to keep a clear record of the work they do at your property.`,
+    `They’ve invited you to view the work documented at ${displayHome}.`,
+    "",
+    message ? `Message from ${contractorName}:` : "",
+    message ? `"${message}"` : "",
+    message ? "" : "",
+    `View your invitation and keep this work in your home’s record:`,
+    inviteUrl,
+    "",
+    "If you weren’t expecting this, you can ignore this email.",
+    "",
+    "— MyDwella",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+      <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;background-color:#0f172a;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f172a;padding:40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;background:rgba(15,23,42,0.98);border-radius:24px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,0.7);">
+                
+                <tr>
+                  <td style="padding:32px 32px 16px 32px;text-align:left;">
+                    <h1 style="margin:0 0 8px 0;font-size:26px;font-weight:600;color:#f9fafb;letter-spacing:-0.02em;">
+                      ${greeting}
+                    </h1>
+                    <p style="margin:0;font-size:15px;color:rgba(226,232,240,0.8);line-height:1.6;">
+                      <strong>${contractorName}</strong> uses MyDwella to keep a record of the work they do at your property.
+                      They’ve invited you to view the work documented at <strong>${displayHome}</strong>.
+                    </p>
+                  </td>
+                </tr>
+
+                ${
+                  message
+                    ? `
+                <tr>
+                  <td style="padding:0 32px 8px 32px;">
+                    <div style="margin-top:16px;padding:16px 18px;border-radius:16px;border-left:4px solid #f97316;background:rgba(15,23,42,0.9);">
+                      <p style="margin:0 0 4px 0;font-size:12px;color:rgba(148,163,184,0.9);text-transform:uppercase;letter-spacing:0.12em;">
+                        Message from ${contractorName}
+                      </p>
+                      <p style="margin:0;font-size:14px;color:#e5e7eb;line-height:1.6;">
+                        “${message}”
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+                `
+                    : ""
+                }
+
+                <tr>
+                  <td style="padding:16px 32px 32px 32px;text-align:left;">
+                    <p style="margin:16px 0 12px 0;font-size:15px;color:rgba(226,232,240,0.9);">
+                      You can review the details and keep this work in your home’s record here:
+                    </p>
+                    <p style="margin:0 0 20px 0;text-align:left;">
+                      <a href="${inviteUrl}" 
+                         style="display:inline-block;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;padding:12px 28px;border-radius:999px;font-weight:600;font-size:14px;text-decoration:none;border:1px solid rgba(248,250,252,0.25);">
+                        View your home record invitation
+                      </a>
+                    </p>
+                    <p style="margin:0;font-size:12px;color:rgba(148,163,184,0.9);line-height:1.6;">
+                      If you weren’t expecting this, you can ignore this email.
+                    </p>
+                    <p style="margin:12px 0 0 0;font-size:12px;color:rgba(148,163,184,0.9);">
+                      — MyDwella
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+    </html>
+  `;
+
+  const result = await sendWithPostmark({ to, subject, text, html });
+  if (result.success) {
+    console.log("Home record invitation email sent:", result.data);
+  }
+  return result;
+}
+
 // Disconnect notification email (sent to contractor when homeowner disconnects)
 interface DisconnectNotificationParams {
   to: string;
