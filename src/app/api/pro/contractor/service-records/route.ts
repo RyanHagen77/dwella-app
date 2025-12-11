@@ -7,22 +7,46 @@ import { z } from "zod";
 
 export const runtime = "nodejs";
 
-const createServiceRecordSchema = z.object({
-  homeId: z.string().min(1, "Home ID is required"),
-  serviceType: z.string().min(1, "Service type is required"),
-  serviceDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
-    message: "Invalid date format",
-  }),
-  description: z.string().optional(),
-  cost: z.number().nullable().optional(),
-  warrantyIncluded: z.boolean().default(false),
-  warrantyLength: z.string().optional(),
-  warrantyDetails: z.string().optional(),
+const addressSchema = z.object({
+  street: z.string().min(1, "Street is required"),
+  unit: z.string().nullable().optional(),
+  city: z.string().min(1, "City is required"),
+  state: z.string().min(1, "State is required"),
+  zip: z.string().min(1, "ZIP is required"),
 });
+
+const createServiceRecordSchema = z
+  .object({
+    // Either this...
+    homeId: z.string().min(1, "Home ID is required").optional(),
+
+    // ...or this, from the verified Smarty address flow
+    address: addressSchema.optional(),
+
+    serviceType: z.string().min(1, "Service type is required"),
+    serviceDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
+      message: "Invalid date format",
+    }),
+    description: z.string().optional(),
+    cost: z.number().nullable().optional(),
+
+    warrantyIncluded: z.boolean().default(false),
+    warrantyLength: z.string().optional(), // we’re using this as "expiresAt"
+    warrantyDetails: z.string().optional(),
+  })
+  .refine(
+    (val) => !!val.homeId || !!val.address,
+    {
+      message: "Either homeId or address is required",
+      path: ["homeId"],
+    }
+  );
 
 /**
  * POST /api/pro/contractor/service-records
- * Allows contractors to document completed work for connected stats
+ * Allows contractors to document completed work for a home:
+ * - Connected home by homeId
+ * - Any property by verified address (creates/fetches an unclaimed Home)
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
@@ -48,45 +72,97 @@ export async function POST(req: Request) {
     const body = await req.json();
     const data = createServiceRecordSchema.parse(body);
 
-    // Verify contractor has access to this stats
-    const connection = await prisma.connection.findFirst({
-      where: {
-        contractorId: session.user.id,
-        homeId: data.homeId,
-        status: "ACTIVE",
-      },
-    });
+    // Resolve home: connected homeId OR find/create by verified address
+    let homeId = data.homeId ?? null;
 
-    if (!connection) {
-      return NextResponse.json(
-        { error: "You don't have access to this property" },
-        { status: 403 }
-      );
+    // If we got a homeId, keep the old behavior: require an ACTIVE connection
+    if (homeId) {
+      const connection = await prisma.connection.findFirst({
+        where: {
+          contractorId: session.user.id,
+          homeId,
+          status: "ACTIVE",
+        },
+      });
+
+      if (!connection) {
+        return NextResponse.json(
+          { error: "You don't have access to this property" },
+          { status: 403 }
+        );
+      }
     }
 
-    // Get stats details for address snapshot
-    const home = await prisma.home.findUnique({
-      where: { id: data.homeId },
-      select: {
-        id: true,
-        address: true,
-        city: true,
-        state: true,
-        zip: true,
-      },
-    });
+    let home;
 
-    if (!home) {
+    if (homeId) {
+      // Standard path – existing home
+      home = await prisma.home.findUnique({
+        where: { id: homeId },
+        select: {
+          id: true,
+          address: true,
+          city: true,
+          state: true,
+          zip: true,
+        },
+      });
+
+      if (!home) {
+        return NextResponse.json(
+          { error: "Home not found" },
+          { status: 404 }
+        );
+      }
+    } else if (data.address) {
+      // Address-only path – allow contractor to store work for any property.
+      // Try to find an existing home row for this address.
+      home =
+        (await prisma.home.findFirst({
+          where: {
+            address: data.address.street,
+            city: data.address.city,
+            state: data.address.state,
+            zip: data.address.zip,
+          },
+          select: {
+            id: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+          },
+        })) ??
+        (await prisma.home.create({
+          data: {
+            address: data.address.street,
+            city: data.address.city,
+            state: data.address.state,
+            zip: data.address.zip,
+            // add other required Home fields here if your schema needs them
+          },
+          select: {
+            id: true,
+            address: true,
+            city: true,
+            state: true,
+            zip: true,
+          },
+        }));
+
+      homeId = home.id;
+    } else {
+      // Should be unreachable thanks to Zod refine, but keeps TS + runtime happy
       return NextResponse.json(
-        { error: "Home not found" },
-        { status: 404 }
+        { error: "Either homeId or address is required" },
+        { status: 400 }
       );
     }
 
     // Create work record with correct status enum value
     const serviceRecord = await prisma.serviceRecord.create({
       data: {
-        homeId: data.homeId,
+        homeId: homeId!,
         contractorId: session.user.id,
         serviceType: data.serviceType,
         serviceDate: new Date(data.serviceDate),
@@ -103,10 +179,10 @@ export async function POST(req: Request) {
         invoiceUrl: null,
         // Store address snapshot for historical record
         addressSnapshot: {
-          address: home.address,
-          city: home.city,
-          state: home.state,
-          zip: home.zip,
+          address: home!.address,
+          city: home!.city,
+          state: home!.state,
+          zip: home!.zip,
         },
       },
     });
@@ -116,7 +192,7 @@ export async function POST(req: Request) {
         success: true,
         serviceRecord: {
           id: serviceRecord.id,
-          homeId: home.id,
+          homeId: home!.id,
           status: serviceRecord.status,
         },
       },
@@ -132,13 +208,18 @@ export async function POST(req: Request) {
       );
     }
 
-    // Log full Prisma error details
-    if (error && typeof error === 'object') {
-      console.error("Full error object:", JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+    if (error && typeof error === "object") {
+      console.error(
+        "Full error object:",
+        JSON.stringify(error, Object.getOwnPropertyNames(error), 2)
+      );
     }
 
     return NextResponse.json(
-      { error: "Failed to create work record", details: error instanceof Error ? error.message : String(error) },
+      {
+        error: "Failed to create work record",
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

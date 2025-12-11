@@ -1,4 +1,4 @@
-// app/api/pro/contractor/document-completed-service-submissions-records/[serviceId]/route.ts
+// app/api/pro/contractor/service-records/[id]/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -22,7 +22,6 @@ function getKeyAndFilename(
   fileUrl: string,
   fallbackFilename: string
 ): { key: string; filename: string } {
-  // Try to split at ".amazonaws.com/" to get the full object key
   const urlParts = fileUrl.split(".amazonaws.com/");
   const afterDomain = urlParts[1];
 
@@ -33,8 +32,8 @@ function getKeyAndFilename(
 }
 
 /**
- * PATCH /api/pro/contractor/document-completed-service-submissions-records/:id
- * Update document-completed-service-submissions record with file URLs after upload
+ * PATCH /api/pro/contractor/service-records/:id
+ * Update service record with file URLs and editable fields
  */
 export async function PATCH(
   req: Request,
@@ -51,7 +50,7 @@ export async function PATCH(
     const body = await req.json();
     const data = updateServiceRecordSchema.parse(body);
 
-    // Verify document-completed-service-submissions record belongs to this contractor
+    // Verify service record belongs to this contractor
     const serviceRecord = await prisma.serviceRecord.findFirst({
       where: {
         id,
@@ -66,21 +65,26 @@ export async function PATCH(
       );
     }
 
-    // Update with file URLs
+    // Update core fields + URLs
     const updated = await prisma.serviceRecord.update({
       where: { id },
       data: {
-        ...(data.serviceType && { serviceType: data.servcieType }),
-        ...(data.serviceDate && { serviceDate: new Date(data.serviceDate) }),
-        ...(data.description !== undefined && { description: data.description }),
+        ...(data.serviceType && { serviceType: data.serviceType }),
+        ...(data.serviceDate && {
+          serviceDate: new Date(data.serviceDate),
+        }),
+        ...(data.description !== undefined && {
+          description: data.description,
+        }),
         ...(data.cost !== undefined && { cost: data.cost }),
         ...(data.photos && { photos: data.photos }),
         ...(data.invoice !== undefined && { invoiceUrl: data.invoice }),
-        // If you eventually add a warrantyUrl column, you can set it here too.
+        // If you add a dedicated warrantyUrl column, you can set it here:
+        // ...(data.warranty !== undefined && { warrantyUrl: data.warranty }),
       },
     });
 
-    // Create Attachment records for homeowner visibility (only if they don't exist)
+    // Build Attachment rows for homeowner visibility
     const attachmentsToCreate: {
       homeId: string;
       recordId: string | null;
@@ -106,8 +110,8 @@ export async function PATCH(
 
       const existingUrls = new Set(existingAttachments.map((a) => a.url));
 
-      data.photos.forEach((photoUrl) => {
-        if (existingUrls.has(photoUrl)) return;
+      for (const photoUrl of data.photos) {
+        if (existingUrls.has(photoUrl)) continue;
 
         const { key, filename } = getKeyAndFilename(photoUrl, "photo.jpg");
 
@@ -123,7 +127,7 @@ export async function PATCH(
           visibility: "HOME",
           uploadedBy: session.user.id,
         });
-      });
+      }
     }
 
     // ---------- Invoice ----------
@@ -186,7 +190,6 @@ export async function PATCH(
       }
     }
 
-    // Create only new attachments
     if (attachmentsToCreate.length > 0) {
       await prisma.attachment.createMany({
         data: attachmentsToCreate,
@@ -198,7 +201,7 @@ export async function PATCH(
       serviceRecord: updated,
     });
   } catch (error) {
-    console.error("Error updating document-completed-service-submissions record:", error);
+    console.error("Error updating service record:", error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -208,15 +211,15 @@ export async function PATCH(
     }
 
     return NextResponse.json(
-      { error: "Failed to update document-completed-service-submissions record" },
+      { error: "Failed to update service record" },
       { status: 500 }
     );
   }
 }
 
 /**
- * GET /api/pro/contractor/document-completed-service-submissions-records/:id
- * Get single document-completed-service-submissions record
+ * GET /api/pro/contractor/service-records/:id
+ * Get single service record
  */
 export async function GET(
   _req: Request,
@@ -277,8 +280,8 @@ export async function GET(
 }
 
 /**
- * DELETE /api/pro/contractor/document-completed-service-submissions-records/:id
- * Delete a document-completed-service-submissions record
+ * DELETE /api/pro/contractor/service-records/:id
+ * Delete a service record
  */
 export async function DELETE(
   _req: Request,
@@ -312,9 +315,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting document-completed-service-submissions record:", error);
+    console.error("Error deleting service record:", error);
     return NextResponse.json(
-      { error: "Failed to delete document-completed-service-submissions record" },
+      { error: "Failed to delete service record" },
       { status: 500 }
     );
   }

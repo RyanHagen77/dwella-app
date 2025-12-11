@@ -14,12 +14,15 @@ import { ServiceRecordActions } from "./ServiceRecordActions";
 import ContractorReminderModal from "@/app/pro/contractor/reminders/ContractorReminderModal";
 import type { ContractorReminderDTO } from "@/app/pro/contractor/reminders/ContractorRemindersClient";
 
+type AttachmentType = "photo" | "invoice" | "warranty" | "other";
+
 type AttachmentDTO = {
   id: string;
   filename: string;
   url: string | null;
   mimeType: string | null;
   size: number;
+  type?: AttachmentType;
 };
 
 type WarrantyDTO = {
@@ -43,6 +46,10 @@ type ServiceRecordDetail = {
   isVerified: boolean;
   verifiedAt: string | null;
   addressLine: string;
+  // warranty metadata from creation form
+  warrantyIncluded: boolean;
+  warrantyLength: string | null;
+  warrantyDetails: string | null;
   home: {
     id: string;
     address: string;
@@ -110,11 +117,14 @@ export function ServiceRecordDetailClient({ record }: Props) {
     try {
       setUploadingWarranty(true);
 
-      // 1. get presign
+      // 1. get presign (generic attachments presign)
       const presignRes = await fetch("/api/uploads/presign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          // we only need storage here – homeId/recordId wiring happens in the backend
+          homeId: record.homeId,
+          recordId: record.id,
           filename: file.name,
           contentType: file.type,
           size: file.size,
@@ -157,8 +167,8 @@ export function ServiceRecordDetailClient({ record }: Props) {
           body: JSON.stringify({
             attachmentId,
             title: `${record.serviceType} warranty`,
-            description: null,
-            coverageTerm: null,
+            description: record.warrantyDetails,
+            coverageTerm: record.warrantyLength,
           }),
         }
       );
@@ -176,11 +186,15 @@ export function ServiceRecordDetailClient({ record }: Props) {
     }
   }
 
-  const imageAttachments = record.attachments.filter((a) =>
-    a.mimeType?.startsWith("image/")
+  // attachment categorisation
+  const photos = record.attachments.filter(
+    (a) => a.type === "photo" || a.mimeType?.startsWith("image/")
   );
-  const docAttachments = record.attachments.filter(
-    (a) => !a.mimeType?.startsWith("image/")
+  const invoices = record.attachments.filter((a) => a.type === "invoice");
+  const warrantyFiles = record.attachments.filter((a) => a.type === "warranty");
+  const otherDocs = record.attachments.filter(
+    (a) =>
+      (a.type === "other" || !a.type) && !a.mimeType?.startsWith("image/")
   );
 
   return (
@@ -272,7 +286,9 @@ export function ServiceRecordDetailClient({ record }: Props) {
                 Service cost
               </h2>
               <p className="mt-1 text-lg font-semibold text-white">
-                {record.cost != null ? `$${record.cost.toFixed(2)}` : "Not provided"}
+                {record.cost != null
+                  ? `$${record.cost.toFixed(2)}`
+                  : "Not provided"}
               </p>
               <p className={textMeta + " mt-1 text-xs"}>
                 Documented on {formatDate(record.serviceDate)}
@@ -281,20 +297,20 @@ export function ServiceRecordDetailClient({ record }: Props) {
           </div>
 
           {/* Attachments */}
-          {record.attachments.length > 0 && (
+          {(record.attachments?.length ?? 0) > 0 && (
             <div>
               <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/60">
                 Attachments ({record.attachments.length})
               </h2>
 
               {/* Photos */}
-              {imageAttachments.length > 0 && (
+              {photos.length > 0 && (
                 <div className="mb-6">
                   <h3 className={`mb-3 text-sm font-medium ${textMeta}`}>
                     Photos
                   </h3>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    {imageAttachments.map((attachment) => {
+                    {photos.map((attachment) => {
                       const src = `/api/home/${record.homeId}/attachments/${attachment.id}`;
                       return (
                         <a
@@ -336,53 +352,53 @@ export function ServiceRecordDetailClient({ record }: Props) {
                 </div>
               )}
 
-              {/* Documents */}
-              {docAttachments.length > 0 && (
-                <div>
-                  <h3 className={`mb-3 text-sm font-medium ${textMeta}`}>
-                    Documents
+              {/* Invoice documents */}
+              {invoices.length > 0 && (
+                <div className="mb-4">
+                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>
+                    Invoice
                   </h3>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    {docAttachments.map((attachment) => (
-                      <a
-                        key={attachment.id}
-                        href={`/api/home/${record.homeId}/attachments/${attachment.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:bg-white/10"
-                      >
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-white/10">
-                          {attachment.mimeType?.includes("pdf") ? (
-                            <span className="text-xl">📄</span>
-                          ) : (
-                            <span className="text-xl">📎</span>
-                          )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium text-white">
-                            {attachment.filename}
-                          </p>
-                          <p className="text-xs text-white/60">
-                            {(Number(attachment.size) / 1024).toFixed(1)} KB
-                          </p>
-                        </div>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          strokeWidth={1.5}
-                          stroke="currentColor"
-                          className="h-5 w-5 text-white/50"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
-                          />
-                        </svg>
-                      </a>
-                    ))}
-                  </div>
+                  {invoices.map((attachment) => (
+                    <DocRow
+                      key={attachment.id}
+                      record={record}
+                      attachment={attachment}
+                      labelOverride="Invoice"
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Warranty documents */}
+              {warrantyFiles.length > 0 && (
+                <div className="mb-4">
+                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>
+                    Warranty file
+                  </h3>
+                  {warrantyFiles.map((attachment) => (
+                    <DocRow
+                      key={attachment.id}
+                      record={record}
+                      attachment={attachment}
+                      labelOverride="Warranty"
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Other documents */}
+              {otherDocs.length > 0 && (
+                <div>
+                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>
+                    Other documents
+                  </h3>
+                  {otherDocs.map((attachment) => (
+                    <DocRow
+                      key={attachment.id}
+                      record={record}
+                      attachment={attachment}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -421,7 +437,9 @@ export function ServiceRecordDetailClient({ record }: Props) {
                     }
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="line-clamp-1 font-medium">{r.title}</span>
+                      <span className="line-clamp-1 font-medium">
+                        {r.title}
+                      </span>
                       <span className="text-[11px] text-white/60">
                         {r.dueAt ? formatDate(r.dueAt) : "No due date"}
                       </span>
@@ -445,18 +463,37 @@ export function ServiceRecordDetailClient({ record }: Props) {
             </button>
           </section>
 
-          {/* Warranty */}
+          {/* Warranty summary + upload */}
           <section className={glass + " rounded-2xl p-4 sm:p-5"}>
             <div className="mb-3 flex items-center justify-between gap-2">
               <h2 className="text-sm font-semibold text-white">Warranty</h2>
             </div>
 
-            {warranties.length === 0 ? (
-              <p className={textMeta + " mb-3 text-sm"}>
-                Upload a warranty document for this service. Homeowners will be
-                able to accept it into their MyDwella warranties.
-              </p>
+            {record.warrantyIncluded ? (
+              <div className="mb-3 space-y-1 text-xs text-white/80">
+                <p className="font-medium text-white">
+                  This service includes a warranty.
+                </p>
+                {record.warrantyLength && (
+                  <p>
+                    <span className="text-white/60">Term:</span>{" "}
+                    {record.warrantyLength}
+                  </p>
+                )}
+                {record.warrantyDetails && (
+                  <p className="whitespace-pre-wrap text-white/70">
+                    {record.warrantyDetails}
+                  </p>
+                )}
+              </div>
             ) : (
+              <p className={textMeta + " mb-3 text-sm"}>
+                No warranty details were recorded for this service. You can
+                still upload a warranty document if you have one.
+              </p>
+            )}
+
+            {warranties.length > 0 && (
               <ul className="mb-3 space-y-2 text-xs">
                 {warranties.map((w) => (
                   <li
@@ -505,9 +542,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
               <span>
                 {uploadingWarranty
                   ? "Uploading warranty..."
-                  : warranties.length === 0
-                  ? "Upload warranty file (PDF / image)"
-                  : "Replace or add another warranty file"}
+                  : "Upload warranty file (PDF / image)"}
               </span>
               <input
                 type="file"
@@ -521,20 +556,67 @@ export function ServiceRecordDetailClient({ record }: Props) {
         </div>
       </div>
 
-      {/* Reminder modal, wired to this service record via serviceRecordId */}
+      {/* Reminder modal */}
       {reminderModalOpen && (
         <ContractorReminderModal
-          reminder={null}
-          onClose={() => setReminderModalOpen(false)}
-          onSaved={onReminderSaved}
-          // extra context prop (see earlier contractor reminder modal)
-          serviceRecordContext={{
-            serviceRecordId: record.id,
-            defaultTitle: `Follow up on ${record.serviceType}`,
-          }}
+          {...({
+            reminder: null,
+            onCloseAction: () => setReminderModalOpen(false),
+            onSaved: onReminderSaved,
+          } as any)}
         />
       )}
     </>
+  );
+}
+
+function DocRow({
+  record,
+  attachment,
+  labelOverride,
+}: {
+  record: ServiceRecordDetail;
+  attachment: AttachmentDTO;
+  labelOverride?: string;
+}) {
+  const href = `/api/home/${record.homeId}/attachments/${attachment.id}`;
+  const label = labelOverride || attachment.filename;
+
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mb-2 flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:bg-white/10"
+    >
+      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-white/10">
+        {attachment.mimeType?.includes("pdf") ? (
+          <span className="text-xl">📄</span>
+        ) : (
+          <span className="text-xl">📎</span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium text-white">{label}</p>
+        <p className="text-xs text-white/60">
+          {(Number(attachment.size) / 1024).toFixed(1)} KB
+        </p>
+      </div>
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={1.5}
+        stroke="currentColor"
+        className="h-5 w-5 text-white/50"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
+        />
+      </svg>
+    </a>
   );
 }
 

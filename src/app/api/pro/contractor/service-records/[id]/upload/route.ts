@@ -1,23 +1,15 @@
-// app/api/pro/contractor/document-completed-service-submissions-records-records/[serviceId]/upload/route.ts
+// app/api/pro/contractor/service-records/[id]/upload/route.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
+import { s3, S3_BUCKET, PUBLIC_S3_URL_PREFIX } from "@/lib/s3";
 
 export const runtime = "nodejs";
 
-const s3Client = new S3Client({
-  region: process.env.AWS_REGION || "us-east-1",
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
-  },
-});
-
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || "dwella-files";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_PHOTO_TYPES = [
   "image/jpeg",
@@ -33,7 +25,7 @@ const ALLOWED_DOC_TYPES = [
 ];
 
 /**
- * POST /api/pro/contractor/document-completed-service-submissions-records-records/:id/upload
+ * POST /api/pro/contractor/service-records/:id/upload
  * Generate presigned URLs for uploading files to S3
  */
 export async function POST(
@@ -47,7 +39,7 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Verify document-completed-service-submissions-records record belongs to this contractor
+  // Verify service record belongs to this contractor
   const serviceRecord = await prisma.serviceRecord.findUnique({
     where: { id: serviceRecordId },
     include: { home: true },
@@ -62,16 +54,23 @@ export async function POST(
 
   if (serviceRecord.contractorId !== session.user.id) {
     return NextResponse.json(
-      { error: "You do not own this document-completed-service-submissions-records record" },
+      { error: "You do not own this service record" },
       { status: 403 }
     );
   }
 
   try {
     const body = await req.json();
-    const { files } = body;
+    const { files } = body as {
+      files?: {
+        name: string;
+        type: string;
+        size: number;
+        category: "photo" | "invoice" | "warranty";
+      }[];
+    };
 
-    if (!files || !Array.isArray(files)) {
+    if (!files || !Array.isArray(files) || files.length === 0) {
       return NextResponse.json(
         { error: "Invalid request: files array required" },
         { status: 400 }
@@ -94,7 +93,6 @@ export async function POST(
         );
       }
 
-      // Validate file type based on category
       if (file.category === "photo") {
         if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
           return NextResponse.json(
@@ -114,16 +112,16 @@ export async function POST(
 
     // Generate presigned URLs for each file
     const uploadUrls = await Promise.all(
-      files.map(async (file: any) => {
+      files.map(async (file) => {
         const fileId = crypto.randomUUID();
-        const extension = file.name.split(".").pop();
+        const extension = file.name.split(".").pop() || "bin";
         const timestamp = Date.now();
 
-        // S3 key structure: stats/{homeId}/document-completed-service-submissions-records-records/{serviceRecordId}/{category}/{timestamp}-{fileId}.{ext}
+        // homes/{homeId}/service-records/{serviceRecordId}/{category}/{timestamp}-{fileId}.{ext}
         const key = `homes/${serviceRecord.homeId}/service-records/${serviceRecordId}/${file.category}/${timestamp}-${fileId}.${extension}`;
 
         const command = new PutObjectCommand({
-          Bucket: BUCKET_NAME,
+          Bucket: S3_BUCKET,
           Key: key,
           ContentType: file.type,
           Metadata: {
@@ -133,7 +131,7 @@ export async function POST(
           },
         });
 
-        const presignedUrl = await getSignedUrl(s3Client, command, {
+        const uploadUrl = await getSignedUrl(s3, command, {
           expiresIn: 3600, // 1 hour
         });
 
@@ -141,101 +139,25 @@ export async function POST(
           fileId,
           fileName: file.name,
           category: file.category,
-          uploadUrl: presignedUrl,
+          uploadUrl,
           key,
-          publicUrl: `https://${BUCKET_NAME}.s3.amazonaws.com/${key}`,
+          publicUrl: `${PUBLIC_S3_URL_PREFIX}/${key}`,
         };
       })
     );
 
-    return NextResponse.json({
-      success: true,
-      uploadUrls,
-      expiresIn: 3600,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        uploadUrls,
+        expiresIn: 3600,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Error generating upload URLs:", error);
     return NextResponse.json(
       { error: "Failed to generate upload URLs" },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * PATCH /api/pro/contractor/document-completed-service-submissions-records-records/:id/upload
- * Confirm uploads and save S3 keys to document-completed-service-submissions-records record
- */
-export async function PATCH(
-  req: Request,
-  ctx: { params: Promise<{ id: string }> }
-) {
-  const { id: serviceRecordId } = await ctx.params;
-  const session = await getServerSession(authConfig);
-
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  // Verify document-completed-service-submissions-records record belongs to this contractor
-  const serviceRecord = await prisma.serviceRecord.findUnique({
-    where: { id: serviceRecordId },
-  });
-
-  if (!serviceRecord) {
-    return NextResponse.json(
-      { error: "Work record not found" },
-      { status: 404 }
-    );
-  }
-
-  if (serviceRecord.contractorId !== session.user.id) {
-    return NextResponse.json(
-      { error: "You do not own this document-completed-service-submissions-records record" },
-      { status: 403 }
-    );
-  }
-
-  try {
-    const body = await req.json();
-    const { uploadedFiles } = body;
-
-    // Organize files by category
-    const photos: string[] = [];
-    let invoiceUrl: string | null = null;
-    let warrantyUrl: string | null = null;
-
-    for (const file of uploadedFiles) {
-      if (file.category === "photo") {
-        photos.push(file.publicUrl);
-      } else if (file.category === "invoice") {
-        invoiceUrl = file.publicUrl;
-      } else if (file.category === "warranty") {
-        warrantyUrl = file.publicUrl;
-      }
-    }
-
-    // Update document-completed-service-submissions-records record with file URLs
-    const updated = await prisma.serviceRecord.update({
-      where: { id: serviceRecordId },
-      data: {
-        photos: {
-          set: photos, // Replace existing photos
-        },
-        ...(invoiceUrl && { invoiceUrl }),
-        ...(warrantyUrl && { warrantyUrl }),
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      serviceRecord: updated,
-      message: "Files uploaded successfully",
-    });
-  } catch (error) {
-    console.error("Error confirming uploads:", error);
-    return NextResponse.json(
-      { error: "Failed to confirm uploads" },
       { status: 500 }
     );
   }

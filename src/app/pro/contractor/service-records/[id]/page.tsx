@@ -1,3 +1,4 @@
+// app/pro/contractor/service-records/[id]/page.tsx
 export const dynamic = "force-dynamic";
 
 import { getServerSession } from "next-auth";
@@ -5,15 +6,37 @@ import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { ServiceRecordDetailClient } from "./ServiceRecordDetailClient";
 
-export default async function ServiceRecordDetailPage({
-  params,
-}: {
-  params: Promise<{ serviceId: string }>;
-}) {
-  const { serviceId } = await params;
+type PageProps = {
+  params: Promise<{ id: string }>;
+};
+
+type AttachmentType = "photo" | "invoice" | "warranty" | "other";
+
+function inferAttachmentType(
+  url: string | null,
+  filename: string,
+  mimeType: string | null
+): AttachmentType {
+  const safeUrl = (url || "").toLowerCase();
+  const lowerName = filename.toLowerCase();
+  const safeMime = (mimeType || "").toLowerCase();
+
+  if (safeUrl.includes("/invoice/") || lowerName.includes("invoice")) {
+    return "invoice";
+  }
+  if (safeUrl.includes("/warranty/") || lowerName.includes("warranty")) {
+    return "warranty";
+  }
+  if (safeMime.startsWith("image/")) {
+    return "photo";
+  }
+  return "other";
+}
+
+export default async function ServiceRecordDetailPage({ params }: PageProps) {
+  const { id: serviceId } = await params;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) {
@@ -22,11 +45,12 @@ export default async function ServiceRecordDetailPage({
 
   const userId = session.user.id;
 
-  // Verify contractor role/type
+  // verify contractor
   const user = await prisma.user.findUnique({
     where: { id: userId },
     include: { proProfile: true },
   });
+
   if (user?.role !== "PRO" || user.proProfile?.type !== "CONTRACTOR") {
     redirect("/pro/contractor/dashboard");
   }
@@ -53,15 +77,10 @@ export default async function ServiceRecordDetailPage({
           size: true,
         },
       },
-
-      // OPTIONAL relations – wire these once you add them to Prisma:
-      // contractorReminders: true,
-      // warranties: { include: { attachment: true } },
     },
   });
 
-  if (!serviceRecord
-  ) {
+  if (!serviceRecord) {
     notFound();
   }
 
@@ -90,6 +109,10 @@ export default async function ServiceRecordDetailPage({
     verifiedAt: serviceRecord.verifiedAt
       ? serviceRecord.verifiedAt.toISOString()
       : null,
+    // warranty metadata from the form / Prisma
+    warrantyIncluded: serviceRecord.warrantyIncluded ?? false,
+    warrantyLength: serviceRecord.warrantyLength ?? null,
+    warrantyDetails: serviceRecord.warrantyDetails ?? null,
     addressLine: addrLine,
     home: {
       id: serviceRecord.home.id,
@@ -105,17 +128,15 @@ export default async function ServiceRecordDetailPage({
       url: a.url,
       mimeType: a.mimeType,
       size: Number(a.size),
+      type: inferAttachmentType(a.url, a.filename, a.mimeType),
     })),
-
-    // If/when you add these relations, map them here:
-    reminders: [], // filled client-side via props once you have contractorReminders
-    warranties: [], // same for warranties
+    // these can be wired later from a dedicated reminders / warranties query
+    reminders: [] as any[],
+    warranties: [] as any[],
   };
 
   return (
     <main className="relative min-h-screen text-white">
-      <Bg />
-
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 lg:px-8 space-y-4">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">
@@ -141,22 +162,5 @@ export default async function ServiceRecordDetailPage({
         <ServiceRecordDetailClient record={detail} />
       </div>
     </main>
-  );
-}
-
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover object-center"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-    </div>
   );
 }

@@ -4,12 +4,10 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import {
   s3,
-  S3_BUCKET,
   buildRecordKey,
   buildReminderKey,
   buildWarrantyKey,
   buildServiceRequestKey,
-  PUBLIC_S3_URL_PREFIX
 } from "@/lib/s3";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -18,21 +16,37 @@ import { requireHomeAccess } from "@/lib/authz";
 
 export const runtime = "nodejs";
 
+// --- ENV CONFIG ---
+const BUCKET = process.env.S3_BUCKET;
+const REGION = process.env.AWS_REGION;
+const PUBLIC_PREFIX = process.env.PUBLIC_S3_URL_PREFIX;
+
+if (!BUCKET) throw new Error("Missing env: S3_BUCKET");
+if (!REGION) throw new Error("Missing env: AWS_REGION");
+if (!PUBLIC_PREFIX) throw new Error("Missing env: PUBLIC_S3_URL_PREFIX");
+
 /**
  * POST /api/uploads/presign
- * Generate presigned URL for uploads
- * Works for both homeowners (records/reminders/warranties/service-requests) and contractors (document-completed-service-submissions records)
+ * Generate presigned upload URL for homeowners + contractors
  */
 export async function POST(req: Request) {
   const session = await getServerSession(authConfig);
-
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await req.json();
-    const { homeId, recordId, warrantyId, reminderId, serviceRequestId, filename, contentType, size } = body;
+    const {
+      homeId,
+      recordId,
+      warrantyId,
+      reminderId,
+      serviceRequestId,
+      filename,
+      contentType,
+      size,
+    } = body;
 
     if (!homeId || !filename || typeof size !== "number") {
       return NextResponse.json(
@@ -48,16 +62,19 @@ export async function POST(req: Request) {
       );
     }
 
-    // Check if user is a contractor with active connection
+    // --- Determine user type ---
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       include: { proProfile: true },
     });
 
-    const isContractor = user?.role === "PRO" && user.proProfile?.type === "CONTRACTOR";
+    const isContractor =
+      user?.role === "PRO" && user.proProfile?.type === "CONTRACTOR";
 
+    /**
+     * CONTRACTOR FLOW
+     */
     if (isContractor) {
-      // Contractor flow - verify active connection
       const connection = await prisma.connection.findFirst({
         where: {
           contractorId: session.user.id,
@@ -73,7 +90,6 @@ export async function POST(req: Request) {
         );
       }
 
-      // Verify document-completed-service-submissions record if provided
       if (recordId) {
         const serviceRecord = await prisma.serviceRecord.findFirst({
           where: {
@@ -90,11 +106,14 @@ export async function POST(req: Request) {
           );
         }
       }
-    } else {
-      // Homeowner flow - verify stats access
+    }
+
+    /**
+     * HOMEOWNER FLOW
+     */
+    else {
       await requireHomeAccess(homeId, session.user.id);
 
-      // Verify job request if provided
       if (serviceRequestId) {
         const serviceRequest = await prisma.serviceRequest.findFirst({
           where: {
@@ -113,7 +132,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // Build the S3 key based on entity type
+    // --- Determine correct S3 key using builders ---
     let key: string;
 
     if (serviceRequestId) {
@@ -126,28 +145,31 @@ export async function POST(req: Request) {
       key = buildRecordKey(homeId, recordId, filename);
     } else {
       return NextResponse.json(
-        { error: "Missing entity ID (recordId, warrantyId, reminderId, or serviceRequestId)" },
+        {
+          error:
+            "Missing entity identifier: recordId, warrantyId, reminderId, or serviceRequestId",
+        },
         { status: 400 }
       );
     }
 
-    // Create presigned URL
-    const cmd = new PutObjectCommand({
-      Bucket: S3_BUCKET,
+    // --- Generate S3 presigned PUT URL ---
+    const command = new PutObjectCommand({
+      Bucket: BUCKET,
       Key: key,
       ContentType: contentType,
+      Metadata: {
+        uploadedBy: session.user.id,
+      },
     });
 
-    const url = await getSignedUrl(s3, cmd, { expiresIn: 300 }); // 5 minutes
+    const url = await getSignedUrl(s3, command, { expiresIn: 300 });
 
-    // Public GET URL
-    const publicUrl = PUBLIC_S3_URL_PREFIX
-      ? `${PUBLIC_S3_URL_PREFIX}/${key}`
-      : null;
+    const publicUrl = `${PUBLIC_PREFIX}/${key}`;
 
     return NextResponse.json({ key, url, publicUrl }, { status: 200 });
-  } catch (error) {
-    console.error("Error generating presigned URL:", error);
+  } catch (err) {
+    console.error("Presign error:", err);
     return NextResponse.json(
       { error: "Failed to generate upload URL" },
       { status: 500 }

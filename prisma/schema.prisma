@@ -895,6 +895,7 @@ model ServiceRecord {
   warrantyLength   String?
   warrantyDetails  String? @db.Text
 
+
   status ServiceSubmissionStatus @default(DOCUMENTED)
 
   isVerified Boolean   @default(false)

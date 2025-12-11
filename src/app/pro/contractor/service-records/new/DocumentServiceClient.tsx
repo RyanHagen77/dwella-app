@@ -24,6 +24,15 @@ type ServiceForm = {
   serviceDate: string;
   cost: string;
   description: string;
+
+  // Warranty fields
+  warrantyIncluded: boolean;
+  warrantyItem: string;
+  warrantyProvider: string;
+  warrantyPolicyNo: string;
+  warrantyPurchasedAt: string;
+  warrantyExpiresAt: string;
+  warrantyNote: string;
 };
 
 type VerifiedAddress = {
@@ -50,12 +59,25 @@ export function DocumentServiceClient({
     connectedHomes.length > 0 ? "connected" : "address"
   );
 
+  const today = React.useMemo(
+    () => new Date().toISOString().slice(0, 10),
+    []
+  );
+
   const [form, setForm] = useState<ServiceForm>({
     homeId: "",
     serviceType: "",
-    serviceDate: new Date().toISOString().slice(0, 10),
+    serviceDate: today,
     cost: "",
     description: "",
+
+    warrantyIncluded: false,
+    warrantyItem: "",
+    warrantyProvider: "",
+    warrantyPolicyNo: "",
+    warrantyPurchasedAt: today,
+    warrantyExpiresAt: "",
+    warrantyNote: "",
   });
 
   const [verifiedAddress, setVerifiedAddress] =
@@ -67,40 +89,66 @@ export function DocumentServiceClient({
 
   const selectedHome = connectedHomes.find((h) => h.id === form.homeId) || null;
 
+  /**
+   * CONTRACTOR-specific upload route:
+   * POST /api/pro/contractor/service-records/:id/upload
+   * Body: { files: [{ name, type, size, category }] }
+   * Returns: { success, uploadUrls: [{ uploadUrl, publicUrl, ... }] }
+   */
   async function uploadFileWithRecordId(
     file: File,
-    homeId: string,
-    recordId: string
+    recordId: string,
+    category: "photo" | "invoice" | "warranty"
   ): Promise<string> {
-    const presignResponse = await fetch("/api/uploads/presign", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        homeId,
-        recordId,
-        filename: file.name,
-        contentType: file.type,
-        size: file.size,
-      }),
-    });
+    const presignResponse = await fetch(
+      `/api/pro/contractor/service-records/${recordId}/upload`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          files: [
+            {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              category,
+            },
+          ],
+        }),
+      }
+    );
 
     if (!presignResponse.ok) {
-      const error = (await presignResponse.json().catch(() => null)) as
+      const errorJson = (await presignResponse.json().catch(() => null)) as
         | { error?: string }
         | null;
-      throw new Error(error?.error || "Failed to get upload URL");
+      throw new Error(
+        errorJson?.error || "Failed to get upload URL for service record"
+      );
     }
 
-    const { url: uploadUrl, publicUrl } = (await presignResponse.json()) as {
-      url: string;
-      publicUrl: string;
+    const json = (await presignResponse.json()) as {
+      success: boolean;
+      uploadUrls: {
+        fileId: string;
+        fileName: string;
+        category: string;
+        uploadUrl: string;
+        key: string;
+        publicUrl: string;
+      }[];
     };
 
-    const uploadResponse = await fetch(uploadUrl, {
+    const uploadInfo = json.uploadUrls?.[0];
+    if (!uploadInfo?.uploadUrl || !uploadInfo.publicUrl) {
+      throw new Error("Invalid upload URL response from server");
+    }
+
+    const uploadResponse = await fetch(uploadInfo.uploadUrl, {
       method: "PUT",
       body: file,
       headers: {
-        "Content-Type": file.type,
+        "Content-Type": file.type || "application/octet-stream",
       },
     });
 
@@ -108,7 +156,8 @@ export function DocumentServiceClient({
       throw new Error("Failed to upload file to storage");
     }
 
-    return publicUrl;
+    // Return public URL that we later PATCH onto the service record
+    return uploadInfo.publicUrl;
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -129,10 +178,15 @@ export function DocumentServiceClient({
       return;
     }
 
+    if (form.warrantyIncluded && !form.warrantyItem.trim()) {
+      alert("Warranty item is required when a warranty is included.");
+      return;
+    }
+
     setSaving(true);
 
     try {
-      // Build payload: either homeId OR address
+      // Build payload: either homeId OR address + warranty info
       const payload: {
         serviceType: string;
         serviceDate: string;
@@ -146,6 +200,9 @@ export function DocumentServiceClient({
           state: string;
           zip: string;
         };
+        warrantyIncluded: boolean;
+        warrantyLength?: string | null;
+        warrantyDetails?: string | null;
       } = {
         serviceType: form.serviceType.trim(),
         serviceDate: form.serviceDate,
@@ -153,6 +210,7 @@ export function DocumentServiceClient({
         description: form.description?.trim()
           ? form.description.trim()
           : null,
+        warrantyIncluded: form.warrantyIncluded,
       };
 
       if (mode === "connected") {
@@ -167,6 +225,25 @@ export function DocumentServiceClient({
         };
       }
 
+      // Map structured warranty fields into warrantyLength / warrantyDetails
+      if (form.warrantyIncluded) {
+        // here you're using "expiresAt" as the "length/term"
+        payload.warrantyLength = form.warrantyExpiresAt || null;
+
+        const detailsParts = [
+          form.warrantyItem && `Item: ${form.warrantyItem}`,
+          form.warrantyProvider && `Provider: ${form.warrantyProvider}`,
+          form.warrantyPolicyNo && `Policy: ${form.warrantyPolicyNo}`,
+          form.warrantyPurchasedAt &&
+            `Purchased: ${form.warrantyPurchasedAt}`,
+          form.warrantyExpiresAt && `Expires: ${form.warrantyExpiresAt}`,
+          form.warrantyNote && `Notes: ${form.warrantyNote}`,
+        ].filter(Boolean) as string[];
+
+        payload.warrantyDetails =
+          detailsParts.length > 0 ? detailsParts.join(" | ") : null;
+      }
+
       // Step 1: create record without files
       const createResponse = await fetch(
         "/api/pro/contractor/service-records",
@@ -179,7 +256,12 @@ export function DocumentServiceClient({
 
       const createJson = (await createResponse
         .json()
-        .catch(() => null)) as { error?: string; serviceRecord?: { id: string; homeId?: string | null } } | null;
+        .catch(() => null)) as
+        | {
+            error?: string;
+            serviceRecord?: { id: string };
+          }
+        | null;
 
       if (!createResponse.ok || !createJson?.serviceRecord?.id) {
         throw new Error(
@@ -189,44 +271,22 @@ export function DocumentServiceClient({
 
       const serviceRecord = createJson.serviceRecord;
       const recordId: string = serviceRecord.id;
-      const recordHomeId: string | null =
-        serviceRecord.homeId ?? null;
 
-      if (!recordHomeId) {
-        // Given how your system works, there *should* always be a Home,
-        // even for unclaimed addresses (an unclaimed Home row).
-        throw new Error(
-          "Service record was created without an associated home."
-        );
-      }
-
-      // Step 2: upload files with recordId + homeId
+      // Step 2: upload files for that record via contractor upload route
       setUploading(true);
 
       const photoUrls: string[] = [];
       for (const file of photoFiles) {
-        const url = await uploadFileWithRecordId(
-          file,
-          recordHomeId,
-          recordId
-        );
+        const url = await uploadFileWithRecordId(file, recordId, "photo");
         photoUrls.push(url);
       }
 
       const invoiceUrl = invoiceFile
-        ? await uploadFileWithRecordId(
-            invoiceFile,
-            recordHomeId,
-            recordId
-          )
+        ? await uploadFileWithRecordId(invoiceFile, recordId, "invoice")
         : null;
 
       const warrantyUrl = warrantyFile
-        ? await uploadFileWithRecordId(
-            warrantyFile,
-            recordHomeId,
-            recordId
-          )
+        ? await uploadFileWithRecordId(warrantyFile, recordId, "warranty")
         : null;
 
       setUploading(false);
@@ -538,6 +598,123 @@ export function DocumentServiceClient({
                 </p>
               )}
             </label>
+          </div>
+        </section>
+
+        {/* Warranty Details (structured) */}
+        <section className={glass}>
+          <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
+            Warranty Details
+          </h2>
+
+          <div className="space-y-4">
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={form.warrantyIncluded}
+                onChange={(e) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    warrantyIncluded: e.target.checked,
+                  }))
+                }
+                className="h-4 w-4 rounded border-white/30 bg-black/30"
+              />
+              <span className="text-sm text-white/85">
+                This work includes a warranty
+              </span>
+            </label>
+
+            {form.warrantyIncluded && (
+              <div className="space-y-4">
+                <label className="block">
+                  <span className={fieldLabel}>Covered Item *</span>
+                  <Input
+                    value={form.warrantyItem}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warrantyItem: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g., Water Heater"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className={fieldLabel}>Provider (optional)</span>
+                  <Input
+                    value={form.warrantyProvider}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warrantyProvider: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g., AO Smith"
+                  />
+                </label>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className={fieldLabel}>Policy # (optional)</span>
+                    <Input
+                      value={form.warrantyPolicyNo}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          warrantyPolicyNo: e.target.value,
+                        }))
+                      }
+                      placeholder="e.g., WH-123456"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className={fieldLabel}>Purchase Date</span>
+                    <Input
+                      type="date"
+                      value={form.warrantyPurchasedAt}
+                      onChange={(e) =>
+                        setForm((prev) => ({
+                          ...prev,
+                          warrantyPurchasedAt: e.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+
+                <label className="block">
+                  <span className={fieldLabel}>Expires (optional)</span>
+                  <Input
+                    type="date"
+                    value={form.warrantyExpiresAt}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warrantyExpiresAt: e.target.value,
+                      }))
+                    }
+                  />
+                </label>
+
+                <label className="block">
+                  <span className={fieldLabel}>Warranty Notes (optional)</span>
+                  <Textarea
+                    rows={3}
+                    value={form.warrantyNote}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        warrantyNote: e.target.value,
+                      }))
+                    }
+                    placeholder="Coverage details, serial numbers, limitations, etc."
+                  />
+                </label>
+              </div>
+            )}
           </div>
         </section>
 
