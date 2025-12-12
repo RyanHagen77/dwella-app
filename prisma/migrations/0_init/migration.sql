@@ -2,6 +2,15 @@
 CREATE TYPE "Role" AS ENUM ('HOMEOWNER', 'PRO', 'ADMIN');
 
 -- CreateEnum
+CREATE TYPE "HomeVerificationStatus" AS ENUM ('UNVERIFIED', 'VERIFIED_BY_POSTCARD', 'VERIFIED_BY_VENDOR');
+
+-- CreateEnum
+CREATE TYPE "HomeVerificationMethod" AS ENUM ('POSTCARD', 'VENDOR');
+
+-- CreateEnum
+CREATE TYPE "VerificationRecordStatus" AS ENUM ('PENDING', 'COMPLETED', 'EXPIRED', 'CANCELLED');
+
+-- CreateEnum
 CREATE TYPE "ProStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- CreateEnum
@@ -14,10 +23,13 @@ CREATE TYPE "AccessLevel" AS ENUM ('OWNER', 'VIEW', 'COMMENT', 'EDIT');
 CREATE TYPE "AttachmentVisibility" AS ENUM ('OWNER', 'HOME', 'PUBLIC');
 
 -- CreateEnum
-CREATE TYPE "EstablishedVia" AS ENUM ('VERIFIED_WORK', 'INVITATION', 'MANUAL');
+CREATE TYPE "EstablishedVia" AS ENUM ('VERIFIED_SERVICE', 'INVITATION', 'MANUAL');
 
 -- CreateEnum
 CREATE TYPE "ConnectionStatus" AS ENUM ('PENDING', 'ACTIVE', 'ARCHIVED');
+
+-- CreateEnum
+CREATE TYPE "ContractorReminderStatus" AS ENUM ('PENDING', 'DONE');
 
 -- CreateEnum
 CREATE TYPE "InvitationType" AS ENUM ('HOMEOWNER_TO_CONTRACTOR', 'CONTRACTOR_TO_HOMEOWNER');
@@ -38,7 +50,7 @@ CREATE TYPE "HomeSystemType" AS ENUM ('ROOF', 'HVAC', 'PLUMBING', 'ELECTRICAL', 
 CREATE TYPE "NotificationChannel" AS ENUM ('EMAIL', 'PUSH', 'INAPP');
 
 -- CreateEnum
-CREATE TYPE "WorkSubmissionStatus" AS ENUM ('PENDING_REVIEW', 'DOCUMENTED_UNVERIFIED', 'DOCUMENTED', 'APPROVED', 'REJECTED', 'DISPUTED', 'EXPIRED');
+CREATE TYPE "ServiceSubmissionStatus" AS ENUM ('PENDING_REVIEW', 'DOCUMENTED_UNVERIFIED', 'DOCUMENTED', 'APPROVED', 'REJECTED', 'DISPUTED', 'EXPIRED');
 
 -- CreateEnum
 CREATE TYPE "ServiceRequestStatus" AS ENUM ('PENDING', 'QUOTED', 'ACCEPTED', 'DECLINED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED');
@@ -96,6 +108,10 @@ CREATE TABLE "Home" (
     "photos" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "meta" JSONB,
     "ownerId" TEXT,
+    "verificationStatus" "HomeVerificationStatus" NOT NULL DEFAULT 'UNVERIFIED',
+    "verificationMethod" "HomeVerificationMethod",
+    "verifiedAt" TIMESTAMP(3),
+    "verifiedByUserId" TEXT,
     "previousOwnerId" TEXT,
     "transferredAt" TIMESTAMP(3),
     "archivedAt" TIMESTAMP(3),
@@ -104,6 +120,25 @@ CREATE TABLE "Home" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Home_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "HomeVerification" (
+    "id" TEXT NOT NULL,
+    "homeId" TEXT NOT NULL,
+    "method" "HomeVerificationMethod" NOT NULL,
+    "status" "VerificationRecordStatus" NOT NULL DEFAULT 'PENDING',
+    "codeHash" TEXT,
+    "vendorId" TEXT,
+    "createdByUserId" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expiresAt" TIMESTAMP(3),
+    "completedAt" TIMESTAMP(3),
+    "attempts" INTEGER NOT NULL DEFAULT 0,
+    "maxAttempts" INTEGER NOT NULL DEFAULT 5,
+    "lastAttemptAt" TIMESTAMP(3),
+
+    CONSTRAINT "HomeVerification_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -158,9 +193,9 @@ CREATE TABLE "Attachment" (
     "reminderId" TEXT,
     "warrantyId" TEXT,
     "messageId" TEXT,
-    "workRecordId" TEXT,
+    "serviceRecordId" TEXT,
     "serviceRequestId" TEXT,
-    "workSubmissionId" TEXT,
+    "serviceSubmissionId" TEXT,
     "key" TEXT NOT NULL,
     "url" TEXT NOT NULL,
     "filename" TEXT NOT NULL,
@@ -268,9 +303,9 @@ CREATE TABLE "Connection" (
     "acceptedAt" TIMESTAMP(3),
     "establishedVia" "EstablishedVia",
     "sourceRecordId" TEXT,
-    "verifiedWorkCount" INTEGER NOT NULL DEFAULT 0,
+    "verifiedServiceCount" INTEGER NOT NULL DEFAULT 0,
     "totalSpent" DECIMAL(12,2) NOT NULL DEFAULT 0,
-    "lastWorkDate" TIMESTAMP(3),
+    "lastServiceDate" TIMESTAMP(3),
     "notes" TEXT,
     "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "archivedAt" TIMESTAMP(3),
@@ -334,6 +369,30 @@ CREATE TABLE "Thread" (
 );
 
 -- CreateTable
+CREATE TABLE "ContractorReminder" (
+    "id" TEXT NOT NULL,
+    "proId" TEXT NOT NULL,
+    "serviceRecordId" TEXT,
+    "title" TEXT NOT NULL,
+    "dueAt" TIMESTAMP(3),
+    "note" TEXT,
+    "status" "ContractorReminderStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ContractorReminder_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ContractorReminderAttachment" (
+    "id" TEXT NOT NULL,
+    "reminderId" TEXT NOT NULL,
+    "attachmentId" TEXT NOT NULL,
+
+    CONSTRAINT "ContractorReminderAttachment_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ServiceRequest" (
     "id" TEXT NOT NULL,
     "connectionId" TEXT NOT NULL,
@@ -352,7 +411,6 @@ CREATE TABLE "ServiceRequest" (
     "contractorNotes" TEXT,
     "respondedAt" TIMESTAMP(3),
     "quoteId" TEXT,
-    "workRecordId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -360,7 +418,7 @@ CREATE TABLE "ServiceRequest" (
 );
 
 -- CreateTable
-CREATE TABLE "WorkSubmission" (
+CREATE TABLE "ServiceSubmission" (
     "id" TEXT NOT NULL,
     "invitedBy" TEXT NOT NULL,
     "invitationType" "InvitationType" NOT NULL DEFAULT 'CONTRACTOR_TO_HOMEOWNER',
@@ -374,25 +432,25 @@ CREATE TABLE "WorkSubmission" (
     "description" TEXT,
     "contractorId" TEXT NOT NULL,
     "homeownerId" TEXT,
-    "status" "WorkSubmissionStatus" NOT NULL DEFAULT 'PENDING_REVIEW',
+    "status" "ServiceSubmissionStatus" NOT NULL DEFAULT 'PENDING_REVIEW',
     "message" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "expiresAt" TIMESTAMP(3),
 
-    CONSTRAINT "WorkSubmission_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ServiceSubmission_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
-CREATE TABLE "WorkRecord" (
+CREATE TABLE "ServiceRecord" (
     "id" TEXT NOT NULL,
     "serviceRequestId" TEXT,
     "submissionId" TEXT,
     "homeId" TEXT NOT NULL,
     "contractorId" TEXT NOT NULL,
     "addressSnapshot" JSONB,
-    "workType" TEXT NOT NULL,
-    "workDate" TIMESTAMP(3) NOT NULL,
+    "serviceType" TEXT NOT NULL,
+    "serviceDate" TIMESTAMP(3) NOT NULL,
     "description" TEXT,
     "cost" DECIMAL(12,2),
     "invoiceUrl" TEXT,
@@ -400,7 +458,7 @@ CREATE TABLE "WorkRecord" (
     "warrantyIncluded" BOOLEAN NOT NULL DEFAULT false,
     "warrantyLength" TEXT,
     "warrantyDetails" TEXT,
-    "status" "WorkSubmissionStatus" NOT NULL DEFAULT 'DOCUMENTED',
+    "status" "ServiceSubmissionStatus" NOT NULL DEFAULT 'DOCUMENTED',
     "isVerified" BOOLEAN NOT NULL DEFAULT false,
     "claimedBy" TEXT,
     "claimedAt" TIMESTAMP(3),
@@ -414,7 +472,7 @@ CREATE TABLE "WorkRecord" (
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    CONSTRAINT "WorkRecord_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "ServiceRecord_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -528,6 +586,17 @@ CREATE TABLE "VerificationToken" (
     "expires" TIMESTAMP(3) NOT NULL
 );
 
+-- CreateTable
+CREATE TABLE "EmailVerificationToken" (
+    "id" TEXT NOT NULL,
+    "token" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "EmailVerificationToken_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "PasswordResetToken_token_key" ON "PasswordResetToken"("token");
 
@@ -592,13 +661,13 @@ CREATE INDEX "Attachment_reminderId_idx" ON "Attachment"("reminderId");
 CREATE INDEX "Attachment_warrantyId_idx" ON "Attachment"("warrantyId");
 
 -- CreateIndex
-CREATE INDEX "Attachment_workRecordId_idx" ON "Attachment"("workRecordId");
+CREATE INDEX "Attachment_serviceRecordId_idx" ON "Attachment"("serviceRecordId");
 
 -- CreateIndex
 CREATE INDEX "Attachment_serviceRequestId_idx" ON "Attachment"("serviceRequestId");
 
 -- CreateIndex
-CREATE INDEX "Attachment_workSubmissionId_idx" ON "Attachment"("workSubmissionId");
+CREATE INDEX "Attachment_serviceSubmissionId_idx" ON "Attachment"("serviceSubmissionId");
 
 -- CreateIndex
 CREATE INDEX "Attachment_messageId_idx" ON "Attachment"("messageId");
@@ -611,15 +680,6 @@ CREATE INDEX "Attachment_checksum_idx" ON "Attachment"("checksum");
 
 -- CreateIndex
 CREATE INDEX "Attachment_homeId_visibility_createdAt_idx" ON "Attachment"("homeId", "visibility", "createdAt");
-
--- CreateIndex
-CREATE INDEX "Reminder_homeId_dueAt_idx" ON "Reminder"("homeId", "dueAt");
-
--- CreateIndex
-CREATE INDEX "Reminder_createdBy_idx" ON "Reminder"("createdBy");
-
--- CreateIndex
-CREATE INDEX "Reminder_homeId_dueAt_createdBy_idx" ON "Reminder"("homeId", "dueAt", "createdBy");
 
 -- CreateIndex
 CREATE INDEX "Warranty_homeId_expiresAt_idx" ON "Warranty"("homeId", "expiresAt");
@@ -703,9 +763,6 @@ CREATE INDEX "Thread_status_idx" ON "Thread"("status");
 CREATE UNIQUE INDEX "ServiceRequest_quoteId_key" ON "ServiceRequest"("quoteId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ServiceRequest_workRecordId_key" ON "ServiceRequest"("workRecordId");
-
--- CreateIndex
 CREATE INDEX "ServiceRequest_connectionId_idx" ON "ServiceRequest"("connectionId");
 
 -- CreateIndex
@@ -724,46 +781,46 @@ CREATE INDEX "ServiceRequest_status_idx" ON "ServiceRequest"("status");
 CREATE INDEX "ServiceRequest_createdAt_idx" ON "ServiceRequest"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "WorkSubmission_contractorId_idx" ON "WorkSubmission"("contractorId");
+CREATE INDEX "ServiceSubmission_contractorId_idx" ON "ServiceSubmission"("contractorId");
 
 -- CreateIndex
-CREATE INDEX "WorkSubmission_homeownerId_idx" ON "WorkSubmission"("homeownerId");
+CREATE INDEX "ServiceSubmission_homeownerId_idx" ON "ServiceSubmission"("homeownerId");
 
 -- CreateIndex
-CREATE INDEX "WorkSubmission_homeId_idx" ON "WorkSubmission"("homeId");
+CREATE INDEX "ServiceSubmission_homeId_idx" ON "ServiceSubmission"("homeId");
 
 -- CreateIndex
-CREATE INDEX "WorkSubmission_status_idx" ON "WorkSubmission"("status");
+CREATE INDEX "ServiceSubmission_status_idx" ON "ServiceSubmission"("status");
 
 -- CreateIndex
-CREATE INDEX "WorkSubmission_createdAt_idx" ON "WorkSubmission"("createdAt");
+CREATE INDEX "ServiceSubmission_createdAt_idx" ON "ServiceSubmission"("createdAt");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "WorkRecord_serviceRequestId_key" ON "WorkRecord"("serviceRequestId");
+CREATE UNIQUE INDEX "ServiceRecord_serviceRequestId_key" ON "ServiceRecord"("serviceRequestId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "WorkRecord_submissionId_key" ON "WorkRecord"("submissionId");
+CREATE UNIQUE INDEX "ServiceRecord_submissionId_key" ON "ServiceRecord"("submissionId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "WorkRecord_finalRecordId_key" ON "WorkRecord"("finalRecordId");
+CREATE UNIQUE INDEX "ServiceRecord_finalRecordId_key" ON "ServiceRecord"("finalRecordId");
 
 -- CreateIndex
-CREATE INDEX "WorkRecord_homeId_idx" ON "WorkRecord"("homeId");
+CREATE INDEX "ServiceRecord_homeId_idx" ON "ServiceRecord"("homeId");
 
 -- CreateIndex
-CREATE INDEX "WorkRecord_contractorId_idx" ON "WorkRecord"("contractorId");
+CREATE INDEX "ServiceRecord_contractorId_idx" ON "ServiceRecord"("contractorId");
 
 -- CreateIndex
-CREATE INDEX "WorkRecord_status_idx" ON "WorkRecord"("status");
+CREATE INDEX "ServiceRecord_status_idx" ON "ServiceRecord"("status");
 
 -- CreateIndex
-CREATE INDEX "WorkRecord_submissionId_idx" ON "WorkRecord"("submissionId");
+CREATE INDEX "ServiceRecord_submissionId_idx" ON "ServiceRecord"("submissionId");
 
 -- CreateIndex
-CREATE INDEX "WorkRecord_createdAt_idx" ON "WorkRecord"("createdAt");
+CREATE INDEX "ServiceRecord_createdAt_idx" ON "ServiceRecord"("createdAt");
 
 -- CreateIndex
-CREATE INDEX "WorkRecord_isVerified_idx" ON "WorkRecord"("isVerified");
+CREATE INDEX "ServiceRecord_isVerified_idx" ON "ServiceRecord"("isVerified");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "Quote_serviceRequestId_key" ON "Quote"("serviceRequestId");
@@ -834,6 +891,12 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 -- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "EmailVerificationToken_token_key" ON "EmailVerificationToken"("token");
+
+-- CreateIndex
+CREATE INDEX "EmailVerificationToken_userId_idx" ON "EmailVerificationToken"("userId");
+
 -- AddForeignKey
 ALTER TABLE "PasswordResetToken" ADD CONSTRAINT "PasswordResetToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -844,7 +907,19 @@ ALTER TABLE "User" ADD CONSTRAINT "User_lastHomeId_fkey" FOREIGN KEY ("lastHomeI
 ALTER TABLE "Home" ADD CONSTRAINT "Home_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Home" ADD CONSTRAINT "Home_verifiedByUserId_fkey" FOREIGN KEY ("verifiedByUserId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Home" ADD CONSTRAINT "Home_previousOwnerId_fkey" FOREIGN KEY ("previousOwnerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "HomeVerification" ADD CONSTRAINT "HomeVerification_homeId_fkey" FOREIGN KEY ("homeId") REFERENCES "Home"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "HomeVerification" ADD CONSTRAINT "HomeVerification_vendorId_fkey" FOREIGN KEY ("vendorId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "HomeVerification" ADD CONSTRAINT "HomeVerification_createdByUserId_fkey" FOREIGN KEY ("createdByUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "HomeOwnership" ADD CONSTRAINT "HomeOwnership_homeId_fkey" FOREIGN KEY ("homeId") REFERENCES "Home"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -883,7 +958,7 @@ ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_warrantyId_fkey" FOREIGN KEY
 ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_messageId_fkey" FOREIGN KEY ("messageId") REFERENCES "Message"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_workRecordId_fkey" FOREIGN KEY ("workRecordId") REFERENCES "WorkRecord"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_serviceRecordId_fkey" FOREIGN KEY ("serviceRecordId") REFERENCES "ServiceRecord"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_uploadedBy_fkey" FOREIGN KEY ("uploadedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
@@ -892,7 +967,7 @@ ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_uploadedBy_fkey" FOREIGN KEY
 ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_serviceRequestId_fkey" FOREIGN KEY ("serviceRequestId") REFERENCES "ServiceRequest"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_workSubmissionId_fkey" FOREIGN KEY ("workSubmissionId") REFERENCES "WorkSubmission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "Attachment" ADD CONSTRAINT "Attachment_serviceSubmissionId_fkey" FOREIGN KEY ("serviceSubmissionId") REFERENCES "ServiceSubmission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Reminder" ADD CONSTRAINT "Reminder_homeId_fkey" FOREIGN KEY ("homeId") REFERENCES "Home"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -961,10 +1036,19 @@ ALTER TABLE "Thread" ADD CONSTRAINT "Thread_homeId_fkey" FOREIGN KEY ("homeId") 
 ALTER TABLE "Thread" ADD CONSTRAINT "Thread_relatedRecordId_fkey" FOREIGN KEY ("relatedRecordId") REFERENCES "Record"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ServiceRequest" ADD CONSTRAINT "ServiceRequest_quoteId_fkey" FOREIGN KEY ("quoteId") REFERENCES "Quote"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ContractorReminder" ADD CONSTRAINT "ContractorReminder_proId_fkey" FOREIGN KEY ("proId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "ServiceRequest" ADD CONSTRAINT "ServiceRequest_workRecordId_fkey" FOREIGN KEY ("workRecordId") REFERENCES "WorkRecord"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ContractorReminder" ADD CONSTRAINT "ContractorReminder_serviceRecordId_fkey" FOREIGN KEY ("serviceRecordId") REFERENCES "ServiceRecord"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ContractorReminderAttachment" ADD CONSTRAINT "ContractorReminderAttachment_reminderId_fkey" FOREIGN KEY ("reminderId") REFERENCES "ContractorReminder"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ContractorReminderAttachment" ADD CONSTRAINT "ContractorReminderAttachment_attachmentId_fkey" FOREIGN KEY ("attachmentId") REFERENCES "Attachment"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ServiceRequest" ADD CONSTRAINT "ServiceRequest_quoteId_fkey" FOREIGN KEY ("quoteId") REFERENCES "Quote"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ServiceRequest" ADD CONSTRAINT "ServiceRequest_connectionId_fkey" FOREIGN KEY ("connectionId") REFERENCES "Connection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -979,31 +1063,34 @@ ALTER TABLE "ServiceRequest" ADD CONSTRAINT "ServiceRequest_homeownerId_fkey" FO
 ALTER TABLE "ServiceRequest" ADD CONSTRAINT "ServiceRequest_contractorId_fkey" FOREIGN KEY ("contractorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkSubmission" ADD CONSTRAINT "WorkSubmission_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ServiceSubmission" ADD CONSTRAINT "ServiceSubmission_invitedBy_fkey" FOREIGN KEY ("invitedBy") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkSubmission" ADD CONSTRAINT "WorkSubmission_homeId_fkey" FOREIGN KEY ("homeId") REFERENCES "Home"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ServiceSubmission" ADD CONSTRAINT "ServiceSubmission_homeId_fkey" FOREIGN KEY ("homeId") REFERENCES "Home"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkSubmission" ADD CONSTRAINT "WorkSubmission_contractorId_fkey" FOREIGN KEY ("contractorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ServiceSubmission" ADD CONSTRAINT "ServiceSubmission_contractorId_fkey" FOREIGN KEY ("contractorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkSubmission" ADD CONSTRAINT "WorkSubmission_homeownerId_fkey" FOREIGN KEY ("homeownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ServiceSubmission" ADD CONSTRAINT "ServiceSubmission_homeownerId_fkey" FOREIGN KEY ("homeownerId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkRecord" ADD CONSTRAINT "WorkRecord_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "WorkSubmission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ServiceRecord" ADD CONSTRAINT "ServiceRecord_serviceRequestId_fkey" FOREIGN KEY ("serviceRequestId") REFERENCES "ServiceRequest"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkRecord" ADD CONSTRAINT "WorkRecord_homeId_fkey" FOREIGN KEY ("homeId") REFERENCES "Home"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ServiceRecord" ADD CONSTRAINT "ServiceRecord_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "ServiceSubmission"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkRecord" ADD CONSTRAINT "WorkRecord_contractorId_fkey" FOREIGN KEY ("contractorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ServiceRecord" ADD CONSTRAINT "ServiceRecord_homeId_fkey" FOREIGN KEY ("homeId") REFERENCES "Home"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkRecord" ADD CONSTRAINT "WorkRecord_approvedBy_fkey" FOREIGN KEY ("approvedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ServiceRecord" ADD CONSTRAINT "ServiceRecord_contractorId_fkey" FOREIGN KEY ("contractorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "WorkRecord" ADD CONSTRAINT "WorkRecord_finalRecordId_fkey" FOREIGN KEY ("finalRecordId") REFERENCES "Record"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "ServiceRecord" ADD CONSTRAINT "ServiceRecord_approvedBy_fkey" FOREIGN KEY ("approvedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ServiceRecord" ADD CONSTRAINT "ServiceRecord_finalRecordId_fkey" FOREIGN KEY ("finalRecordId") REFERENCES "Record"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Quote" ADD CONSTRAINT "Quote_connectionId_fkey" FOREIGN KEY ("connectionId") REFERENCES "Connection"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -1037,3 +1124,7 @@ ALTER TABLE "HomeTransfer" ADD CONSTRAINT "HomeTransfer_toUserId_fkey" FOREIGN K
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "EmailVerificationToken" ADD CONSTRAINT "EmailVerificationToken_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+

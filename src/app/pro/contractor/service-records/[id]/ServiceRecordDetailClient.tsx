@@ -1,15 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { ComponentProps } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import {
-  glass,
-  glassTight,
-  heading,
-  textMeta,
-  ctaGhost,
-} from "@/lib/glass";
+import { glass, glassTight, heading, textMeta, ctaGhost } from "@/lib/glass";
 import { ServiceRecordActions } from "./ServiceRecordActions";
 import ContractorReminderModal from "@/app/pro/contractor/reminders/ContractorReminderModal";
 import type { ContractorReminderDTO } from "@/app/pro/contractor/reminders/ContractorRemindersClient";
@@ -25,16 +20,6 @@ type AttachmentDTO = {
   type?: AttachmentType;
 };
 
-type WarrantyDTO = {
-  id: string;
-  title: string;
-  description: string | null;
-  coverageTerm: string | null;
-  createdAt: string;
-  acceptedAt: string | null;
-  attachment: { id: string; filename: string; url: string | null };
-};
-
 type ServiceRecordDetail = {
   id: string;
   homeId: string;
@@ -46,10 +31,12 @@ type ServiceRecordDetail = {
   isVerified: boolean;
   verifiedAt: string | null;
   addressLine: string;
+
   // warranty metadata from creation form
   warrantyIncluded: boolean;
   warrantyLength: string | null;
   warrantyDetails: string | null;
+
   home: {
     id: string;
     address: string;
@@ -58,9 +45,9 @@ type ServiceRecordDetail = {
     zip: string | null;
     homeownerName: string;
   };
+
   attachments: AttachmentDTO[];
   reminders?: ContractorReminderDTO[];
-  warranties?: WarrantyDTO[];
 };
 
 type Props = {
@@ -78,24 +65,36 @@ function formatDate(iso: string | null | undefined) {
   });
 }
 
+type PresignResponse = {
+  success: boolean;
+  uploadUrls: {
+    fileId: string;
+    fileName: string;
+    category: "photo" | "invoice" | "warranty";
+    uploadUrl: string;
+    key: string;
+    publicUrl: string;
+  }[];
+};
+
 export function ServiceRecordDetailClient({ record }: Props) {
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
   const [reminders, setReminders] = useState<ContractorReminderDTO[]>(
-    record.reminders || []
-  );
-  const [warranties, setWarranties] = useState<WarrantyDTO[]>(
-    record.warranties || []
+    record.reminders ?? []
   );
   const [uploadingWarranty, setUploadingWarranty] = useState(false);
 
-  const serializedServiceRecord = {
-    id: record.id,
-    serviceType: record.serviceType,
-    serviceDate: record.serviceDate.slice(0, 10),
-    description: record.description,
-    cost: record.cost,
-    status: record.status,
-  };
+  const serializedServiceRecord = useMemo(
+    () => ({
+      id: record.id,
+      serviceType: record.serviceType,
+      serviceDate: record.serviceDate.slice(0, 10),
+      description: record.description,
+      cost: record.cost,
+      status: record.status,
+    }),
+    [record]
+  );
 
   function onReminderSaved(saved: ContractorReminderDTO) {
     setReminders((prev) => {
@@ -117,69 +116,84 @@ export function ServiceRecordDetailClient({ record }: Props) {
     try {
       setUploadingWarranty(true);
 
-      // 1. get presign (generic attachments presign)
-      const presignRes = await fetch("/api/uploads/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          // we only need storage here – homeId/recordId wiring happens in the backend
-          homeId: record.homeId,
-          recordId: record.id,
-          filename: file.name,
-          contentType: file.type,
-          size: file.size,
-        }),
-      });
-      if (!presignRes.ok) throw new Error("Failed to get upload URL");
-      const { url, key, publicUrl } = await presignRes.json();
-
-      // 2. upload to S3
-      const putRes = await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!putRes.ok) throw new Error("Failed to upload warranty");
-
-      // 3. store attachment metadata
-      const attachRes = await fetch("/api/attachments", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          size: file.size,
-          contentType: file.type,
-          storageKey: key,
-          url: publicUrl,
-        }),
-      });
-
-      if (!attachRes.ok) throw new Error("Failed to save attachment");
-      const attachJson = await attachRes.json();
-      const attachmentId = attachJson.attachment.id as string;
-
-      // 4. attach to this service record (work record)
-      const warrantyRes = await fetch(
-        `/api/pro/contractor/service-records/${record.id}/warranty`,
+      // 1) Presign via contractor service-record upload route
+      const presignRes = await fetch(
+        `/api/pro/contractor/service-records/${record.id}/upload`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            attachmentId,
-            title: `${record.serviceType} warranty`,
-            description: record.warrantyDetails,
-            coverageTerm: record.warrantyLength,
+            files: [
+              {
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                category: "warranty",
+              },
+            ],
           }),
         }
       );
 
-      if (!warrantyRes.ok) throw new Error("Failed to attach warranty");
-      const { warranty } = await warrantyRes.json();
+      if (!presignRes.ok) {
+        const j: unknown = await presignRes.json().catch(() => null);
+        const msg =
+          typeof j === "object" && j && "error" in j && typeof (j as { error?: unknown }).error === "string"
+            ? (j as { error: string }).error
+            : "Failed to get upload URL";
+        throw new Error(msg);
+      }
 
-      setWarranties((prev) => [...prev, warranty]);
+      const presignJson = (await presignRes.json()) as PresignResponse;
+      const uploadInfo = presignJson.uploadUrls?.[0];
+
+      if (!uploadInfo?.uploadUrl || !uploadInfo.publicUrl) {
+        throw new Error("Invalid presign response");
+      }
+
+      // 2) Upload PUT to S3
+      const putRes = await fetch(uploadInfo.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+
+      if (!putRes.ok) {
+        throw new Error("Failed to upload warranty file to storage");
+      }
+
+      // 3) PATCH service record (Option B will create/update Warranty row + HOME attachment)
+      const patchRes = await fetch(
+        `/api/pro/contractor/service-records/${record.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            warranty: uploadInfo.publicUrl,
+
+            // keep warranty meta consistent
+            warrantyIncluded: record.warrantyIncluded ? true : true,
+            warrantyLength: record.warrantyLength ?? null,
+            warrantyDetails: record.warrantyDetails ?? null,
+          }),
+        }
+      );
+
+      if (!patchRes.ok) {
+        const j: unknown = await patchRes.json().catch(() => null);
+        const msg =
+          typeof j === "object" && j && "error" in j && typeof (j as { error?: unknown }).error === "string"
+            ? (j as { error: string }).error
+            : "Failed to attach warranty to service record";
+        throw new Error(msg);
+      }
+
+      // If you want the new attachment to appear immediately without a full reload,
+      // you can add a router.refresh() and fetch fresh server data.
+      // For now: it’s uploaded + linked; page will show it on next navigation/refresh.
     } catch (err) {
       console.error(err);
-      alert("Something went wrong attaching the warranty.");
+      alert(err instanceof Error ? err.message : "Something went wrong uploading the warranty.");
     } finally {
       setUploadingWarranty(false);
       e.target.value = "";
@@ -193,9 +207,15 @@ export function ServiceRecordDetailClient({ record }: Props) {
   const invoices = record.attachments.filter((a) => a.type === "invoice");
   const warrantyFiles = record.attachments.filter((a) => a.type === "warranty");
   const otherDocs = record.attachments.filter(
-    (a) =>
-      (a.type === "other" || !a.type) && !a.mimeType?.startsWith("image/")
+    (a) => (a.type === "other" || !a.type) && !a.mimeType?.startsWith("image/")
   );
+
+  type ContractorReminderModalProps = ComponentProps<typeof ContractorReminderModal>;
+  const reminderModalProps: ContractorReminderModalProps = {
+    reminder: null,
+    onClose: () => setReminderModalOpen(false),
+    onSaved: onReminderSaved,
+  };
 
   return (
     <>
@@ -286,9 +306,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
                 Service cost
               </h2>
               <p className="mt-1 text-lg font-semibold text-white">
-                {record.cost != null
-                  ? `$${record.cost.toFixed(2)}`
-                  : "Not provided"}
+                {record.cost != null ? `$${record.cost.toFixed(2)}` : "Not provided"}
               </p>
               <p className={textMeta + " mt-1 text-xs"}>
                 Documented on {formatDate(record.serviceDate)}
@@ -306,9 +324,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
               {/* Photos */}
               {photos.length > 0 && (
                 <div className="mb-6">
-                  <h3 className={`mb-3 text-sm font-medium ${textMeta}`}>
-                    Photos
-                  </h3>
+                  <h3 className={`mb-3 text-sm font-medium ${textMeta}`}>Photos</h3>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                     {photos.map((attachment) => {
                       const src = `/api/home/${record.homeId}/attachments/${attachment.id}`;
@@ -355,9 +371,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
               {/* Invoice documents */}
               {invoices.length > 0 && (
                 <div className="mb-4">
-                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>
-                    Invoice
-                  </h3>
+                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>Invoice</h3>
                   {invoices.map((attachment) => (
                     <DocRow
                       key={attachment.id}
@@ -372,9 +386,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
               {/* Warranty documents */}
               {warrantyFiles.length > 0 && (
                 <div className="mb-4">
-                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>
-                    Warranty file
-                  </h3>
+                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>Warranty file</h3>
                   {warrantyFiles.map((attachment) => (
                     <DocRow
                       key={attachment.id}
@@ -389,9 +401,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
               {/* Other documents */}
               {otherDocs.length > 0 && (
                 <div>
-                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>
-                    Other documents
-                  </h3>
+                  <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>Other documents</h3>
                   {otherDocs.map((attachment) => (
                     <DocRow
                       key={attachment.id}
@@ -410,9 +420,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
           {/* Follow-up reminders */}
           <section className={glass + " rounded-2xl p-4 sm:p-5"}>
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h2 className="text-sm font-semibold text-white">
-                Follow-up reminders
-              </h2>
+              <h2 className="text-sm font-semibold text-white">Follow-up reminders</h2>
               <Link
                 href="/pro/contractor/reminders"
                 className="text-xs font-medium text-purple-300 hover:text-purple-200"
@@ -423,8 +431,8 @@ export function ServiceRecordDetailClient({ record }: Props) {
 
             {reminders.length === 0 ? (
               <p className={textMeta + " mb-3 text-sm"}>
-                Create reminders tied to this service — things like “Check in
-                before winter” or “Annual maintenance follow-up”.
+                Create reminders tied to this service — things like “Check in before winter”
+                or “Annual maintenance follow-up”.
               </p>
             ) : (
               <ul className="mb-3 space-y-2 text-xs">
@@ -437,9 +445,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
                     }
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="line-clamp-1 font-medium">
-                        {r.title}
-                      </span>
+                      <span className="line-clamp-1 font-medium">{r.title}</span>
                       <span className="text-[11px] text-white/60">
                         {r.dueAt ? formatDate(r.dueAt) : "No due date"}
                       </span>
@@ -488,61 +494,14 @@ export function ServiceRecordDetailClient({ record }: Props) {
               </div>
             ) : (
               <p className={textMeta + " mb-3 text-sm"}>
-                No warranty details were recorded for this service. You can
-                still upload a warranty document if you have one.
+                No warranty details were recorded for this service. You can still upload
+                a warranty document if you have one.
               </p>
-            )}
-
-            {warranties.length > 0 && (
-              <ul className="mb-3 space-y-2 text-xs">
-                {warranties.map((w) => (
-                  <li
-                    key={w.id}
-                    className={
-                      glassTight +
-                      " rounded-xl px-3 py-2 flex flex-col gap-0.5 text-white/80"
-                    }
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="line-clamp-1 font-medium">{w.title}</p>
-                        {w.coverageTerm && (
-                          <p className="text-[11px] text-white/60">
-                            {w.coverageTerm}
-                          </p>
-                        )}
-                      </div>
-                      {w.attachment.url && (
-                        <a
-                          href={w.attachment.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[11px] font-medium text-purple-300 hover:text-purple-200"
-                        >
-                          View
-                        </a>
-                      )}
-                    </div>
-                    {w.description && (
-                      <p className="line-clamp-2 text-[11px] text-white/60">
-                        {w.description}
-                      </p>
-                    )}
-                    {w.acceptedAt && (
-                      <p className="mt-0.5 text-[10px] text-emerald-300">
-                        Accepted by homeowner on {formatDate(w.acceptedAt)}
-                      </p>
-                    )}
-                  </li>
-                ))}
-              </ul>
             )}
 
             <label className="inline-flex w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-white/25 bg-black/30 px-4 py-3 text-center text-xs text-white/70 hover:border-white/40 hover:bg-black/40">
               <span>
-                {uploadingWarranty
-                  ? "Uploading warranty..."
-                  : "Upload warranty file (PDF / image)"}
+                {uploadingWarranty ? "Uploading warranty..." : "Upload warranty file (PDF / image)"}
               </span>
               <input
                 type="file"
@@ -557,15 +516,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
       </div>
 
       {/* Reminder modal */}
-      {reminderModalOpen && (
-        <ContractorReminderModal
-          {...({
-            reminder: null,
-            onCloseAction: () => setReminderModalOpen(false),
-            onSaved: onReminderSaved,
-          } as any)}
-        />
-      )}
+      {reminderModalOpen && <ContractorReminderModal {...reminderModalProps} />}
     </>
   );
 }
@@ -590,11 +541,7 @@ function DocRow({
       className="mb-2 flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:bg-white/10"
     >
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-white/10">
-        {attachment.mimeType?.includes("pdf") ? (
-          <span className="text-xl">📄</span>
-        ) : (
-          <span className="text-xl">📎</span>
-        )}
+        {attachment.mimeType?.includes("pdf") ? <span className="text-xl">📄</span> : <span className="text-xl">📎</span>}
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-white">{label}</p>
@@ -620,13 +567,7 @@ function DocRow({
   );
 }
 
-function StatusPill({
-  status,
-  isVerified,
-}: {
-  status: string;
-  isVerified: boolean;
-}) {
+function StatusPill({ status, isVerified }: { status: string; isVerified: boolean }) {
   if (isVerified) {
     return (
       <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-200">

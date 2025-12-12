@@ -86,6 +86,12 @@ enum ContractorReminderStatus {
   DONE
 }
 
+enum WarrantyStatus {
+  PENDING // created from contractor/service record, waiting for homeowner acceptance
+  ACTIVE // accepted by homeowner (or auto-accepted, if you decide)
+  REJECTED // homeowner rejected
+}
+
 enum InvitationType {
   HOMEOWNER_TO_CONTRACTOR
   CONTRACTOR_TO_HOMEOWNER
@@ -132,13 +138,13 @@ enum NotificationChannel {
 
 // FOR SERVICE SUBMISSIONS (contractor documenting past services completed)
 enum ServiceSubmissionStatus {
-  PENDING_REVIEW          // Homeowner needs to review
-  DOCUMENTED_UNVERIFIED   // Alternative pending state
-  DOCUMENTED              // Documented, awaiting review
-  APPROVED                // Homeowner approved
-  REJECTED                // Homeowner rejected
-  DISPUTED                // Homeowner disputes details
-  EXPIRED                 // Submission expired
+  PENDING_REVIEW // Homeowner needs to review
+  DOCUMENTED_UNVERIFIED // Alternative pending state
+  DOCUMENTED // Documented, awaiting review
+  APPROVED // Homeowner approved
+  REJECTED // Homeowner rejected
+  DISPUTED // Homeowner disputes details
+  EXPIRED // Submission expired
 }
 
 enum ServiceRequestStatus {
@@ -222,6 +228,7 @@ model User {
   reminders          Reminder[] @relation("ReminderCreator")
   warrantiesCreated  Warranty[] @relation("WarrantyCreator")
   warrantiesVerified Warranty[] @relation("WarrantyVerifier")
+  warrantiesAccepted Warranty[] @relation("WarrantyAcceptedBy")
 
   contractorReminders ContractorReminder[]
 
@@ -526,8 +533,21 @@ model Warranty {
   item      String
   provider  String?
   policyNo  String?
+  purchasedAt DateTime?
   expiresAt DateTime?
   note      String?
+
+  // Tie to the service record that produced it (optional)
+  serviceRecordId String?
+  serviceRecord   ServiceRecord? @relation(fields: [serviceRecordId], references: [id], onDelete: SetNull)
+
+  // Homeowner workflow
+  status WarrantyStatus @default(PENDING)
+
+  // Acceptance tracking (explicit)
+  acceptedBy     String?
+  acceptedAt     DateTime?
+  acceptedByUser User?     @relation("WarrantyAcceptedBy", fields: [acceptedBy], references: [id], onDelete: SetNull)
 
   createdBy  String?
   createdAt  DateTime  @default(now())
@@ -546,6 +566,9 @@ model Warranty {
   @@index([homeId, expiresAt])
   @@index([createdBy])
   @@index([verifiedBy])
+  @@index([serviceRecordId])
+  @@index([status])
+  @@index([acceptedBy])
 }
 
 /**
@@ -627,8 +650,8 @@ model Connection {
   sourceRecordId String?
 
   verifiedServiceCount Int       @default(0)
-  totalSpent          Decimal   @default(0) @db.Decimal(12, 2)
-  lastServiceDate     DateTime?
+  totalSpent           Decimal   @default(0) @db.Decimal(12, 2)
+  lastServiceDate      DateTime?
 
   notes String?
   tags  String[] @default([])
@@ -871,7 +894,7 @@ model ServiceRecord {
   serviceRequest   ServiceRequest? @relation(fields: [serviceRequestId], references: [id], onDelete: SetNull)
 
   // FK to ServiceSubmission (optional)
-  submissionId String?          @unique
+  submissionId String?            @unique
   submission   ServiceSubmission? @relation(fields: [submissionId], references: [id], onDelete: Cascade)
 
   homeId String
@@ -891,10 +914,10 @@ model ServiceRecord {
   invoiceUrl  String?
   photos      String[]     @default([])
 
-  warrantyIncluded Boolean @default(false)
+  warrantyIncluded Boolean    @default(false)
   warrantyLength   String?
-  warrantyDetails  String? @db.Text
-
+  warrantyDetails  String?    @db.Text
+  warranties       Warranty[] // NEW back relation
 
   status ServiceSubmissionStatus @default(DOCUMENTED)
 

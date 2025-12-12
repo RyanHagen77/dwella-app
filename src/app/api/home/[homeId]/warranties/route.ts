@@ -7,25 +7,53 @@ import { requireHomeAccess } from "@/lib/authz";
 import { WarrantySchema } from "@/lib/validators";
 
 export const runtime = "nodejs";
+
 type Params = { homeId: string };
 
 export async function GET(_req: Request, ctx: { params: Promise<Params> }) {
   const { homeId } = await ctx.params;
+
   const session = await getServerSession(authConfig);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   await requireHomeAccess(homeId, session.user.id);
 
   const warranties = await prisma.warranty.findMany({
-    where: { homeId },
-    orderBy: [{ expiresAt: "asc" }],
+    where: {
+      homeId,
+      deletedAt: null,
+      archivedAt: null,
+      status: { in: ["PENDING", "ACTIVE"] },
+    },
+    include: {
+      attachments: {
+        where: { deletedAt: null, archivedAt: null },
+        select: { id: true, filename: true, mimeType: true },
+      },
+      serviceRecord: {
+        select: { id: true, contractorId: true, serviceType: true, serviceDate: true },
+      },
+    },
+    orderBy: [
+      { status: "asc" },     // PENDING -> ACTIVE (matches enum order)
+      { expiresAt: "asc" },
+      { createdAt: "desc" },
+    ],
   });
+
   return NextResponse.json(warranties, { status: 200 });
 }
 
 export async function POST(req: Request, ctx: { params: Promise<Params> }) {
   const { homeId } = await ctx.params;
+
   const session = await getServerSession(authConfig);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   await requireHomeAccess(homeId, session.user.id);
 
   const body = await req.json().catch(() => null);
@@ -39,7 +67,8 @@ export async function POST(req: Request, ctx: { params: Promise<Params> }) {
     }
     return NextResponse.json({ error: { fieldErrors } }, { status: 400 });
   }
-    const { item, provider, policyNo, expiresAt, note } = parsed.data;
+
+  const { item, provider, policyNo, expiresAt, note } = parsed.data;
 
   const created = await prisma.warranty.create({
     data: {
@@ -48,8 +77,11 @@ export async function POST(req: Request, ctx: { params: Promise<Params> }) {
       provider: provider ?? null,
       policyNo: policyNo ?? null,
       expiresAt: expiresAt ? new Date(`${expiresAt}T00:00:00.000Z`) : null,
-      note: note ?? null,                 // <- NEW
-      createdBy: session.user.id ?? null, // audit
+      note: note ?? null,
+      status: "ACTIVE", // homeowner-created warranties should be active immediately
+      acceptedBy: session.user.id,
+      acceptedAt: new Date(),
+      createdBy: session.user.id,
     },
     select: { id: true },
   });
