@@ -52,13 +52,15 @@ function computeStatus(expiresAt: Date | null) {
 export default async function WarrantyDetailPage({
   params,
 }: {
-  params: { homeId: string; warrantyId: string };
+  params: Promise<{ homeId: string; warrantyId: string }>;
 }) {
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) redirect("/login");
 
   const userId = session.user.id;
-  const { homeId, warrantyId } = params;
+
+  // ✅ Next.js sync-dynamic-apis fix: await params before using
+  const { homeId, warrantyId } = await params;
 
   await requireHomeAccess(homeId, userId);
 
@@ -69,9 +71,9 @@ export default async function WarrantyDetailPage({
 
   if (!home) redirect("/");
 
-  const homeAddress = `${home.address}${
-    home.city ? `, ${home.city}` : ""
-  }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
+  const homeAddress = `${home.address}${home.city ? `, ${home.city}` : ""}${
+    home.state ? `, ${home.state}` : ""
+  }${home.zip ? ` ${home.zip}` : ""}`;
 
   const warranty = await prisma.warranty.findFirst({
     where: {
@@ -277,9 +279,7 @@ export default async function WarrantyDetailPage({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between gap-4">
                   <span className="text-white/60">Status</span>
-                  <span className="font-medium text-white">
-                    {status.label}
-                  </span>
+                  <span className="font-medium text-white">{status.label}</span>
                 </div>
                 <div className="flex justify-between gap-4">
                   <span className="text-white/60">Days until expiry</span>

@@ -2,6 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   Theme tokens (Dark-first, ready for Light later)
+   ========================================================================== */
+
+:root {
+  /* Base background (avoid pure #000; it crushes contrast) */
+  --bg: 14 16 18;          /* ~ #0e1012 */
+  --bg2: 10 11 13;         /* deeper */
+  --surface: 20 22 25;     /* ~ #141619 */
+  --surface2: 26 29 33;    /* ~ #1a1d21 */
+
+  /* Glass */
+  --glass: 255 255 255;
+  --glassA: 0.06;          /* was 0.10 -> less washed */
+  --glassA2: 0.045;        /* tighter cards */
+
+  /* Borders */
+  --border: 255 255 255;
+  --borderA: 0.12;         /* was 0.15 -> calmer */
+  --borderA2: 0.10;
+
+  /* Text */
+  --text: 255 255 255;
+  --textA: 0.92;
+  --mutedA: 0.68;
+  --muted2A: 0.56;
+
+  /* Shadows (subtle, not gray haze) */
+  --shadow: 0 10px 30px rgba(0,0,0,.35);
+  --shadowSoft: 0 8px 24px rgba(0,0,0,.28);
+
+  /* Inputs */
+  --inputBgA: 0.07;
+  --inputBorderA: 0.16;
+
+  color-scheme: dark;
+}
+
+/* Optional: light mode foundation (you can toggle with data-theme="light") */
+:root[data-theme="light"] {
+  --bg: 246 247 249;
+  --bg2: 238 240 244;
+  --surface: 255 255 255;
+  --surface2: 250 251 252;
+
+  --glass: 0 0 0;
+  --glassA: 0.03;
+  --glassA2: 0.02;
+
+  --border: 0 0 0;
+  --borderA: 0.08;
+  --borderA2: 0.06;
+
+  --text: 10 10 12;
+  --textA: 0.92;
+  --mutedA: 0.62;
+  --muted2A: 0.52;
+
+  --shadow: 0 10px 28px rgba(0,0,0,.08);
+  --shadowSoft: 0 8px 20px rgba(0,0,0,.06);
+
+  --inputBgA: 0.03;
+  --inputBorderA: 0.10;
+
+  color-scheme: light;
+}
+
+/* Respect system preference if no explicit data-theme set */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    --bg: 246 247 249;
+    --bg2: 238 240 244;
+    --surface: 255 255 255;
+    --surface2: 250 251 252;
+
+    --glass: 0 0 0;
+    --glassA: 0.03;
+    --glassA2: 0.02;
+
+    --border: 0 0 0;
+    --borderA: 0.08;
+    --borderA2: 0.06;
+
+    --text: 10 10 12;
+    --textA: 0.92;
+    --mutedA: 0.62;
+    --muted2A: 0.52;
+
+    --shadow: 0 10px 28px rgba(0,0,0,.08);
+    --shadowSoft: 0 8px 20px rgba(0,0,0,.06);
+
+    --inputBgA: 0.03;
+    --inputBorderA: 0.10;
+
+    color-scheme: light;
+  }
+}
+
+/* ==========================================================================
+   Global base
+   ========================================================================== */
 
 html,
 body {
@@ -11,81 +112,38 @@ body {
   overflow-x: hidden;
   overscroll-behavior-y: none;
 
-  /* ✨ New clean background */
-  background-color: #000000; /* Solid base */
+  /* cleaner, less “washed” background */
+  background-color: rgb(var(--bg));
   background-image:
-    radial-gradient(
-      1200px 600px at 50% -10%,
-      rgba(255, 255, 255, 0.06),
-      transparent
-    ),
-    linear-gradient(180deg, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.85));
+    radial-gradient(1200px 650px at 50% -12%, rgba(255,255,255,0.07), transparent 55%),
+    radial-gradient(900px 500px at 90% 20%, rgba(234,106,26,0.08), transparent 60%),
+    linear-gradient(180deg, rgba(var(--bg), 0.0), rgba(var(--bg2), 0.9));
   background-repeat: no-repeat;
   background-size: cover;
 
-  color: #ffffff;
+  color: rgba(var(--text), var(--textA));
 }
-/* smoothing + base body font handled by font-body below */
-html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
 
 /* Map next/font vars to easy utility classes */
-.font-body    { font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans"; }
-.font-heading { font-family: var(--font-outfit), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans"; }
+.font-body {
+  font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans";
+}
+.font-heading {
+  font-family: var(--font-outfit), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, "Noto Sans";
+}
 
 /* Optional: soft text shadow helper for hero text on photos */
-.text-shadow  { text-shadow: 0 1px 2px rgba(0,0,0,.45); }
-
-@layer components {
-  /* Frosted glass cards */
-  .glass {
-    @apply rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md shadow-glass;
-  }
-  .glass-tight {
-    @apply rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm shadow-glassSoft;
-  }
-  .table-glass {
-    @apply rounded-2xl border border-white/10 bg-white/10 backdrop-blur-md;
-  }
-
-  /* Typography helpers for dark photo backgrounds */
-  .heading { @apply font-heading font-semibold tracking-tight text-white/90; }
-  .textMeta { @apply text-white/70 text-sm; }
-
-  /* Buttons */
-  .ctaPrimary {
-    @apply inline-flex items-center justify-center rounded-full px-4 py-2 font-medium text-white
-           bg-gradient-to-r from-brand-orange to-brand-amber
-           hover:from-brand-orangeDark hover:to-brand-orange
-           shadow-[0_6px_24px_rgba(234,106,26,0.35)];
-  }
-  .ctaGhost {
-    @apply inline-flex items-center justify-center rounded-full px-4 py-2 font-medium
-           border border-white/20 text-white/90 hover:bg-white/10;
-  }
-
-  /* Pills / badges */
-  .pill { @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium; }
-  .pill--warn { @apply pill bg-amber-100/15 text-amber-300 border border-amber-300/30; }
-  .pill--ok { @apply pill bg-green-100/15 text-green-300 border border-green-300/30; }
-
-  /* Alert glass with amber outline (like your Overdue/Warranty cards) */
-  .alert-glass { @apply glass relative; }
-  .alert-glass::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: 1rem;
-    box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.7); /* amber-500 accent */
-    pointer-events: none;
-  }
-
-  /* Optional page overlay for photo backgrounds */
-  .page-backdrop {
-    background:
-      radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,0.06), transparent),
-      linear-gradient(180deg, rgba(0,0,0,0.35), rgba(0,0,0,0.55));
-  }
+.text-shadow {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .45);
 }
+
 @layer base {
   html,
   body {
@@ -94,11 +152,156 @@ html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
   }
 }
 
-/* Prevent Chrome/Safari autofill from forcing yellow background */
+/* ==========================================================================
+   Components
+   ========================================================================== */
+
+@layer components {
+  /* Frosted glass cards (less milky, more depth) */
+  .glass {
+    @apply rounded-2xl backdrop-blur-md;
+    border: 1px solid rgba(var(--border), var(--borderA));
+    background: linear-gradient(
+      180deg,
+      rgba(var(--glass), var(--glassA)),
+      rgba(var(--glass), calc(var(--glassA) * 0.65))
+    );
+    box-shadow: var(--shadow);
+  }
+
+  .glass-tight {
+    @apply rounded-xl backdrop-blur-sm;
+    border: 1px solid rgba(var(--border), var(--borderA2));
+    background: linear-gradient(
+      180deg,
+      rgba(var(--glass), var(--glassA2)),
+      rgba(var(--glass), calc(var(--glassA2) * 0.70))
+    );
+    box-shadow: var(--shadowSoft);
+  }
+
+  .table-glass {
+    @apply rounded-2xl backdrop-blur-md;
+    border: 1px solid rgba(var(--border), var(--borderA2));
+    background: rgba(var(--glass), var(--glassA2));
+  }
+
+  /* Typography helpers */
+  .heading {
+    @apply font-heading font-semibold tracking-tight;
+    color: rgba(var(--text), var(--textA));
+  }
+  .textMeta {
+    @apply text-sm;
+    color: rgba(var(--text), var(--mutedA));
+  }
+
+  /* Buttons */
+  .ctaPrimary {
+    @apply inline-flex items-center justify-center rounded-full px-4 py-2 font-medium text-white;
+    @apply bg-gradient-to-r from-brand-orange to-brand-amber;
+    @apply hover:from-brand-orangeDark hover:to-brand-orange;
+    box-shadow: 0 10px 28px rgba(234,106,26,0.32);
+  }
+
+  .ctaGhost {
+    @apply inline-flex items-center justify-center rounded-full px-4 py-2 font-medium;
+    border: 1px solid rgba(var(--border), 0.18);
+    color: rgba(var(--text), 0.90);
+    background: rgba(var(--glass), 0.03);
+  }
+  .ctaGhost:hover {
+    background: rgba(var(--glass), 0.06);
+  }
+
+  /* Pills / badges */
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium;
+  }
+  .pill--warn {
+    @apply pill;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    background: rgba(245, 158, 11, 0.12);
+    color: rgba(253, 230, 138, 0.95);
+  }
+  .pill--ok {
+    @apply pill;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.12);
+    color: rgba(187, 247, 208, 0.95);
+  }
+
+  /* Alert glass with amber outline */
+  .alert-glass {
+    @apply glass relative;
+  }
+  .alert-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 1rem;
+    box-shadow: inset 0 0 0 2px rgba(245, 158, 11, 0.55);
+    pointer-events: none;
+  }
+
+  /* Optional page overlay for photo backgrounds */
+  .page-backdrop {
+    background:
+      radial-gradient(1200px 650px at 50% -12%, rgba(255,255,255,0.07), transparent 55%),
+      linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.55));
+  }
+
+  /* Inputs / selects (big source of “washed/cheap” feel) */
+  input,
+  textarea,
+  select {
+    color: rgba(var(--text), var(--textA));
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select {
+    border: 1px solid rgba(var(--border), var(--inputBorderA));
+    background: rgba(var(--glass), var(--inputBgA));
+    outline: none;
+  }
+
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="date"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: rgba(234, 106, 26, 0.45);
+    box-shadow: 0 0 0 4px rgba(234, 106, 26, 0.18);
+  }
+
+  /* Reduce “white box” look on Safari/Chrome selects in dark */
+  select {
+    background-image:
+      linear-gradient(45deg, transparent 50%, rgba(var(--text), 0.55) 50%),
+      linear-gradient(135deg, rgba(var(--text), 0.55) 50%, transparent 50%);
+    background-position:
+      calc(100% - 18px) calc(1em + 2px),
+      calc(100% - 13px) calc(1em + 2px);
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+  }
+}
+
+/* ==========================================================================
+   Autofill fix (kept)
+   ========================================================================== */
+
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
-  -webkit-text-fill-color: white !important;
+  -webkit-text-fill-color: rgba(255,255,255,0.92) !important;
   box-shadow: 0 0 0px 1000px rgba(255,255,255,0.05) inset !important;
   transition: background-color 9999s ease-in-out 0s;
 }
