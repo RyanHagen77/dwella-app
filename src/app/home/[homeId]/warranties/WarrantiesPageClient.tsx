@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { glass, glassTight, ctaGhost } from "@/lib/glass";
-import { Input, Select } from "@/components/ui";
 import { EditWarrantyModal } from "./_components/EditWarrantyModal";
 
 export type WarrantyItem = {
@@ -35,6 +34,40 @@ type Props = {
   initialSort?: string;
 };
 
+type SortKey = "soonest" | "latest" | "item";
+
+function expiryLabel(w: WarrantyItem) {
+  if (!w.expiresAt) return "No expiry";
+  if (w.isExpired) {
+    const d = Math.abs(w.daysUntilExpiry);
+    if (d === 0) return "Expired today";
+    if (d === 1) return "Expired 1 day ago";
+    return `Expired ${d} days ago`;
+  }
+  if (w.daysUntilExpiry === 0) return "Expires today";
+  if (w.daysUntilExpiry === 1) return "Expires tomorrow";
+  return `Expires in ${w.daysUntilExpiry} days`;
+}
+
+function statusDotClass(w: WarrantyItem) {
+  if (w.isExpired) return "bg-red-400";
+  if (w.isExpiringSoon) return "bg-yellow-400";
+  if (w.expiresAt) return "bg-emerald-400";
+  return "bg-white/30";
+}
+
+function statusTextClass(w: WarrantyItem) {
+  if (w.isExpired) return "text-red-300";
+  if (w.isExpiringSoon) return "text-yellow-300";
+  if (w.expiresAt) return "text-emerald-200";
+  return "text-white/60";
+}
+
+function truncFilename(name: string) {
+  if (name.length <= 28) return name;
+  return name.slice(0, 18) + "…" + name.slice(-8);
+}
+
 export function WarrantiesPageClient({
   warranties,
   homeId,
@@ -44,86 +77,102 @@ export function WarrantiesPageClient({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [search, setSearch] = useState(initialSearch || "");
-  const [sort, setSort] = useState(initialSort || "soonest");
+  const [search, setSearch] = useState(initialSearch ?? "");
+  const [sort, setSort] = useState<SortKey>(
+    (initialSort as SortKey) ?? "soonest"
+  );
 
-  function updateFilters(updates: { search?: string; sort?: string }) {
+  // Debounce URL updates
+  const debounceRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+
+    debounceRef.current = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams?.toString());
+
+      const s = search.trim();
+      if (s) params.set("search", s);
+      else params.delete("search");
+
+      if (sort !== "soonest") params.set("sort", sort);
+      else params.delete("sort");
+
+      const qs = params.toString();
+      router.push(`/home/${homeId}/warranties${qs ? `?${qs}` : ""}`);
+    }, 250);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, sort, homeId]);
+
+  const emptyHref = useMemo(() => {
+    if (!search.trim()) return `/home/${homeId}`;
     const params = new URLSearchParams(searchParams?.toString());
-
-    if (updates.search !== undefined) {
-      if (updates.search) {
-        params.set("search", updates.search);
-      } else {
-        params.delete("search");
-      }
-    }
-
-    if (updates.sort !== undefined) {
-      if (updates.sort && updates.sort !== "soonest") {
-        params.set("sort", updates.sort);
-      } else {
-        params.delete("sort");
-      }
-    }
-
-    const queryString = params.toString();
-    router.push(`/home/${homeId}/warranties${queryString ? `?${queryString}` : ""}`);
-  }
-
-  function handleSearchChange(value: string) {
-    setSearch(value);
-    const timeoutId = setTimeout(() => {
-      updateFilters({ search: value });
-    }, 300);
-    return () => clearTimeout(timeoutId);
-  }
-
-  function handleSortChange(value: string) {
-    setSort(value);
-    updateFilters({ sort: value });
-  }
+    params.delete("search");
+    const qs = params.toString();
+    return `/home/${homeId}/warranties${qs ? `?${qs}` : ""}`;
+  }, [homeId, search, searchParams]);
 
   return (
     <>
+      {/* Filters (dark + consistent) */}
       <section className={glass}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-white/70 mb-2">Search</label>
-            <Input
-              type="text"
-              placeholder="Search warranties..."
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="flex-1">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              Search
+            </label>
+            <input
               value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search warranties…"
+              className="w-full rounded-xl border border-white/15 bg-black/35 px-4 py-2 text-sm text-white outline-none backdrop-blur transition focus:border-white/30 focus:bg-black/45 placeholder:text-white/35"
             />
           </div>
 
-          <div>
-            <label className="block text-sm text-white/70 mb-2">Sort By</label>
-            <Select value={sort} onChange={(e) => handleSortChange(e.target.value)}>
-              <option value="soonest">Expiring Soonest</option>
-              <option value="latest">Expiring Latest</option>
-              <option value="item">Item (A-Z)</option>
-            </Select>
+          <div className="w-full md:w-72">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              Sort
+            </label>
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              className="w-full rounded-xl border border-white/15 bg-black/35 px-4 py-2 text-sm text-white outline-none backdrop-blur transition focus:border-white/30 focus:bg-black/45"
+            >
+              <option value="soonest" className="bg-gray-900">
+                Expiring Soonest
+              </option>
+              <option value="latest" className="bg-gray-900">
+                Expiring Latest
+              </option>
+              <option value="item" className="bg-gray-900">
+                Item (A–Z)
+              </option>
+            </select>
           </div>
         </div>
       </section>
 
+      {/* List */}
       <section className={glass}>
         {warranties.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="text-white/70 mb-4">
-              {search ? "No warranties match your search" : "No warranties yet"}
+          <div className="py-14 text-center">
+            <p className="mb-4 text-white/70">
+              {search ? "No warranties match your search." : "No warranties yet."}
             </p>
-            <Link href={`/home/${homeId}`} className={ctaGhost}>
-              {search ? "Clear Search" : "+ Add Your First Warranty"}
+            <Link href={emptyHref} className={ctaGhost}>
+              {search ? "Clear search" : "+ Add your first warranty"}
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            {warranties.map((warranty) => (
-              <WarrantyCard key={warranty.id} warranty={warranty} homeId={homeId} />
+          <ul className="space-y-3">
+            {warranties.map((w) => (
+              <WarrantyCard key={w.id} warranty={w} homeId={homeId} />
             ))}
-          </div>
+          </ul>
         )}
       </section>
     </>
@@ -134,7 +183,14 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
 
   async function handleDelete() {
     setDeleting(true);
@@ -144,173 +200,145 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
       });
       if (!res.ok) throw new Error("Failed to delete warranty");
       router.refresh();
-    } catch (error) {
-      console.error("Delete failed:", error);
+    } catch (e) {
+      console.error(e);
       alert("Failed to delete warranty. Please try again.");
       setDeleting(false);
-      setShowConfirm(false);
+      setConfirmDelete(false);
     }
   }
 
-  const tint = warranty.isExpired
-    ? "border-red-400/30 bg-red-500/5"
+  const metaParts: string[] = [];
+  if (warranty.provider) metaParts.push(warranty.provider);
+  if (warranty.policyNo) metaParts.push(`Policy ${warranty.policyNo}`);
+
+  const leftAccent = warranty.isExpired
+    ? "before:bg-red-400/80"
     : warranty.isExpiringSoon
-    ? "border-yellow-400/30 bg-yellow-500/5"
-    : "";
+    ? "before:bg-yellow-400/80"
+    : warranty.expiresAt
+    ? "before:bg-emerald-400/70"
+    : "before:bg-white/15";
 
   return (
     <>
-      <Link
-        href={`/home/${homeId}/warranties/${warranty.id}`}
-        className={`block rounded-lg border p-4 transition-colors ${glassTight} ${tint} hover:bg-white/10`}
+      <div
+        className={[
+          "group relative overflow-hidden rounded-2xl border border-white/10",
+          "bg-black/35 backdrop-blur",
+          "hover:border-white/18 hover:bg-black/45 transition",
+          "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
+          leftAccent,
+        ].join(" ")}
       >
-        <div className="flex flex-col gap-3">
-          {/* Title */}
-          <h3 className="text-lg font-medium text-white break-words">
-            {warranty.item}
-          </h3>
+        {/* Whole card navigates, but keep actions clickable */}
+        <Link
+          href={`/home/${homeId}/warranties/${warranty.id}`}
+          className="block px-4 py-3"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${statusDotClass(warranty)}`} />
+                <h3 className="truncate text-[15px] font-semibold text-white">
+                  {warranty.item}
+                </h3>
+              </div>
 
-          {/* Date + status message */}
-          <div className="flex flex-wrap items-center gap-4">
-            {warranty.provider && (
-              <span className="text-sm text-white/70">🏢 {warranty.provider}</span>
-            )}
-            {warranty.policyNo && (
-              <span className="text-sm text-white/70">📋 {warranty.policyNo}</span>
-            )}
-            <span
-              className={`text-sm font-medium ${
-                warranty.isExpired
-                  ? "text-red-400"
-                  : warranty.isExpiringSoon
-                  ? "text-yellow-400"
-                  : "text-white/90"
-              }`}
-            >
-              📅 {warranty.formattedExpiry}
-            </span>
+              {metaParts.length > 0 && (
+                <p className="mt-1 truncate text-xs text-white/55">
+                  {metaParts.join(" • ")}
+                </p>
+              )}
 
-            {warranty.expiresAt && (
-              <span
-                className={`text-sm ${
-                  warranty.isExpiringSoon
-                    ? "text-yellow-400"
-                    : warranty.isExpired
-                    ? "text-red-400"
-                    : "text-white/60"
-                }`}
-              >
-                {warranty.isExpired ? (
-                  Math.abs(warranty.daysUntilExpiry) === 1
-                    ? "Expired 1 day ago"
-                    : `Expired ${Math.abs(warranty.daysUntilExpiry)} days ago`
-                ) : warranty.daysUntilExpiry === 0 ? (
-                  "Expires today"
-                ) : warranty.daysUntilExpiry === 1 ? (
-                  "Expires tomorrow"
-                ) : (
-                  `Expires in ${warranty.daysUntilExpiry} days`
-                )}
-              </span>
-            )}
-          </div>
+              {warranty.note && (
+                <p className="mt-2 line-clamp-1 text-xs text-white/65">
+                  {warranty.note}
+                </p>
+              )}
 
-          {/* Note */}
-          {warranty.note && (
-            <p className="line-clamp-1 text-sm text-white/70">
-              {warranty.note}
-            </p>
-          )}
+              {warranty.attachments?.length > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] text-white/45">
+                    📎 {warranty.attachments.length}
+                  </span>
+                  {warranty.attachments.slice(0, 2).map((att) => (
+                    <span
+                      key={att.id}
+                      className="max-w-[260px] truncate rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60"
+                      title={att.filename}
+                    >
+                      {truncFilename(att.filename)}
+                    </span>
+                  ))}
+                  {warranty.attachments.length > 2 && (
+                    <span className="text-[11px] text-white/45">
+                      +{warranty.attachments.length - 2} more
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* Attachments */}
-          {warranty.attachments?.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-white/60">
-              <span>📎</span>
-              <span>
-                {warranty.attachments.length} attachment
-                {warranty.attachments.length > 1 ? "s" : ""}
-              </span>
+            <div className="shrink-0 text-right">
+              <div className={`text-xs font-medium ${statusTextClass(warranty)}`}>
+                {expiryLabel(warranty)}
+              </div>
+              <div className="mt-0.5 text-[11px] text-white/50">
+                {warranty.formattedExpiry}
+              </div>
 
-              {warranty.attachments.slice(0, 3).map((att) => (
+              {/* Actions: appear on hover/focus within card */}
+              <div className="mt-2 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
-                  key={att.id}
                   type="button"
+                  className="rounded-lg border border-white/20 bg-white/5 px-2.5 py-1 text-xs text-white/80 hover:bg-white/10"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    window.open(`/api/home/${homeId}/attachments/${att.id}`, "_blank");
+                    setEditOpen(true);
                   }}
-                  className="underline hover:text-white/90"
                 >
-                  {att.filename.length > 15 ? att.filename.slice(0, 12) + "..." : att.filename}
+                  Edit
                 </button>
-              ))}
 
-              {warranty.attachments.length > 3 && (
-                <span>+{warranty.attachments.length - 3} more</span>
-              )}
-            </div>
-          )}
+                <button
+                  type="button"
+                  disabled={deleting}
+                  className={[
+                    "rounded-lg border px-2.5 py-1 text-xs transition disabled:opacity-60",
+                    confirmDelete
+                      ? "border-red-400/50 bg-red-500/25 text-red-100 hover:bg-red-500/35"
+                      : "border-red-400/30 bg-red-500/10 text-red-200 hover:bg-red-500/20",
+                  ].join(" ")}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
 
-          {/* Actions + Status Badge */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-            {/* Status Badge */}
-            {warranty.isExpired && (
-              <span className="inline-flex items-center rounded border border-red-400/30 bg-red-400/20 px-2 py-1.5 text-xs font-medium text-red-300">
-                Expired
-              </span>
-            )}
+                    if (!confirmDelete) {
+                      setConfirmDelete(true);
+                      if (confirmTimerRef.current) {
+                        window.clearTimeout(confirmTimerRef.current);
+                      }
+                      confirmTimerRef.current = window.setTimeout(() => {
+                        setConfirmDelete(false);
+                      }, 2500);
+                      return;
+                    }
 
-            {warranty.isExpiringSoon && !warranty.isExpired && (
-              <span className="inline-flex items-center rounded border border-yellow-400/30 bg-yellow-400/20 px-2 py-1.5 text-xs font-medium text-yellow-300">
-                Expiring Soon
-              </span>
-            )}
-
-            {/* Buttons */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setEditOpen(true);
-                }}
-                className="rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-sm text-white transition-colors hover:bg-white/15"
-              >
-                Edit
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-
-                  if (showConfirm) {
                     void handleDelete();
-                  } else {
-                    setShowConfirm(true);
-                    setTimeout(() => setShowConfirm(false), 3000);
-                  }
-                }}
-                disabled={deleting}
-                className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
-                  showConfirm
-                    ? "border-red-400/50 bg-red-500/30 text-red-200 hover:bg-red-500/40"
-                    : "border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20"
-                } disabled:opacity-50`}
-              >
-                {deleting
-                  ? "Deleting..."
-                  : showConfirm
-                  ? "Confirm Delete?"
-                  : "Delete"}
-              </button>
+                  }}
+                >
+                  {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </Link>
+        </Link>
+
+        {/* subtle inner padding/contrast guardrail */}
+        <div className={glassTight + " hidden"} />
+      </div>
 
       <EditWarrantyModal
         open={editOpen}

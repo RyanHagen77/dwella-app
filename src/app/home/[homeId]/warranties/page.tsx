@@ -9,15 +9,18 @@ import { glass, glassTight, textMeta, heading } from "@/lib/glass";
 import { WarrantiesPageClient } from "./WarrantiesPageClient";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
-export default async function WarrantiesPage({
-  params,
-  searchParams,
-}: {
-  params: { homeId: string };
-  searchParams: { search?: string; sort?: string };
-}) {
-  const { homeId } = params;
-  const { search, sort } = searchParams;
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+type PageProps = {
+  params: Promise<{ homeId: string }>;
+  searchParams: Promise<{ search?: string; sort?: string }>;
+};
+
+export default async function WarrantiesPage({ params, searchParams }: PageProps) {
+  const { homeId } = await params;
+  const { search, sort } = await searchParams;
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
