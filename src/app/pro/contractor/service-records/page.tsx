@@ -1,23 +1,29 @@
-// app/pro/contractor/service-records/page.tsx
 export const dynamic = "force-dynamic";
 
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { glass, heading, textMeta } from "@/lib/glass";
+import { Prisma } from "@prisma/client";
+
+import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import ContractorServiceRecordsClient from "./ContractorServiceRecordsClient";
+import { InviteHomeownerButton } from "@/app/pro/_components/InviteHomeownerButton";
 
-export default async function ContractorServiceRecordsPage() {
+type PageProps = {
+  searchParams: Promise<{ search?: string; sort?: string; filter?: string }>;
+};
+
+type SortKey = "newest" | "oldest" | "created" | "type";
+type FilterKey = "all" | "pending" | "verified";
+
+export default async function ContractorServiceRecordsPage({ searchParams }: PageProps) {
+  const { search, sort, filter } = await searchParams;
+
   const session = await getServerSession(authConfig);
+  if (!session?.user?.id) redirect("/login");
 
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-
-  // Verify user is a contractor
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     include: { proProfile: true },
@@ -27,27 +33,33 @@ export default async function ContractorServiceRecordsPage() {
     redirect("/pro/contractor/dashboard");
   }
 
-  // Get all service (work) records for this contractor
+  // Parse URL params (client uses these as initial state)
+  const parsedFilter: FilterKey = filter === "pending" || filter === "verified" ? filter : "all";
+  const parsedSort: SortKey = sort === "oldest" || sort === "created" || sort === "type" ? sort : "newest";
+  const initialSearch = (search ?? "").trim() || undefined;
+
+  /**
+   * IMPORTANT:
+   * Always fetch ALL records for correct dropdown counts.
+   * Filtering/searching happens in the client.
+   */
+  const where: Prisma.ServiceRecordWhereInput = {
+    contractorId: session.user.id,
+    archivedAt: null,
+  };
+
+  // Keep a stable default order; client handles sort changes
+  const orderBy: Prisma.ServiceRecordOrderByWithRelationInput = { serviceDate: "desc" };
+
   const serviceRecords = await prisma.serviceRecord.findMany({
-    where: {
-      contractorId: session.user.id,
-      archivedAt: null,
-    },
+    where,
+    orderBy,
     include: {
       home: {
         include: {
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
+          owner: { select: { id: true, name: true, email: true } },
         },
       },
-    },
-    orderBy: {
-      createdAt: "desc",
     },
   });
 
@@ -58,41 +70,31 @@ export default async function ContractorServiceRecordsPage() {
     city: record.home.city,
     state: record.home.state,
     zip: record.home.zip,
-    homeownerName:
-      record.home.owner?.name ||
-      record.home.owner?.email ||
-      "Unclaimed",
+    homeownerName: record.home.owner?.name || record.home.owner?.email || "Unclaimed",
     serviceType: record.serviceType,
     serviceDate: record.serviceDate.toISOString(),
     cost: record.cost ? Number(record.cost) : null,
     status: record.status,
     isVerified: record.isVerified,
     description: record.description,
-    photos: record.photos as string[],
+    photos: (record.photos as string[]) ?? [],
     createdAt: record.createdAt.toISOString(),
   }));
 
   return (
-    <main className="relative min-h-screen text-white">
-      <Bg />
-
+    <main className="min-h-screen text-white">
       <div className="mx-auto max-w-7xl p-6 space-y-6">
-        {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href="/pro/contractor/dashboard"
-            className="text-white/70 hover:text-white transition-colors"
-          >
+          <Link href="/pro/contractor/dashboard" className="text-white/70 hover:text-white transition-colors">
             Dashboard
           </Link>
           <span className="text-white/50">/</span>
           <span className="text-white">Service Records</span>
         </nav>
 
-        {/* Header */}
         <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="flex items-center gap-3">
               <Link
                 href="/pro/contractor/dashboard"
                 className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
@@ -106,53 +108,35 @@ export default async function ContractorServiceRecordsPage() {
                   stroke="currentColor"
                   className="w-5 h-5"
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
               </Link>
 
-              <div className="flex-1 min-w-0">
-                <h1 className={`text-2xl font-bold ${heading}`}>
-                  Service Records
-                </h1>
+              <div className="min-w-0">
+                <h1 className={`text-2xl font-bold ${heading}`}>Service Records</h1>
                 <p className={`mt-1 text-sm ${textMeta}`}>
-                  All services you’ve documented and attached to your clients’
-                  MyDwella homes.
+                  All services you’ve documented and attached to your clients’ MyDwella homes.
                 </p>
-                <p className={`mt-1 text-xs ${textMeta}`}>
-                  {formattedRecords.length} record
-                  {formattedRecords.length === 1 ? "" : "s"}
-                </p>
+                <p className={`mt-1 text-xs ${textMeta}`}>{formattedRecords.length} records</p>
               </div>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <Link href="/pro/contractor/service-records/new" className={ctaPrimary}>
+                + Document Service
+              </Link>
+              <InviteHomeownerButton />
             </div>
           </div>
         </section>
 
-        {/* Records list */}
-        <section className={glass}>
-          <ContractorServiceRecordsClient serviceRecords={formattedRecords} />
-        </section>
+        <ContractorServiceRecordsClient
+          serviceRecords={formattedRecords}
+          initialSearch={initialSearch}
+          initialSort={parsedSort}
+          initialFilter={parsedFilter}
+        />
       </div>
     </main>
-  );
-}
-
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover object-center"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-    </div>
   );
 }

@@ -1,20 +1,15 @@
-/**
- * PROPERTIES CLIENT COMPONENT
- *
- * Client component with filtering, search, and Active/Archived toggle.
- * Shows property cards with relationship metrics and opportunities.
- *
- * Location: app/(pro)/pro/contractor/properties/PropertiesClient.tsx
- */
-
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDistanceToNow } from "date-fns";
-import { glass, heading, textMeta, ctaGhost } from "@/lib/glass";
+import { glass, textMeta, ctaGhost } from "@/lib/glass";
+
+/* =========================
+   Types
+========================= */
 
 type Property = {
   id: string;
@@ -36,14 +31,8 @@ type Property = {
   verifiedServiceCount: number;
   totalSpent: number | null;
   daysSinceLastService: number | null;
-  // Opportunities
-  expiringWarranties: Array<{
-    item: string;
-    expiresAt: string;
-    daysUntil: number;
-  }>;
+  expiringWarranties: Array<{ item: string; expiresAt: string; daysUntil: number }>;
   upcomingReminders: Array<{ title: string; dueAt: string; daysUntil: number }>;
-  // Requests
   pendingRequests: Array<{ id: string; title: string; urgency: string }>;
 };
 
@@ -52,65 +41,158 @@ type PropertiesClientProps = {
   archivedProperties: Property[];
 };
 
-type FilterType =
-  | "all"
-  | "opportunities"
-  | "needs-attention"
-  | "pending";
+type FilterType = "all" | "opportunities" | "needs-attention" | "pending";
+type SortKey = "priority" | "recent" | "address" | "homeowner";
+
+/* =========================
+   Helpers
+========================= */
+
+function safeLower(v: string | null | undefined) {
+  return (v ?? "").toLowerCase();
+}
+
+function formatShortDate(iso: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function formatMoney(v: number) {
+  return `$${v.toFixed(2)}`;
+}
+
+/* =========================
+   Control styling (same as Service Records)
+========================= */
+
+const fieldShell =
+  "rounded-2xl border border-white/10 bg-black/35 backdrop-blur transition " +
+  "focus-within:border-white/18 focus-within:bg-black/45";
+
+const fieldInner =
+  "w-full bg-transparent px-4 py-2 text-sm text-white outline-none placeholder:text-white/35";
+
+const selectInner =
+  fieldInner +
+  " appearance-none pr-10 outline-none focus:outline-none ring-0 focus:ring-0";
+/* =========================
+   Component
+========================= */
 
 export function PropertiesClient({
   activeProperties,
   archivedProperties,
 }: PropertiesClientProps) {
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const urlFilter = searchParams.get("filter") as FilterType | null;
+  const debounceRef = useRef<number | null>(null);
 
   const [view, setView] = useState<"active" | "archived">("active");
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState<FilterType>("all");
+  const [sort, setSort] = useState<SortKey>("priority");
 
-  const properties = view === "active" ? activeProperties : archivedProperties;
+  const isArchivedView = view === "archived";
 
-  // Set filter from URL on mount (only for active view)
+  const properties = isArchivedView ? archivedProperties : activeProperties;
+
+  /* -------------------------
+     URL sync (optional)
+  ------------------------- */
+
   useEffect(() => {
-    if (
-      urlFilter &&
-      ["opportunities", "needs-attention", "pending"].includes(urlFilter)
-    ) {
-      setFilter(urlFilter);
-    }
-  }, [urlFilter]);
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
-  // Reset filter when switching views
-  useEffect(() => {
-    if (view === "archived") {
-      setFilter("all");
-    }
-  }, [view]);
+    debounceRef.current = window.setTimeout(() => {
+      const params = new URLSearchParams(searchParams?.toString());
 
-  const counts = useMemo(
-    () => ({
-      all: properties.length,
-      opportunities: properties.filter(
-        (p) =>
-          (p.expiringWarranties?.length || 0) +
-            (p.upcomingReminders?.length || 0) >
-          0
-      ).length,
-      needsAttention: properties.filter(
-        (p) => !p.lastServiceDate || (p.daysSinceLastService ?? 999) > 180
-      ).length,
-      pending: properties.filter((p) => (p.pendingRequests?.length || 0) > 0)
-        .length,
-    }),
-    [properties]
-  );
+      if (searchQuery.trim()) params.set("search", searchQuery.trim());
+      else params.delete("search");
+
+      if (isArchivedView) params.set("view", "archived");
+      else params.delete("view");
+
+      if (!isArchivedView && filter !== "all") params.set("filter", filter);
+      else params.delete("filter");
+
+      if (sort !== (isArchivedView ? "recent" : "priority")) {
+        params.set("sort", sort);
+      } else {
+        params.delete("sort");
+      }
+
+      const qs = params.toString();
+      router.push(`/pro/contractor/properties${qs ? `?${qs}` : ""}`);
+    }, 250);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, view, filter, sort]);
+
+  /* -------------------------
+     Search
+  ------------------------- */
+
+  const searched = useMemo(() => {
+    if (!searchQuery.trim()) return [...properties];
+
+    const q = searchQuery.toLowerCase();
+    return properties.filter(
+      (p) =>
+        safeLower(p.address).includes(q) ||
+        safeLower(p.city).includes(q) ||
+        safeLower(p.state).includes(q) ||
+        safeLower(p.homeownerName).includes(q) ||
+        safeLower(p.homeownerEmail).includes(q)
+    );
+  }, [properties, searchQuery]);
+
+  /* -------------------------
+     Counts (based on searched list)
+  ------------------------- */
+
+  const counts = useMemo(() => {
+    const opportunities = searched.filter(
+      (p) =>
+        (p.expiringWarranties?.length || 0) +
+          (p.upcomingReminders?.length || 0) >
+        0
+    ).length;
+
+    const needsAttention = searched.filter(
+      (p) => !p.lastServiceDate || (p.daysSinceLastService ?? 999) > 180
+    ).length;
+
+    const pending = searched.filter(
+      (p) => (p.pendingRequests?.length || 0) > 0
+    ).length;
+
+    return {
+      all: searched.length,
+      opportunities,
+      needsAttention,
+      pending,
+      activeTotal: activeProperties.length,
+      archivedTotal: archivedProperties.length,
+    };
+  }, [searched, activeProperties.length, archivedProperties.length]);
+
+  /* -------------------------
+     Filter + Sort
+  ------------------------- */
 
   const filtered = useMemo(() => {
-    let list = properties;
+    let list = [...searched];
 
-    // Filter by type (only for active view)
-    if (view === "active") {
+    if (!isArchivedView) {
       if (filter === "opportunities") {
         list = list.filter(
           (p) =>
@@ -127,20 +209,7 @@ export function PropertiesClient({
       }
     }
 
-    // Search
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.address.toLowerCase().includes(q) ||
-          p.city.toLowerCase().includes(q) ||
-          p.homeownerName.toLowerCase().includes(q)
-      );
-    }
-
-    // Sort
-    if (view === "archived") {
-      // Sort archived by archivedAt (most recent first)
+    if (isArchivedView) {
       return list.sort((a, b) => {
         const aDate = a.archivedAt ? new Date(a.archivedAt).getTime() : 0;
         const bDate = b.archivedAt ? new Date(b.archivedAt).getTime() : 0;
@@ -148,434 +217,302 @@ export function PropertiesClient({
       });
     }
 
-    // Sort active by priority
     return list.sort((a, b) => {
-      // Pending requests first
-      const aPending = a.pendingRequests?.length || 0;
-      const bPending = b.pendingRequests?.length || 0;
-      if (aPending > bPending) return -1;
-      if (bPending > aPending) return 1;
+      if (sort === "address") return a.address.localeCompare(b.address);
+      if (sort === "homeowner")
+        return a.homeownerName.localeCompare(b.homeownerName);
 
-      // Then opportunities
-      const aOpps =
+      if (sort === "recent") {
+        const ad = a.lastServiceDate ? new Date(a.lastServiceDate).getTime() : 0;
+        const bd = b.lastServiceDate ? new Date(b.lastServiceDate).getTime() : 0;
+        return bd - ad;
+      }
+
+      // priority
+      const ap = a.pendingRequests?.length || 0;
+      const bp = b.pendingRequests?.length || 0;
+      if (ap !== bp) return bp - ap;
+
+      const ao =
         (a.expiringWarranties?.length || 0) +
         (a.upcomingReminders?.length || 0);
-      const bOpps =
+      const bo =
         (b.expiringWarranties?.length || 0) +
         (b.upcomingReminders?.length || 0);
-      if (aOpps > bOpps) return -1;
-      if (bOpps > aOpps) return 1;
+      if (ao !== bo) return bo - ao;
 
-      // Then by last service date (most recent first)
-      if (a.lastServiceDate && b.lastServiceDate) {
-        return (
-          new Date(b.lastServiceDate).getTime() -
-          new Date(a.lastServiceDate).getTime()
-        );
-      }
-      if (a.lastServiceDate) return -1;
-      if (b.lastServiceDate) return 1;
+      const an =
+        !a.lastServiceDate || (a.daysSinceLastService ?? 999) > 180;
+      const bn =
+        !b.lastServiceDate || (b.daysSinceLastService ?? 999) > 180;
+      if (an && !bn) return -1;
+      if (!an && bn) return 1;
 
       return 0;
     });
-  }, [properties, filter, searchQuery, view]);
+  }, [searched, filter, sort, isArchivedView]);
+
+  const showClear =
+    searchQuery.trim() ||
+    isArchivedView ||
+    (!isArchivedView && filter !== "all") ||
+    sort !== (isArchivedView ? "recent" : "priority");
+
+  /* =========================
+     Render
+  ========================= */
 
   return (
     <div className="space-y-6">
-      {/* Filters Section */}
+      {/* Controls */}
       <section className={glass}>
-        <div className="flex flex-col gap-4">
-          {/* Top row: Active/Archived toggle + Search */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            {/* Active/Archived Toggle - only show if there are archived */}
-            {archivedProperties.length > 0 ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setView("active")}
-                  className={`rounded-full border px-4 py-2 text-sm transition ${
-                    view === "active"
-                      ? "border-white/40 bg-white/15 text-white"
-                      : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-                  }`}
-                >
-                  Active ({activeProperties.length})
-                </button>
-                <button
-                  onClick={() => setView("archived")}
-                  className={`rounded-full border px-4 py-2 text-sm transition ${
-                    view === "archived"
-                      ? "border-white/40 bg-white/15 text-white"
-                      : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-                  }`}
-                >
-                  Archived ({archivedProperties.length})
-                </button>
-              </div>
-            ) : (
-              <div /> /* Spacer when no archived */
-            )}
-
-            {/* Search */}
-            <div className="w-full sm:w-72">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          {/* Search */}
+          <div className="flex-1">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              Search
+            </label>
+            <div className={fieldShell}>
               <input
-                type="text"
-                placeholder={
-                  view === "archived"
-                    ? "Search archived..."
-                    : "Search properties..."
-                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-white/40 focus:outline-none focus:ring-0"
+                placeholder={isArchivedView ? "Search archived…" : "Search properties…"}
+                className={fieldInner}
               />
             </div>
           </div>
 
-          {/* Action filters - only for active view */}
-          {view === "active" && (
-            <div className="flex flex-wrap gap-2">
-              <Chip active={filter === "all"} onClick={() => setFilter("all")}>
-                All ({counts.all})
-              </Chip>
-              <Chip
-                active={filter === "pending"}
-                onClick={() => setFilter("pending")}
-                variant="orange"
+          {/* View */}
+          <div className="w-full md:w-56">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              View
+            </label>
+            <div className={`${fieldShell} relative`}>
+              <select
+                value={view}
+                onChange={(e) =>
+                  setView(e.target.value as "active" | "archived")
+                }
+                className={selectInner}
               >
-                🔴 Pending ({counts.pending})
-              </Chip>
-              <Chip
-                active={filter === "opportunities"}
-                onClick={() => setFilter("opportunities")}
-                variant="blue"
-              >
-                🎯 Opportunities ({counts.opportunities})
-              </Chip>
-              <Chip
-                active={filter === "needs-attention"}
-                onClick={() => setFilter("needs-attention")}
-                variant="yellow"
-              >
-                ⚡ Follow-up ({counts.needsAttention})
-              </Chip>
+                <option value="active" className="bg-gray-900">
+                  Active ({counts.activeTotal})
+                </option>
+                <option value="archived" className="bg-gray-900">
+                  Archived ({counts.archivedTotal})
+                </option>
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+                ▾
+              </span>
             </div>
-          )}
+          </div>
+
+          {/* Filter */}
+          <div className="w-full md:w-56">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              Filter
+            </label>
+            <div
+              className={`${fieldShell} relative ${
+                isArchivedView ? "opacity-60" : ""
+              }`}
+            >
+              <select
+                value={filter}
+                onChange={(e) => setFilter(e.target.value as FilterType)}
+                disabled={isArchivedView}
+                className={selectInner}
+              >
+                <option value="all" className="bg-gray-900">
+                  All ({counts.all})
+                </option>
+                <option value="pending" className="bg-gray-900">
+                  Pending ({counts.pending})
+                </option>
+                <option value="opportunities" className="bg-gray-900">
+                  Opportunities ({counts.opportunities})
+                </option>
+                <option value="needs-attention" className="bg-gray-900">
+                  Follow-up ({counts.needsAttention})
+                </option>
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+                ▾
+              </span>
+            </div>
+          </div>
+
+          {/* Sort */}
+          <div className="w-full md:w-56">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              Sort
+            </label>
+            <div className={`${fieldShell} relative`}>
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                className={selectInner}
+              >
+                {isArchivedView ? (
+                  <>
+                    <option value="recent" className="bg-gray-900">
+                      Most Recently Archived
+                    </option>
+                    <option value="address" className="bg-gray-900">
+                      Address (A–Z)
+                    </option>
+                    <option value="homeowner" className="bg-gray-900">
+                      Homeowner (A–Z)
+                    </option>
+                  </>
+                ) : (
+                  <>
+                    <option value="priority" className="bg-gray-900">
+                      Priority
+                    </option>
+                    <option value="recent" className="bg-gray-900">
+                      Recent Service
+                    </option>
+                    <option value="address" className="bg-gray-900">
+                      Address (A–Z)
+                    </option>
+                    <option value="homeowner" className="bg-gray-900">
+                      Homeowner (A–Z)
+                    </option>
+                  </>
+                )}
+              </select>
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+                ▾
+              </span>
+            </div>
+          </div>
+
+          {showClear ? (
+            <div className="flex md:justify-end">
+              <Link href="/pro/contractor/properties" className={ctaGhost}>
+                Clear
+              </Link>
+            </div>
+          ) : null}
         </div>
       </section>
 
-      {/* Properties Grid / Empty state */}
-      {filtered.length === 0 ? (
-        <section className={glass}>
-          <div className="py-10 text-center">
-            <div className="mb-4 text-5xl">
-              {view === "archived"
-                ? "📦"
-                : filter === "opportunities"
-                ? "🎯"
-                : filter === "needs-attention"
-                ? "⚡"
-                : filter === "pending"
-                ? "📋"
-                : "🏠"}
-            </div>
-            <p className="mb-2 text-lg text-white">
-              {view === "archived"
-                ? "No archived properties"
-                : filter === "opportunities"
-                ? "No opportunities right now"
-                : filter === "needs-attention"
-                ? "All clients are engaged"
-                : filter === "pending"
-                ? "No pending requests"
-                : searchQuery
-                ? "No properties match your search"
-                : "No properties yet"}
-            </p>
-            <p className={textMeta}>
-              {view === "archived"
-                ? "Properties from disconnected homeowners will appear here."
-                : searchQuery
-                ? "Try a different search term."
-                : filter !== "all"
-                ? "Try a different filter."
-                : "Start documenting work to see properties here."}
-            </p>
-            {(searchQuery || filter !== "all") && view === "active" && (
-              <button
-                className={`${ctaGhost} mt-4`}
-                onClick={() => {
-                  setSearchQuery("");
-                  setFilter("all");
-                }}
-              >
-                Clear filters
-              </button>
-            )}
+      {/* List */}
+      <section className={glass}>
+        {filtered.length === 0 ? (
+          <div className="py-14 text-center">
+            <p className="mb-4 text-white/70">No properties match your filters.</p>
+            <Link href="/pro/contractor/properties" className={ctaGhost}>
+              Reset view
+            </Link>
           </div>
-        </section>
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((property) => (
-            <PropertyCard key={property.id} property={property} />
-          ))}
-        </div>
-      )}
+        ) : (
+          <ul className="space-y-3">
+            {filtered.map((p) => (
+              <PropertyRowCard key={p.id} property={p} />
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }
 
-function PropertyCard({ property }: { property: Property }) {
-  const hasOpportunities =
+/* =========================
+   Row Card
+========================= */
+
+function PropertyRowCard({ property }: { property: Property }) {
+  const hasPending = (property.pendingRequests?.length || 0) > 0;
+  const hasOpps =
     (property.expiringWarranties?.length || 0) +
       (property.upcomingReminders?.length || 0) >
     0;
-  const hasPendingRequests = (property.pendingRequests?.length || 0) > 0;
   const needsAttention =
     !property.lastServiceDate || (property.daysSinceLastService ?? 999) > 180;
 
-  // Determine card border color based on status
-  let borderColor = "border-white/10";
-  if (property.isArchived) {
-    borderColor = "border-gray-500/30";
-  } else if (hasPendingRequests) {
-    borderColor = "border-orange-400/30";
-  } else if (needsAttention && hasOpportunities) {
-    borderColor = "border-yellow-400/30";
-  } else if (hasOpportunities) {
-    borderColor = "border-blue-400/30";
-  } else if (needsAttention) {
-    borderColor = "border-yellow-400/20";
-  }
+  const leftAccent =
+    property.isArchived
+      ? "before:bg-white/20"
+      : hasPending
+      ? "before:bg-amber-400/70"
+      : hasOpps
+      ? "before:bg-sky-400/70"
+      : needsAttention
+      ? "before:bg-yellow-400/60"
+      : "before:bg-emerald-400/40";
 
   return (
-    <Link
-      href={`/pro/contractor/properties/${property.id}`}
-      className={`${glass} group block transition hover:bg-white/15 relative border-l-4 ${borderColor} ${
-        property.isArchived ? "opacity-75" : ""
-      }`}
+    <li
+      className={[
+        "group relative overflow-hidden rounded-2xl border border-white/10",
+        "bg-black/35 backdrop-blur",
+        "hover:border-white/18 hover:bg-black/45 transition",
+        "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
+        leftAccent,
+      ].join(" ")}
     >
-      {/* Property Image */}
-      <div className="relative mb-4 h-48 overflow-hidden rounded-lg bg-white/5">
-        {property.imageUrl ? (
-          <Image
-            src={property.imageUrl}
-            alt={property.address}
-            fill
-            className="object-cover transition group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, 33vw"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center">
-            <span className="text-6xl opacity-20">🏠</span>
-          </div>
-        )}
-
-        {/* Status badge */}
-        {property.isArchived ? (
-          <div className="absolute right-2 top-2 rounded-full border border-gray-500/40 bg-gray-500/20 px-2 py-1 text-xs text-gray-300 flex items-center gap-1">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-3 h-3"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-              />
-            </svg>
-            Disconnected
-          </div>
-        ) : (
-          property.connectionStatus === "ACTIVE" && (
-            <div className="absolute right-2 top-2 rounded-full border border-emerald-400/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-100">
-              Active Client
-            </div>
-          )
-        )}
-      </div>
-
-      {/* Homeowner Info */}
-      <div className="flex items-center gap-3 mb-3">
-        {property.homeownerImage ? (
-          <Image
-            src={property.homeownerImage}
-            alt={property.homeownerName}
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white font-medium">
-            {property.homeownerName[0]?.toUpperCase() || "?"}
-          </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <h3 className={`font-semibold ${heading} line-clamp-1 text-base`}>
-            {property.homeownerName}
-          </h3>
-          <p className={`text-sm ${textMeta} truncate`}>{property.address}</p>
-        </div>
-      </div>
-
-      {/* Archived info */}
-      {property.isArchived && property.archivedAt && (
-        <div className="mb-3 rounded-md bg-gray-500/10 border border-gray-500/20 px-3 py-2">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 text-sm">📦</span>
-            <span className="text-sm text-gray-300">
-              Disconnected{" "}
-              {formatDistanceToNow(new Date(property.archivedAt), {
-                addSuffix: true,
-              })}
-            </span>
-          </div>
-          <p className="text-xs text-gray-500 mt-1">
-            Work history preserved • Read-only access
-          </p>
-        </div>
-      )}
-
-      {/* Action Items - only for active */}
-      {!property.isArchived && (
-        <>
-          {hasPendingRequests && property.pendingRequests && (
-            <div className="mb-3 rounded-md bg-orange-400/10 border border-orange-400/30 px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-orange-300 text-sm">📋</span>
-                <span className="text-sm text-orange-200 font-medium">
-                  {property.pendingRequests[0].title}
-                </span>
-              </div>
-              {property.pendingRequests.length > 1 && (
-                <p className="text-xs text-orange-300/70 mt-1">
-                  +{property.pendingRequests.length - 1} more request
-                  {property.pendingRequests.length > 2 ? "s" : ""}
-                </p>
+      <Link href={`/pro/contractor/properties/${property.id}`} className="block px-4 py-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex gap-3">
+            <div className="h-12 w-12 rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+              {property.imageUrl && (
+                <Image src={property.imageUrl} alt="" width={48} height={48} />
               )}
             </div>
-          )}
 
-          {hasOpportunities && !hasPendingRequests && (
-            <div className="mb-3 space-y-1.5">
-              {property.expiringWarranties?.slice(0, 1).map((warranty) => (
-                <div
-                  key={warranty.item}
-                  className="rounded-md bg-blue-400/10 border border-blue-400/20 px-3 py-1.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-blue-300 text-xs">🛡️</span>
-                      <span className="text-xs text-blue-200 truncate">
-                        {warranty.item} expiring
-                      </span>
-                    </div>
-                    <span className="text-xs text-blue-300/70 flex-shrink-0">
-                      {warranty.daysUntil}d
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {property.upcomingReminders?.slice(0, 1).map((reminder) => (
-                <div
-                  key={reminder.title}
-                  className="rounded-md bg-blue-400/10 border border-blue-400/20 px-3 py-1.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-blue-300 text-xs">🔔</span>
-                      <span className="text-xs text-blue-200 truncate">
-                        {reminder.title}
-                      </span>
-                    </div>
-                    <span className="text-xs text-blue-300/70 flex-shrink-0">
-                      {reminder.daysUntil}d
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+            <div className="min-w-0">
+              <h3 className="truncate text-[15px] font-semibold text-white">
+                {property.homeownerName}
+              </h3>
 
-          {needsAttention && !hasPendingRequests && !hasOpportunities && (
-            <div className="mb-3 rounded-md bg-yellow-400/10 border border-yellow-400/20 px-3 py-1.5">
-              <div className="flex items-center gap-2">
-                <span className="text-yellow-300 text-xs">💡</span>
-                <span className="text-xs text-yellow-200">
+              <p className="mt-1 truncate text-xs text-white/55">
+                {property.address}
+              </p>
+
+              <div className={`mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs ${textMeta}`}>
+                <span>{property.serviceCount} services</span>
+                {property.totalSpent ? <span>{formatMoney(property.totalSpent)}</span> : null}
+                {property.lastServiceDate ? (
+                  <span>Last: {formatShortDate(property.lastServiceDate)}</span>
+                ) : (
+                  <span>Last: —</span>
+                )}
+              </div>
+
+              {property.isArchived && property.archivedAt ? (
+                <p className="mt-2 text-xs text-white/60">
+                  Disconnected{" "}
+                  {formatDistanceToNow(new Date(property.archivedAt), {
+                    addSuffix: true,
+                  })}
+                </p>
+              ) : hasPending && property.pendingRequests?.[0]?.title ? (
+                <p className="mt-2 text-xs text-white/70">
+                  Pending: {property.pendingRequests[0].title}
+                </p>
+              ) : hasOpps ? (
+                <p className="mt-2 text-xs text-white/70">Opportunities available</p>
+              ) : needsAttention ? (
+                <p className="mt-2 text-xs text-white/70">
                   {property.daysSinceLastService
                     ? `${property.daysSinceLastService} days since last contact`
                     : "No recent contact"}
-                </span>
-              </div>
+                </p>
+              ) : null}
             </div>
-          )}
-        </>
-      )}
+          </div>
 
-      {/* Stats */}
-      <div className="flex items-center gap-3 text-xs text-white/60 mb-2">
-        {property.verifiedServiceCount > 0 && (
-          <span>✓ {property.verifiedServiceCount} verified</span>
-        )}
-        {!property.isArchived && property.daysSinceLastService !== null && (
-          <span>
-            {property.daysSinceLastService === 0
-              ? "Today"
-              : `${property.daysSinceLastService}d ago`}
-          </span>
-        )}
-        {property.totalSpent && property.totalSpent > 0 && (
-          <span className="text-green-300">
-            ${property.totalSpent.toLocaleString()}
-          </span>
-        )}
-      </div>
-
-      {/* Last work */}
-      {property.lastServiceTitle && (
-        <div className={`text-xs ${textMeta} line-clamp-1`}>
-          {property.isArchived ? "Last service" : "Recent"}: {property.lastServiceTitle}
+          <div className="shrink-0 text-right">
+            <div className="mt-2 inline-flex items-center gap-1 text-xs text-white/60 opacity-0 transition group-hover:opacity-100">
+              <span>Open</span>
+              <span aria-hidden>→</span>
+            </div>
+          </div>
         </div>
-      )}
-    </Link>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  children,
-  variant = "default",
-}: {
-  active?: boolean;
-  onClick?: () => void;
-  children: React.ReactNode;
-  variant?: "default" | "orange" | "blue" | "yellow";
-}) {
-  const variantStyles = {
-    default: active
-      ? "border-white/40 bg-white/15 text-white"
-      : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10",
-    orange: active
-      ? "border-orange-400/40 bg-orange-400/20 text-orange-200"
-      : "border-orange-400/20 bg-orange-400/5 text-orange-300/80 hover:bg-orange-400/10",
-    blue: active
-      ? "border-blue-400/40 bg-blue-400/20 text-blue-200"
-      : "border-blue-400/20 bg-blue-400/5 text-blue-300/80 hover:bg-blue-400/10",
-    yellow: active
-      ? "border-yellow-400/40 bg-yellow-400/20 text-yellow-200"
-      : "border-yellow-400/20 bg-yellow-400/5 text-yellow-300/80 hover:bg-yellow-400/10",
-  };
-
-  return (
-    <button
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-sm transition ${variantStyles[variant]}`}
-    >
-      {children}
-    </button>
+      </Link>
+    </li>
   );
 }

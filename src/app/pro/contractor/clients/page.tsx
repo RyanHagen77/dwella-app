@@ -1,152 +1,187 @@
-// app/pro/clients/page.tsx
-"use client";
+export const dynamic = "force-dynamic";
 
+import { prisma } from "@/lib/prisma";
+import { getServerSession } from "next-auth";
+import { authConfig } from "@/lib/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
-import { glass, glassTight, textMeta, ctaGhost } from "@/lib/glass";
-import { Button, GhostButton } from "@/components/ui/Button";
-import { Input, fieldLabel } from "@/components/ui";
-import { Modal } from "@/components/ui/Modal";
-import { loadJSON, saveJSON } from "@/lib/storage";
+import { ConnectionStatus } from "@prisma/client";
 
-/* ------------ Types (aligned with /pro) ------------ */
-type ClientHome = { id: string; address: string; sharedLink: string; owner?: string; };
-type ServiceStatus = "requested" | "scheduled" | "in_progress" | "complete";
-type Service = { id: string; title: string; clientAddress: string; due: string; status: ServiceStatus; estAmount?: number; };
-type RecordItem = { id: string; title: string; date: string; address: string; amount?: number; };
-type Review = { id: string; author: string; rating: number; text: string; date: string; };
-type Pro = { id: string; business: string; category: string; rating: number; verified: boolean; logo?: string; };
-type ProData = { pro: Pro; services: Service[]; records: RecordItem[]; clients: ClientHome[]; reviews: Review[]; };
+import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
+import ContractorClientsClient from "./ContractorClientsClient";
+import { InviteHomeownerButton } from "@/app/pro/_components/InviteHomeownerButton";
 
-export default function ClientsPage() {
-  const [db, setDb] = useState<ProData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [q, setQ] = useState("");
-  const [addOpen, setAddOpen] = useState(false);
+type PageProps = {
+  searchParams: Promise<{ search?: string; sort?: string; filter?: string }>;
+};
 
-  useEffect(() => { setDb(loadJSON<ProData | null>("proData", null)); setLoading(false); }, []);
-  useEffect(() => { if (db) saveJSON("proData", db); }, [db]);
+type SortKey = "newest" | "oldest" | "name" | "recent";
+type FilterKey = "all" | "pending" | "active";
 
-  const clients = db?.clients ?? [];
-  const filtered = useMemo(() => {
-    if (!q.trim()) return clients;
-    const t = q.toLowerCase();
-    return clients.filter(c =>
-      c.address.toLowerCase().includes(t) || (c.owner ?? "").toLowerCase().includes(t)
-    );
-  }, [clients, q]);
+export type ClientRow = {
+  homeownerId: string;
+  homeownerName: string;
+  homeownerEmail: string | null;
 
-  if (loading) {
-    return (
-      <main className="relative min-h-screen text-white">
-        <Bg />
-        <div className="mx-auto max-w-7xl p-6 space-y-6">
-          <div className="h-9 w-48 animate-pulse rounded-xl bg-white/10 backdrop-blur-sm" />
-          <div className="h-40 animate-pulse rounded-2xl bg-white/10 backdrop-blur-sm" />
-        </div>
-      </main>
-    );
+  homesCount: number;
+  homes: { homeId: string; addressLine: string }[];
+
+  status: "Active" | "Pending"; // rollup label
+  lastServiceDate: string | null; // ISO
+  totalSpent: number; // rolled up
+  createdAt: string; // first connection createdAt (earliest)
+};
+
+function addrLine(home: { address: string; city: string; state: string }) {
+  return `${home.address}, ${home.city}, ${home.state}`;
+}
+
+export default async function ContractorClientsPage({ searchParams }: PageProps) {
+  const { search, sort, filter } = await searchParams;
+
+  const session = await getServerSession(authConfig);
+  if (!session?.user?.id) redirect("/login");
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    include: { proProfile: true },
+  });
+
+  if (user?.role !== "PRO" || user.proProfile?.type !== "CONTRACTOR") {
+    redirect("/pro/contractor/dashboard");
   }
 
-  return (
-    <main className="relative min-h-screen text-white">
-      <Bg />
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
+  const parsedFilter: FilterKey =
+    filter === "pending" || filter === "active" ? filter : "all";
 
-        {/* Search / actions */}
+  const parsedSort: SortKey =
+    sort === "oldest" || sort === "name" || sort === "recent" ? sort : "newest";
+
+  const initialSearch = (search ?? "").trim() || undefined;
+
+  /**
+   * ✅ IMPORTANT:
+   * Fetch ALL connections for correct counts (client handles filter/search/sort).
+   * Exclude archived by BOTH archivedAt + status.
+   */
+  const connections = await prisma.connection.findMany({
+    where: {
+      contractorId: session.user.id,
+      archivedAt: null,
+      status: { not: ConnectionStatus.ARCHIVED },
+    },
+    include: {
+      homeowner: { select: { id: true, name: true, email: true } },
+      home: { select: { id: true, address: true, city: true, state: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  // Group by homeowner (1 row per homeowner)
+  const byHomeowner = new Map<string, ClientRow>();
+
+  for (const c of connections) {
+    const key = c.homeowner.id;
+    const existing = byHomeowner.get(key);
+
+    const homeEntry = {
+      homeId: c.home.id,
+      addressLine: addrLine(c.home),
+    };
+
+    const spent = Number(c.totalSpent ?? 0);
+    const lastServiceIso = c.lastServiceDate ? c.lastServiceDate.toISOString() : null;
+
+    const isActive = c.status === ConnectionStatus.ACTIVE;
+
+    if (!existing) {
+      byHomeowner.set(key, {
+        homeownerId: c.homeowner.id,
+        homeownerName: c.homeowner.name || c.homeowner.email || "Homeowner",
+        homeownerEmail: c.homeowner.email ?? null,
+
+        homesCount: 1,
+        homes: [homeEntry],
+
+        status: isActive ? "Active" : "Pending",
+        lastServiceDate: lastServiceIso,
+        totalSpent: spent,
+        createdAt: c.createdAt.toISOString(),
+      });
+      continue;
+    }
+
+    // merge
+    if (!existing.homes.some((h) => h.homeId === homeEntry.homeId)) {
+      existing.homes.push(homeEntry);
+      existing.homesCount = existing.homes.length;
+    }
+
+    // rollup status: Active wins if any connection is active
+    if (isActive) existing.status = "Active";
+
+    // rollup spent
+    existing.totalSpent += spent;
+
+    // rollup lastServiceDate (max)
+    if (lastServiceIso) {
+      if (!existing.lastServiceDate) existing.lastServiceDate = lastServiceIso;
+      else {
+        const prev = new Date(existing.lastServiceDate).getTime();
+        const next = new Date(lastServiceIso).getTime();
+        if (next > prev) existing.lastServiceDate = lastServiceIso;
+      }
+    }
+
+    // earliest createdAt (min)
+    const cur = new Date(existing.createdAt).getTime();
+    const cand = c.createdAt.getTime();
+    if (cand < cur) existing.createdAt = c.createdAt.toISOString();
+  }
+
+  const rows = Array.from(byHomeowner.values());
+
+  return (
+    <main className="min-h-screen text-white">
+      <div className="mx-auto max-w-7xl p-6 space-y-6">
+        <nav className="flex items-center gap-2 text-sm">
+          <Link
+            href="/pro/contractor/dashboard"
+            className="text-white/70 hover:text-white transition-colors"
+          >
+            Dashboard
+          </Link>
+          <span className="text-white/50">/</span>
+          <span className="text-white">Clients</span>
+        </nav>
+
+        {/* Clean header (no icon blocks) */}
         <section className={glass}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <Input placeholder="Search address or owner…" value={q} onChange={e => setQ((e.target as HTMLInputElement).value)} />
-            <div className="flex gap-2">
-              <button className={ctaGhost}>New Request (demo)</button>
-              <button className={ctaGhost}>Import CSV (demo)</button>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0">
+              <h1 className={`text-2xl font-bold ${heading}`}>Clients</h1>
+              <p className={`mt-1 text-sm ${textMeta}`}>
+                Homeowners you’re connected with on MyDwella.
+              </p>
+              <p className={`mt-1 text-xs ${textMeta}`}>{rows.length} clients</p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <Link href="/pro/contractor/clients/new" className={ctaPrimary}>
+                + Add Client
+              </Link>
+              <InviteHomeownerButton />
             </div>
           </div>
         </section>
 
-        {/* List */}
-        <section className={glass}>
-          {filtered.length === 0 ? (
-            <div className="py-10 text-center text-white/80">
-              <p className="mb-2">No clients match your search.</p>
-              <button className={ctaGhost} onClick={() => setQ("")}>Clear</button>
-            </div>
-          ) : (
-            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map(c => (
-                <li key={c.id} className={`${glassTight} rounded-xl p-3`}>
-                  <div className="mb-2 flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-medium text-white">{c.address}</p>
-                      <p className={`text-sm ${textMeta}`}>Owner • {c.owner ?? "—"}</p>
-                    </div>
-                    <a className="underline text-white/85" href={c.sharedLink}>Report</a>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Link className={ctaGhost} href={`/pro/jobs?q=${encodeURIComponent(c.address)}`}>View jobs</Link>
-                    <button className={ctaGhost} onClick={() => createJobFor(c, setDb)}>New job</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* Modal */}
-        <AddClientModal
-          open={addOpen}
-          onClose={() => setAddOpen(false)}
-          onCreate={(client) => setDb(d => (d ? { ...d, clients: [client, ...(d.clients ?? [])] } : d))}
+        <ContractorClientsClient
+          clients={rows}
+          initialSearch={initialSearch}
+          initialSort={parsedSort}
+          initialFilter={parsedFilter}
         />
       </div>
     </main>
-  );
-}
-
-/* ------------ Local helpers/components ------------ */
-function Bg() {
-  return (
-    <div className="fixed inset-0 -z-50">
-      <Image
-        src="/myhomedox_home3.webp"
-        alt=""
-        fill
-        sizes="100vw"
-        className="object-cover md:object-[50%_35%] lg:object-[50%_30%]"
-        priority
-      />
-      <div className="absolute inset-0 bg-black/45" />
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.6))]" />
-    </div>
-  );
-}
-function createJobFor(client: ClientHome, setDb: React.Dispatch<React.SetStateAction<ProData | null>>) {
-  const id = cryptoId();
-  const due = new Date(); due.setDate(due.getDate() + 3);
-  setDb(d => {
-    if (!d) return d;
-    const job: Service = { id, title: "New Service Request", clientAddress: client.address, due: due.toISOString().slice(0,10), status: "requested" };
-    return { ...d, services: [job, ...d.services] };
-  });
-}
-function cryptoId() { return (globalThis.crypto && "randomUUID" in crypto) ? crypto.randomUUID() : String(Date.now()); }
-
-function AddClientModal({ open, onClose, onCreate }: { open: boolean; onClose: () => void; onCreate: (c: ClientHome) => void; }) {
-  const [form, setForm] = useState({ address: "", owner: "" });
-  function submit() {
-    if (!form.address.trim()) return;
-    const slug = form.address.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    onCreate({ id: cryptoId(), address: form.address.trim(), owner: form.owner.trim() || undefined, sharedLink: `/report?h=${slug}` });
-    onClose();
-  }
-  return (
-    <Modal open={open} onCloseAction={onClose} title="Add Client">
-      <div className="space-y-3">
-        <label className="block"><span className={fieldLabel}>Address</span><Input value={form.address} onChange={e => setForm({ ...form, address: (e.target as HTMLInputElement).value })} placeholder="123 Main St" /></label>
-        <label className="block"><span className={fieldLabel}>Owner (optional)</span><Input value={form.owner} onChange={e => setForm({ ...form, owner: (e.target as HTMLInputElement).value })} placeholder="e.g., Nguyen" /></label>
-        <div className="mt-1 flex justify-end gap-2"><GhostButton onClick={onClose}>Cancel</GhostButton><Button onClick={submit}>Add</Button></div>
-      </div>
-    </Modal>
   );
 }
