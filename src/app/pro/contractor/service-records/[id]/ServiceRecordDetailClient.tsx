@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { ComponentProps } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { glass, glassTight, textMeta, ctaGhost } from "@/lib/glass";
+import { glass, glassTight, heading, textMeta, ctaGhost } from "@/lib/glass";
 import ContractorReminderModal from "@/app/pro/contractor/reminders/ContractorReminderModal";
 
 type AttachmentType = "photo" | "invoice" | "warranty" | "other";

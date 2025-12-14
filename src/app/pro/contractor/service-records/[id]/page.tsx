@@ -214,18 +214,21 @@ export default async function ServiceRecordDetailPage({ params }: PageProps) {
             </div>
 
             {/* Right: actions (stays on same row on mobile) */}
-            <div className="flex flex-shrink-0 items-center gap-2">
-              <ServiceRecordActions
-                serviceRecordId={detail.id}
-                serviceRecord={{
-                  id: detail.id,
-                  serviceType: detail.serviceType,
-                  serviceDate: detail.serviceDate.slice(0, 10),
-                  description: detail.description,
-                  cost: detail.cost,
-                  status: detail.status,
-                }}
-              />
+            <div className="flex flex-shrink-0 items-center">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-1 backdrop-blur">
+                <ServiceRecordActions
+                  variant="header"
+                  serviceRecordId={detail.id}
+                  serviceRecord={{
+                    id: detail.id,
+                    serviceType: detail.serviceType,
+                    serviceDate: detail.serviceDate.slice(0, 10),
+                    description: detail.description,
+                    cost: detail.cost,
+                    status: detail.status,
+                  }}
+                />
+              </div>
             </div>
           </div>
         </section>
