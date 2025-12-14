@@ -403,7 +403,7 @@ export function ContractorDashboardClient({
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <h2 className={`text-xl font-semibold ${heading}`}>
-                    Your Clients
+                    Properties
                   </h2>
                   <p className={`text-sm ${textMeta} mt-1`}>
                     Active relationships

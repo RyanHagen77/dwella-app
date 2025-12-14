@@ -55,63 +55,56 @@ type SentInvitation = Prisma.InvitationGetPayload<{
 
 export default async function ContractorInvitationsPage() {
   const session = await getServerSession(authConfig);
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+  if (!session?.user?.id) redirect("/login");
 
   const userId = session.user.id;
 
-  // Get user email for received invitations
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true },
+    select: { email: true, role: true },
   });
 
-  if (!user?.email) {
-    redirect("/dashboard");
-  }
+  if (!user?.email) redirect("/pro/contractor/dashboard");
+
+  // (Optional) ensure contractor, if you want consistency with other pages:
+  // if (user.role !== "PRO") redirect("/pro/contractor/dashboard");
 
   const email = user.email;
 
-  const receivedInvitations: ReceivedInvitation[] =
-    await prisma.invitation.findMany({
-      where: {
-        invitedEmail: {
-          equals: email,
-          mode: "insensitive",
-        },
-      },
-      include: {
-        inviter: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true,
-            proProfile: {
-              select: {
-                businessName: true,
-                company: true,
-                phone: true,
-                rating: true,
-                verified: true,
-              },
+  const receivedInvitations: ReceivedInvitation[] = await prisma.invitation.findMany({
+    where: {
+      invitedEmail: { equals: email, mode: "insensitive" },
+    },
+    include: {
+      inviter: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          proProfile: {
+            select: {
+              businessName: true,
+              company: true,
+              phone: true,
+              rating: true,
+              verified: true,
             },
           },
         },
-        home: {
-          select: {
-            id: true,
-            address: true,
-            city: true,
-            state: true,
-            zip: true,
-          },
+      },
+      home: {
+        select: {
+          id: true,
+          address: true,
+          city: true,
+          state: true,
+          zip: true,
         },
       },
-      orderBy: { createdAt: "desc" },
-    });
+    },
+    orderBy: { createdAt: "desc" },
+  });
 
   const sentInvitations: SentInvitation[] = await prisma.invitation.findMany({
     where: { invitedBy: userId },
@@ -130,13 +123,11 @@ export default async function ContractorInvitationsPage() {
   });
 
   return (
-    <>
-      <div className="relative mx-auto max-w-7xl p-6">
-        <ContractorInvitationsClient
-          receivedInvitations={receivedInvitations}
-          sentInvitations={sentInvitations}
-        />
-      </div>
-    </>
+    <main className="min-h-screen text-white">
+      <ContractorInvitationsClient
+        receivedInvitations={receivedInvitations}
+        sentInvitations={sentInvitations}
+      />
+    </main>
   );
 }

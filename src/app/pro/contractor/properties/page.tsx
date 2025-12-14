@@ -215,9 +215,6 @@ export default async function PropertiesPage() {
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0">
               <h1 className={`text-2xl font-bold ${heading}`}>Properties</h1>
-              <p className={`mt-1 text-sm ${textMeta}`}>
-                Homes you&apos;ve worked on and maintained.
-              </p>
               <p className={`mt-1 text-xs ${textMeta}`}>
                 {activeProperties.length} active propert
                 {activeProperties.length === 1 ? "y" : "ies"}

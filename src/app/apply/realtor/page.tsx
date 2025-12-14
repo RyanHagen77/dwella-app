@@ -82,7 +82,7 @@ export default function RealtorApplyPage() {
         </Link>
 
         <h1 className="text-3xl font-bold text-gray-900">Apply as a Realtor</h1>
-        <p className="mt-2 text-gray-600">Join MyHomeDox and enhance your client experience</p>
+        <p className="mt-2 text-gray-600">Join MyDwella and enhance your client experience</p>
       </div>
 
       <div className="mb-6 rounded-lg border border-purple-200 bg-purple-50 p-4">
