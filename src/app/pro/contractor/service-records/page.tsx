@@ -124,7 +124,7 @@ export default async function ContractorServiceRecordsPage({ searchParams }: Pag
             </div>
 
             {/* Actions */}
-            <div className="flex flex-shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex flex-shrink-0 flex-row flex-wrap items-center gap-2">
               <Link href="/pro/contractor/service-records/new" className={ctaPrimary}>
                 + Document Service
               </Link>
