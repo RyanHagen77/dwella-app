@@ -373,12 +373,12 @@ function ConversationRowCard({ conv }: { conv: Conversation }) {
 
   const showUnread = !conv.isArchived && conv.unreadCount > 0;
 
-  // Accent like Properties: unread = amber, archived = muted, otherwise subtle
+  // ✅ Green default, orange if unread, muted if archived
   const leftAccent = conv.isArchived
-    ? "before:bg-white/20"
+    ? "before:bg-white/15"
     : showUnread
-    ? "before:bg-amber-400/70"
-    : "before:bg-white/15";
+    ? "before:bg-orange-400/80"
+    : "before:bg-emerald-400/60";
 
   return (
     <li
@@ -386,7 +386,8 @@ function ConversationRowCard({ conv }: { conv: Conversation }) {
         "group relative overflow-hidden rounded-2xl border border-white/10",
         "bg-black/35 backdrop-blur",
         "hover:border-white/18 hover:bg-black/45 transition",
-        "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
+        // ✅ IMPORTANT: before needs content to render
+        "before:content-[''] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
         leftAccent,
       ].join(" ")}
     >
@@ -426,7 +427,7 @@ function ConversationRowCard({ conv }: { conv: Conversation }) {
                 )}
 
                 {showUnread && (
-                  <span className="flex-shrink-0 rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] text-amber-200">
+                  <span className="flex-shrink-0 rounded-full border border-orange-400/40 bg-orange-500/15 px-2 py-0.5 text-[11px] text-orange-200">
                     Unread
                   </span>
                 )}
