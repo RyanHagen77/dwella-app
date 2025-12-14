@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 
+import Breadcrumb from "@/components/ui/Breadcrumb";
 import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import ContractorServiceRecordsClient from "./ContractorServiceRecordsClient";
 import { InviteHomeownerButton } from "@/app/pro/_components/InviteHomeownerButton";
@@ -83,21 +84,23 @@ export default async function ContractorServiceRecordsPage({ searchParams }: Pag
 
   return (
     <main className="min-h-screen text-white">
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <nav className="flex items-center gap-2 text-sm">
-          <Link href="/pro/contractor/dashboard" className="text-white/70 hover:text-white transition-colors">
-            Dashboard
-          </Link>
-          <span className="text-white/50">/</span>
-          <span className="text-white">Service Records</span>
-        </nav>
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        {/* Breadcrumb (match home pages) */}
+        <div className="px-4">
+          <Breadcrumb
+            href="/pro/contractor/dashboard"
+            label="Dashboard"
+            current="Service Records"
+          />
+        </div>
 
+        {/* Header (match home pages) */}
         <section className={glass}>
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
               <Link
                 href="/pro/contractor/dashboard"
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
+                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
                 aria-label="Back to dashboard"
               >
                 <svg
@@ -106,22 +109,22 @@ export default async function ContractorServiceRecordsPage({ searchParams }: Pag
                   viewBox="0 0 24 24"
                   strokeWidth={2}
                   stroke="currentColor"
-                  className="w-5 h-5"
+                  className="h-5 w-5"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18" />
                 </svg>
               </Link>
 
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h1 className={`text-2xl font-bold ${heading}`}>Service Records</h1>
                 <p className={`mt-1 text-sm ${textMeta}`}>
-                  All services you’ve documented and attached to your clients’ MyDwella homes.
+                  {formattedRecords.length} {formattedRecords.length === 1 ? "record" : "records"} total
                 </p>
-                <p className={`mt-1 text-xs ${textMeta}`}>{formattedRecords.length} records</p>
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            {/* Actions */}
+            <div className="flex flex-shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
               <Link href="/pro/contractor/service-records/new" className={ctaPrimary}>
                 + Document Service
               </Link>
@@ -130,6 +133,7 @@ export default async function ContractorServiceRecordsPage({ searchParams }: Pag
           </div>
         </section>
 
+        {/* Body */}
         <ContractorServiceRecordsClient
           serviceRecords={formattedRecords}
           initialSearch={initialSearch}

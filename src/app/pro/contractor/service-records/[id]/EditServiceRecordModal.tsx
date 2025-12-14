@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { Modal } from "@/components/ui/Modal";
-import { Input, Textarea, fieldLabel } from "@/components/ui";
+import { fieldLabel } from "@/components/ui";
 import { Button, GhostButton } from "@/components/ui/Button";
 
 type ServiceRecordData = {
@@ -21,6 +23,59 @@ type Props = {
   serviceRecordId: string;
 };
 
+const fieldShell =
+  "rounded-2xl border border-white/10 bg-black/35 backdrop-blur transition " +
+  "focus-within:border-white/18 focus-within:bg-black/45";
+
+const fieldInner =
+  "w-full bg-transparent px-4 py-2 text-sm text-white outline-none placeholder:text-white/35";
+
+const textareaInner =
+  "w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 resize-none min-h-[110px]";
+
+function toDateInputValue(v: string) {
+  if (!v) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toISOString().slice(0, 10);
+}
+
+function FileField({
+  label,
+  accept,
+  multiple,
+  onChange,
+  helper,
+}: {
+  label: string;
+  accept?: string;
+  multiple?: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  helper?: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className={fieldLabel}>{label}</span>
+      <div className={fieldShell}>
+        <input
+          type="file"
+          accept={accept}
+          multiple={multiple}
+          onChange={onChange}
+          className={[
+            "w-full bg-transparent px-4 py-2 text-sm text-white outline-none",
+            "file:mr-4 file:rounded-lg file:border-0 file:bg-white/15 file:px-3 file:py-2 file:text-xs file:text-white",
+            "hover:file:bg-white/20",
+            "focus:outline-none focus:ring-0",
+          ].join(" ")}
+        />
+      </div>
+      {helper ? <div className="mt-1 text-xs text-white/55">{helper}</div> : null}
+    </label>
+  );
+}
+
 export function EditServiceRecordModal({
   open,
   onCloseAction,
@@ -32,29 +87,38 @@ export function EditServiceRecordModal({
   const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
-    serviceType: serviceRecord.serviceType,
-    serviceDate: serviceRecord.serviceDate,
+    serviceType: serviceRecord.serviceType || "",
+    serviceDate: toDateInputValue(serviceRecord.serviceDate),
     description: serviceRecord.description || "",
-    cost: serviceRecord.cost || 0,
+    cost: serviceRecord.cost ?? null,
   });
 
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [warrantyFile, setWarrantyFile] = useState<File | null>(null);
 
+  useEffect(() => {
+    if (!open) return;
+    setForm({
+      serviceType: serviceRecord.serviceType || "",
+      serviceDate: toDateInputValue(serviceRecord.serviceDate),
+      description: serviceRecord.description || "",
+      cost: serviceRecord.cost ?? null,
+    });
+    setPhotoFiles([]);
+    setInvoiceFile(null);
+    setWarrantyFile(null);
+  }, [open, serviceRecord]);
+
   function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
-  async function uploadFileWithRecordId(
-    file: File,
-    recordId: string
-  ): Promise<string> {
+  async function uploadFileWithRecordId(file: File, recordId: string): Promise<string> {
     const presignResponse = await fetch("/api/uploads/presign", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        homeId: serviceRecord.id, // if you need actual homeId, pass it down
         recordId,
         filename: file.name,
         contentType: file.type,
@@ -63,223 +127,181 @@ export function EditServiceRecordModal({
     });
 
     if (!presignResponse.ok) {
-      const error = await presignResponse.json();
-      throw new Error(error.error || "Failed to get upload URL");
+      const error = (await presignResponse.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(error?.error || "Failed to get upload URL");
     }
 
-    const { url: uploadUrl, publicUrl } = await presignResponse.json();
+    const presignJson = (await presignResponse.json()) as { url: string; publicUrl: string };
 
-    const uploadResponse = await fetch(uploadUrl, {
+    const uploadResponse = await fetch(presignJson.url, {
       method: "PUT",
       body: file,
-      headers: {
-        "Content-Type": file.type,
-      },
+      headers: { "Content-Type": file.type || "application/octet-stream" },
     });
 
-    if (!uploadResponse.ok) {
-      throw new Error("Failed to upload file to S3");
-    }
-
-    return publicUrl;
+    if (!uploadResponse.ok) throw new Error("Failed to upload file to storage");
+    return presignJson.publicUrl;
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!form.serviceType.trim()) {
-      alert("Service type is required");
-      return;
-    }
+    if (!form.serviceType.trim()) return alert("Service type is required");
+    if (!form.serviceDate) return alert("Service date is required");
 
     setSaving(true);
 
     try {
-      // Update service record details (API still uses /service-records)
-      const res = await fetch(
-        `/api/pro/contractor/service-records/${serviceRecordId}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            serviceType: form.serviceType,
-            serviceDate: form.serviceDate,
-            description: form.description || null,
-            cost: form.cost || null,
-          }),
-        }
-      );
+      const res = await fetch(`/api/pro/contractor/service-records/${serviceRecordId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serviceType: form.serviceType.trim(),
+          serviceDate: form.serviceDate,
+          description: form.description?.trim() ? form.description.trim() : null,
+          cost: form.cost != null && !Number.isNaN(Number(form.cost)) ? Number(form.cost) : null,
+        }),
+      });
 
       if (!res.ok) {
-        const error = await res.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to update service record");
+        const error = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(error?.error || "Failed to update service record");
       }
 
       if (photoFiles.length > 0 || invoiceFile || warrantyFile) {
         setUploading(true);
 
         const photoUrls: string[] = [];
-        for (const file of photoFiles) {
-          const url = await uploadFileWithRecordId(file, serviceRecordId);
-          photoUrls.push(url);
-        }
+        for (const file of photoFiles) photoUrls.push(await uploadFileWithRecordId(file, serviceRecordId));
 
-        const invoiceUrl = invoiceFile
-          ? await uploadFileWithRecordId(invoiceFile, serviceRecordId)
-          : null;
+        const invoiceUrl = invoiceFile ? await uploadFileWithRecordId(invoiceFile, serviceRecordId) : null;
+        const warrantyUrl = warrantyFile ? await uploadFileWithRecordId(warrantyFile, serviceRecordId) : null;
 
-        const warrantyUrl = warrantyFile
-          ? await uploadFileWithRecordId(warrantyFile, serviceRecordId)
-          : null;
-
-        await fetch(`/api/pro/contractor/service-records/${serviceRecordId}`, {
+        const patchFilesRes = await fetch(`/api/pro/contractor/service-records/${serviceRecordId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            photos: photoUrls,
-            invoice: invoiceUrl,
-            warranty: warrantyUrl,
+            ...(photoUrls.length ? { photos: photoUrls } : {}),
+            ...(invoiceUrl ? { invoice: invoiceUrl } : {}),
+            ...(warrantyUrl ? { warranty: warrantyUrl } : {}),
           }),
         });
+
+        if (!patchFilesRes.ok) {
+          const error = (await patchFilesRes.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(error?.error || "Failed to attach uploaded files");
+        }
 
         setUploading(false);
       }
 
-      alert("Service record updated successfully");
       onCloseAction();
       router.refresh();
     } catch (error) {
       console.error("Failed to update service record:", error);
-      alert(
-        error instanceof Error
-          ? error.message
-          : "Failed to update service record"
-      );
+      alert(error instanceof Error ? error.message : "Failed to update service record");
     } finally {
       setSaving(false);
       setUploading(false);
     }
   }
 
-  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files) {
-      setPhotoFiles(Array.from(e.target.files));
-    }
-  }
-
-  function handleInvoiceChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files?.[0]) {
-      setInvoiceFile(e.target.files[0]);
-    }
-  }
-
-  function handleWarrantyChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (e.target.files?.[0]) {
-      setWarrantyFile(e.target.files[0]);
-    }
-  }
+  const busy = saving || uploading;
 
   return (
     <Modal open={open} onCloseAction={onCloseAction} title="Edit Service Record">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <label className="block">
-          <span className={fieldLabel}>Service Type</span>
-          <Input
-            value={form.serviceType}
-            onChange={(e) => set("serviceType", e.target.value)}
-            placeholder="e.g., HVAC Repair"
-            required
-          />
-        </label>
+      {/* ✅ Make modal body scrollable so it never gets stuck off-screen */}
+      <div className="max-h-[75vh] overflow-y-auto pr-1 -mr-1">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <label className="block">
+            <span className={fieldLabel}>Service Type *</span>
+            <div className={fieldShell}>
+              <input
+                className={fieldInner}
+                value={form.serviceType}
+                onChange={(e) => set("serviceType", e.target.value)}
+                placeholder="e.g., HVAC Repair"
+                required
+              />
+            </div>
+          </label>
 
-        <label className="block">
-          <span className={fieldLabel}>Service Date</span>
-          <Input
-            type="date"
-            value={form.serviceDate}
-            onChange={(e) => set("serviceDate", e.target.value)}
-            required
-          />
-        </label>
+          <label className="block">
+            <span className={fieldLabel}>Service Date *</span>
+            <div className={fieldShell}>
+              <input
+                type="date"
+                className={fieldInner}
+                value={form.serviceDate}
+                onChange={(e) => set("serviceDate", e.target.value)}
+                required
+              />
+            </div>
+          </label>
 
-        <label className="block">
-          <span className={fieldLabel}>Service Cost</span>
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.cost}
-            onChange={(e) => set("cost", Number(e.target.value))}
-            placeholder="0.00"
-          />
-        </label>
+          <label className="block">
+            <span className={fieldLabel}>Service Cost</span>
+            <div className={fieldShell}>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className={fieldInner}
+                value={form.cost ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  set("cost", v === "" ? null : Number(v));
+                }}
+                placeholder="0.00"
+              />
+            </div>
+          </label>
 
-        <label className="block">
-          <span className={fieldLabel}>Description</span>
-          <Textarea
-            rows={4}
-            value={form.description}
-            onChange={(e) => set("description", e.target.value)}
-            placeholder="Describe the service performed..."
-          />
-        </label>
+          <label className="block">
+            <span className={fieldLabel}>Description</span>
+            <div className={fieldShell}>
+              <textarea
+                className={textareaInner}
+                rows={4}
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                placeholder="Describe the service performed..."
+              />
+            </div>
+          </label>
 
-        <label className="block">
-          <span className={fieldLabel}>Add Photos</span>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handlePhotoChange}
-            className="w-full rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm text-white outline-none backdrop-blur file:mr-4 file:rounded file:border-0 file:bg-white/20 file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-white/30"
-          />
-          {photoFiles.length > 0 && (
-            <p className="mt-1 text-xs text-white/60">
-              {photoFiles.length} photo
-              {photoFiles.length !== 1 ? "s" : ""} selected
-            </p>
-          )}
-        </label>
+          <div className="pt-1 space-y-3">
+            <FileField
+              label="Add Photos"
+              accept="image/*"
+              multiple
+              onChange={(e) => setPhotoFiles(e.target.files ? Array.from(e.target.files) : [])}
+              helper={photoFiles.length ? `${photoFiles.length} selected` : "Optional"}
+            />
+            <FileField
+              label="Add Invoice (PDF)"
+              accept=".pdf"
+              onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
+              helper={invoiceFile ? invoiceFile.name : "Optional"}
+            />
+            <FileField
+              label="Add Warranty (PDF)"
+              accept=".pdf"
+              onChange={(e) => setWarrantyFile(e.target.files?.[0] ?? null)}
+              helper={warrantyFile ? warrantyFile.name : "Optional"}
+            />
+          </div>
 
-        <label className="block">
-          <span className={fieldLabel}>Add Invoice (PDF)</span>
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={handleInvoiceChange}
-            className="w-full rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm text-white outline-none backdrop-blur file:mr-4 file:rounded file:border-0 file:bg-white/20 file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-white/30"
-          />
-          {invoiceFile && (
-            <p className="mt-1 text-xs text-white/60">{invoiceFile.name}</p>
-          )}
-        </label>
-
-        <label className="block">
-          <span className={fieldLabel}>Add Warranty (PDF)</span>
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={handleWarrantyChange}
-            className="w-full rounded-md border border-white/15 bg-white/10 px-4 py-2 text-sm text-white outline-none backdrop-blur file:mr-4 file:rounded file:border-0 file:bg-white/20 file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-white/30"
-          />
-          {warrantyFile && (
-            <p className="mt-1 text-xs text-white/60">{warrantyFile.name}</p>
-          )}
-        </label>
-
-        <div className="flex justify-end gap-2 pt-2">
-          <GhostButton type="button" onClick={onCloseAction} disabled={saving || uploading}>
-            Cancel
-          </GhostButton>
-          <Button type="submit" disabled={saving || uploading}>
-            {uploading
-              ? "Uploading files..."
-              : saving
-              ? "Saving..."
-              : "Save Changes"}
-          </Button>
-        </div>
-      </form>
+          <div className="flex justify-end gap-2 pt-2">
+            <GhostButton type="button" onClick={onCloseAction} disabled={busy}>
+              Cancel
+            </GhostButton>
+            <Button type="submit" disabled={busy}>
+              {uploading ? "Uploading files..." : saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </div>
     </Modal>
   );
 }

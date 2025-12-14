@@ -1,3 +1,4 @@
+// app/pro/contractor/service-records/[id]/ServiceRecordDetailClient.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -7,7 +8,6 @@ import Image from "next/image";
 import { glass, glassTight, heading, textMeta, ctaGhost } from "@/lib/glass";
 import { ServiceRecordActions } from "./ServiceRecordActions";
 import ContractorReminderModal from "@/app/pro/contractor/reminders/ContractorReminderModal";
-import type { ContractorReminderDTO } from "@/app/pro/contractor/reminders/ContractorRemindersClient";
 
 type AttachmentType = "photo" | "invoice" | "warranty" | "other";
 
@@ -16,8 +16,17 @@ type AttachmentDTO = {
   filename: string;
   url: string | null;
   mimeType: string | null;
-  size: number;
+  size: number; // bytes
   type?: AttachmentType;
+};
+
+type ReminderPreview = {
+  id: string;
+  title: string;
+  dueAt: string | null;
+  note?: string | null;
+  status?: string | null;
+  createdAt?: string | null;
 };
 
 type ServiceRecordDetail = {
@@ -47,7 +56,7 @@ type ServiceRecordDetail = {
   };
 
   attachments: AttachmentDTO[];
-  reminders?: ContractorReminderDTO[];
+  reminders?: ReminderPreview[];
 };
 
 type Props = {
@@ -79,7 +88,7 @@ type PresignResponse = {
 
 export function ServiceRecordDetailClient({ record }: Props) {
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
-  const [reminders, setReminders] = useState<ContractorReminderDTO[]>(
+  const [reminders, setReminders] = useState<ReminderPreview[]>(
     record.reminders ?? []
   );
   const [uploadingWarranty, setUploadingWarranty] = useState(false);
@@ -96,14 +105,31 @@ export function ServiceRecordDetailClient({ record }: Props) {
     [record]
   );
 
-  function onReminderSaved(saved: ContractorReminderDTO) {
+  function onReminderSaved(saved: {
+    id: string;
+    title: string;
+    dueAt?: string | null;
+    note?: string | null;
+    status?: string | null;
+    createdAt?: string | null;
+  }) {
+    const preview: ReminderPreview = {
+      id: saved.id,
+      title: saved.title,
+      dueAt: saved.dueAt ?? null,
+      note: saved.note ?? null,
+      status: saved.status ?? null,
+      createdAt: saved.createdAt ?? null,
+    };
+
     setReminders((prev) => {
-      const idx = prev.findIndex((r) => r.id === saved.id);
-      if (idx === -1) return [...prev, saved];
+      const idx = prev.findIndex((r) => r.id === preview.id);
+      if (idx === -1) return [...prev, preview];
       const clone = [...prev];
-      clone[idx] = saved;
+      clone[idx] = preview;
       return clone;
     });
+
     setReminderModalOpen(false);
   }
 
@@ -116,7 +142,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
     try {
       setUploadingWarranty(true);
 
-      // 1) Presign via contractor service-record upload route
+      // 1) Presign
       const presignRes = await fetch(
         `/api/pro/contractor/service-records/${record.id}/upload`,
         {
@@ -138,7 +164,10 @@ export function ServiceRecordDetailClient({ record }: Props) {
       if (!presignRes.ok) {
         const j: unknown = await presignRes.json().catch(() => null);
         const msg =
-          typeof j === "object" && j && "error" in j && typeof (j as { error?: unknown }).error === "string"
+          typeof j === "object" &&
+          j &&
+          "error" in j &&
+          typeof (j as { error?: unknown }).error === "string"
             ? (j as { error: string }).error
             : "Failed to get upload URL";
         throw new Error(msg);
@@ -151,7 +180,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
         throw new Error("Invalid presign response");
       }
 
-      // 2) Upload PUT to S3
+      // 2) Upload PUT to storage
       const putRes = await fetch(uploadInfo.uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": file.type || "application/octet-stream" },
@@ -162,7 +191,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
         throw new Error("Failed to upload warranty file to storage");
       }
 
-      // 3) PATCH service record (Option B will create/update Warranty row + HOME attachment)
+      // 3) PATCH record to link warranty file
       const patchRes = await fetch(
         `/api/pro/contractor/service-records/${record.id}`,
         {
@@ -171,8 +200,8 @@ export function ServiceRecordDetailClient({ record }: Props) {
           body: JSON.stringify({
             warranty: uploadInfo.publicUrl,
 
-            // keep warranty meta consistent
-            warrantyIncluded: record.warrantyIncluded ? true : true,
+            // ensure warranty is marked included once a file is uploaded
+            warrantyIncluded: true,
             warrantyLength: record.warrantyLength ?? null,
             warrantyDetails: record.warrantyDetails ?? null,
           }),
@@ -182,25 +211,30 @@ export function ServiceRecordDetailClient({ record }: Props) {
       if (!patchRes.ok) {
         const j: unknown = await patchRes.json().catch(() => null);
         const msg =
-          typeof j === "object" && j && "error" in j && typeof (j as { error?: unknown }).error === "string"
+          typeof j === "object" &&
+          j &&
+          "error" in j &&
+          typeof (j as { error?: unknown }).error === "string"
             ? (j as { error: string }).error
             : "Failed to attach warranty to service record";
         throw new Error(msg);
       }
 
-      // If you want the new attachment to appear immediately without a full reload,
-      // you can add a router.refresh() and fetch fresh server data.
-      // For now: it’s uploaded + linked; page will show it on next navigation/refresh.
+      alert("Warranty uploaded. Refresh to see it in attachments.");
     } catch (err) {
       console.error(err);
-      alert(err instanceof Error ? err.message : "Something went wrong uploading the warranty.");
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong uploading the warranty."
+      );
     } finally {
       setUploadingWarranty(false);
       e.target.value = "";
     }
   }
 
-  // attachment categorisation
+  // Attachment categorisation
   const photos = record.attachments.filter(
     (a) => a.type === "photo" || a.mimeType?.startsWith("image/")
   );
@@ -219,61 +253,33 @@ export function ServiceRecordDetailClient({ record }: Props) {
 
   return (
     <>
-      {/* Top header card */}
-      <section className={glass + " rounded-2xl px-4 py-4 sm:px-6 sm:py-4"}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          {/* Left: back + title */}
-          <div className="flex items-start gap-3">
-            <Link
-              href="/pro/contractor/service-records"
-              className="mt-1 flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 hover:bg-white/15"
-              aria-label="Back to service records"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                strokeWidth={2}
-                stroke="currentColor"
-                fill="none"
-                className="h-4 w-4"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
-                />
-              </svg>
-            </Link>
-
-            <div className="min-w-0">
-              <h1 className={`text-2xl font-bold ${heading} truncate`}>
-                {record.serviceType}
-              </h1>
-              <p className={`mt-1 text-sm ${textMeta}`}>
-                {formatDate(record.serviceDate)}
-              </p>
-              {record.addressLine && (
-                <p className={`mt-1 text-xs ${textMeta} truncate`}>
-                  {record.addressLine}
-                </p>
-              )}
-            </div>
+      {/* Actions bar (no duplicate header; server owns breadcrumb + header) */}
+      <section className={glass + " rounded-2xl px-4 py-3 sm:px-6 sm:py-3"}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h2 className={`text-sm font-semibold ${heading}`}>
+              Record details
+            </h2>
+            <p className={`mt-0.5 text-xs ${textMeta} truncate`}>
+              {record.addressLine}
+            </p>
           </div>
 
-          {/* Right: status + actions */}
           <div className="flex flex-wrap items-center gap-2">
-            <StatusPill status={record.status} isVerified={record.isVerified} />
             <ServiceRecordActions
               serviceRecordId={record.id}
               serviceRecord={serializedServiceRecord}
             />
+            <Link href="/pro/contractor/service-records" className={ctaGhost}>
+              Back to list
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Main grid */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1.1fr)]">
-        {/* Left column: property, description, attachments */}
+        {/* Left column */}
         <section className={glass + " rounded-2xl p-4 sm:p-5 space-y-5"}>
           {/* Property */}
           <div>
@@ -345,22 +351,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
                               className="object-cover transition group-hover:scale-105"
                             />
                           </div>
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              strokeWidth={2}
-                              stroke="currentColor"
-                              className="h-8 w-8 text-white opacity-0 transition-opacity group-hover:opacity-100"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607zM10.5 7.5v6m3-3h-6"
-                              />
-                            </svg>
-                          </div>
+                          <div className="absolute inset-0 bg-black/0 transition-colors group-hover:bg-black/20" />
                         </a>
                       );
                     })}
@@ -368,7 +359,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
                 </div>
               )}
 
-              {/* Invoice documents */}
+              {/* Invoices */}
               {invoices.length > 0 && (
                 <div className="mb-4">
                   <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>Invoice</h3>
@@ -383,7 +374,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
                 </div>
               )}
 
-              {/* Warranty documents */}
+              {/* Warranty */}
               {warrantyFiles.length > 0 && (
                 <div className="mb-4">
                   <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>Warranty file</h3>
@@ -398,16 +389,12 @@ export function ServiceRecordDetailClient({ record }: Props) {
                 </div>
               )}
 
-              {/* Other documents */}
+              {/* Other */}
               {otherDocs.length > 0 && (
                 <div>
                   <h3 className={`mb-2 text-sm font-medium ${textMeta}`}>Other documents</h3>
                   {otherDocs.map((attachment) => (
-                    <DocRow
-                      key={attachment.id}
-                      record={record}
-                      attachment={attachment}
-                    />
+                    <DocRow key={attachment.id} record={record} attachment={attachment} />
                   ))}
                 </div>
               )}
@@ -415,7 +402,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
           )}
         </section>
 
-        {/* Right column: reminders + warranty */}
+        {/* Right column */}
         <div className="flex flex-col gap-4">
           {/* Follow-up reminders */}
           <section className={glass + " rounded-2xl p-4 sm:p-5"}>
@@ -450,11 +437,11 @@ export function ServiceRecordDetailClient({ record }: Props) {
                         {r.dueAt ? formatDate(r.dueAt) : "No due date"}
                       </span>
                     </div>
-                    {r.note && (
+                    {r.note ? (
                       <p className="line-clamp-2 text-[11px] text-white/60">
                         {r.note}
                       </p>
-                    )}
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -482,8 +469,7 @@ export function ServiceRecordDetailClient({ record }: Props) {
                 </p>
                 {record.warrantyLength && (
                   <p>
-                    <span className="text-white/60">Term:</span>{" "}
-                    {record.warrantyLength}
+                    <span className="text-white/60">Term:</span> {record.warrantyLength}
                   </p>
                 )}
                 {record.warrantyDetails && (
@@ -515,7 +501,6 @@ export function ServiceRecordDetailClient({ record }: Props) {
         </div>
       </div>
 
-      {/* Reminder modal */}
       {reminderModalOpen && <ContractorReminderModal {...reminderModalProps} />}
     </>
   );
@@ -541,14 +526,20 @@ function DocRow({
       className="mb-2 flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:bg-white/10"
     >
       <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-white/10">
-        {attachment.mimeType?.includes("pdf") ? <span className="text-xl">📄</span> : <span className="text-xl">📎</span>}
+        {attachment.mimeType?.includes("pdf") ? (
+          <span className="text-xl">📄</span>
+        ) : (
+          <span className="text-xl">📎</span>
+        )}
       </div>
+
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium text-white">{label}</p>
         <p className="text-xs text-white/60">
           {(Number(attachment.size) / 1024).toFixed(1)} KB
         </p>
       </div>
+
       <svg
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
@@ -564,37 +555,5 @@ function DocRow({
         />
       </svg>
     </a>
-  );
-}
-
-function StatusPill({ status, isVerified }: { status: string; isVerified: boolean }) {
-  if (isVerified) {
-    return (
-      <span className="rounded-full border border-emerald-400/40 bg-emerald-500/15 px-3 py-1 text-xs font-medium text-emerald-200">
-        APPROVED
-      </span>
-    );
-  }
-
-  if (status === "DOCUMENTED_UNVERIFIED") {
-    return (
-      <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-200">
-        Pending homeowner review
-      </span>
-    );
-  }
-
-  if (status === "DISPUTED") {
-    return (
-      <span className="rounded-full border border-red-400/40 bg-red-500/15 px-3 py-1 text-xs font-medium text-red-200">
-        Disputed
-      </span>
-    );
-  }
-
-  return (
-    <span className="rounded-full border border-slate-400/40 bg-slate-500/15 px-3 py-1 text-xs font-medium text-slate-200">
-      {status}
-    </span>
   );
 }
