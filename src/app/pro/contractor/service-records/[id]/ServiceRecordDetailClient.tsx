@@ -1,12 +1,11 @@
 // app/pro/contractor/service-records/[id]/ServiceRecordDetailClient.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import type { ComponentProps } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { glass, glassTight, heading, textMeta, ctaGhost } from "@/lib/glass";
-import { ServiceRecordActions } from "./ServiceRecordActions";
 import ContractorReminderModal from "@/app/pro/contractor/reminders/ContractorReminderModal";
 
 type AttachmentType = "photo" | "invoice" | "warranty" | "other";
@@ -93,17 +92,6 @@ export function ServiceRecordDetailClient({ record }: Props) {
   );
   const [uploadingWarranty, setUploadingWarranty] = useState(false);
 
-  const serializedServiceRecord = useMemo(
-    () => ({
-      id: record.id,
-      serviceType: record.serviceType,
-      serviceDate: record.serviceDate.slice(0, 10),
-      description: record.description,
-      cost: record.cost,
-      status: record.status,
-    }),
-    [record]
-  );
 
   function onReminderSaved(saved: {
     id: string;
@@ -253,30 +241,6 @@ export function ServiceRecordDetailClient({ record }: Props) {
 
   return (
     <>
-      {/* Actions bar (no duplicate header; server owns breadcrumb + header) */}
-      <section className={glass + " rounded-2xl px-4 py-3 sm:px-6 sm:py-3"}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
-            <h2 className={`text-sm font-semibold ${heading}`}>
-              Record details
-            </h2>
-            <p className={`mt-0.5 text-xs ${textMeta} truncate`}>
-              {record.addressLine}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <ServiceRecordActions
-              serviceRecordId={record.id}
-              serviceRecord={serializedServiceRecord}
-            />
-            <Link href="/pro/contractor/service-records" className={ctaGhost}>
-              Back to list
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* Main grid */}
       <div className="grid gap-4 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1.1fr)]">
         {/* Left column */}

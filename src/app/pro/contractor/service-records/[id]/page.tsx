@@ -8,6 +8,7 @@ import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
 import { glass, heading, textMeta } from "@/lib/glass";
 import { ServiceRecordDetailClient } from "./ServiceRecordDetailClient";
+import { ServiceRecordActions } from "./ServiceRecordActions";
 
 type PageProps = {
   params: { id: string };
@@ -166,7 +167,8 @@ export default async function ServiceRecordDetailPage({ params }: PageProps) {
 
         {/* Header (matches your main-page pattern) */}
         <section className={glass}>
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left: back + title/meta */}
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <Link
                 href="/pro/contractor/service-records"
@@ -211,7 +213,20 @@ export default async function ServiceRecordDetailPage({ params }: PageProps) {
               </div>
             </div>
 
-            <div className="flex-shrink-0" />
+            {/* Right: actions (stays on same row on mobile) */}
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <ServiceRecordActions
+                serviceRecordId={detail.id}
+                serviceRecord={{
+                  id: detail.id,
+                  serviceType: detail.serviceType,
+                  serviceDate: detail.serviceDate.slice(0, 10),
+                  description: detail.description,
+                  cost: detail.cost,
+                  status: detail.status,
+                }}
+              />
+            </div>
           </div>
         </section>
 
