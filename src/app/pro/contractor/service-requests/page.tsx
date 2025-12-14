@@ -190,9 +190,6 @@ export default async function ContractorServiceRequestsPage() {
                 <h1 className={`text-2xl font-bold ${heading}`}>
                   Service Requests
                 </h1>
-                <p className={`mt-1 text-sm ${textMeta}`}>
-                  Manage service requests from homeowners.
-                </p>
                 <p className={`mt-1 text-xs ${textMeta}`}>
                   {serviceRequests.length} total request
                   {serviceRequests.length === 1 ? "" : "s"}
