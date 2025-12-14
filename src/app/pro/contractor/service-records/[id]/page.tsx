@@ -165,14 +165,14 @@ export default async function ServiceRecordDetailPage({ params }: PageProps) {
           <span className="text-white truncate max-w-[40%]">{detail.serviceType}</span>
         </nav>
 
-        {/* Header (matches your main-page pattern) */}
+        {/* Header */}
         <section className={glass}>
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             {/* Left: back + title/meta */}
-            <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex min-w-0 flex-1 items-start gap-3">
               <Link
                 href="/pro/contractor/service-records"
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
+                className="mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
                 aria-label="Back to service records"
               >
                 <svg
@@ -210,28 +210,40 @@ export default async function ServiceRecordDetailPage({ params }: PageProps) {
                     <span>{statusLabel}</span>
                   </span>
                 </div>
+
+                {/* ✅ Actions under text on mobile, but can "float" right on desktop */}
+                <div className="mt-3 flex flex-wrap items-center gap-2 sm:hidden">
+                  <ServiceRecordActions
+                    serviceRecordId={detail.id}
+                    serviceRecord={{
+                      id: detail.id,
+                      serviceType: detail.serviceType,
+                      serviceDate: detail.serviceDate.slice(0, 10),
+                      description: detail.description,
+                      cost: detail.cost,
+                      status: detail.status,
+                    }}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Right: actions (stays on same row on mobile) */}
-            <div className="flex flex-shrink-0 items-center">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 p-1 backdrop-blur">
-                <ServiceRecordActions
-                  variant="header"
-                  serviceRecordId={detail.id}
-                  serviceRecord={{
-                    id: detail.id,
-                    serviceType: detail.serviceType,
-                    serviceDate: detail.serviceDate.slice(0, 10),
-                    description: detail.description,
-                    cost: detail.cost,
-                    status: detail.status,
-                  }}
-                />
-              </div>
+            {/* ✅ Desktop: float actions to the right */}
+            <div className="hidden flex-shrink-0 sm:flex sm:items-center sm:gap-2">
+              <ServiceRecordActions
+                serviceRecordId={detail.id}
+                serviceRecord={{
+                  id: detail.id,
+                  serviceType: detail.serviceType,
+                  serviceDate: detail.serviceDate.slice(0, 10),
+                  description: detail.description,
+                  cost: detail.cost,
+                  status: detail.status,
+                }}
+              />
             </div>
           </div>
-        </section>
+          </section>
 
         <ServiceRecordDetailClient record={detail} />
       </div>
