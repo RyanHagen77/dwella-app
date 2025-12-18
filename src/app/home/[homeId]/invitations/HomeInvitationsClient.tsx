@@ -676,7 +676,7 @@ export default function HomeInvitationsClient({
         {/* Invite Pro Modal */}
         <InviteProModal
           open={inviteOpen}
-          onCloseAction={() => setInviteOpen(false)}
+          onClose={() => setInviteOpen(false)}
           homeId={homeId}
           homeAddress={homeAddress}
         />

@@ -120,7 +120,7 @@ export function ReminderActions({ reminderId, homeId, reminder }: Props) {
 
       <EditReminderModal
         open={editOpen}
-        onCloseAction={() => setEditOpen(false)}
+        onClose={() => setEditOpen(false)}
         reminder={reminder}
         homeId={homeId}
       />

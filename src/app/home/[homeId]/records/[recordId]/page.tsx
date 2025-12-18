@@ -343,7 +343,6 @@ export default async function RecordDetailPage({ params }: PageProps) {
             )}
           </section>
         )}
-
         <div className="h-12" />
       </div>
     </main>

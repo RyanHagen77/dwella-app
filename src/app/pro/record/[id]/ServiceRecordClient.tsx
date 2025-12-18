@@ -442,7 +442,7 @@ function EditServiceModal({
   }
 
   return (
-    <Modal open={open} onCloseAction={onClose} title="Edit Service">
+    <Modal open={open} onClose={onClose} title="Edit Service">
       <div className="space-y-3">
         <label className="block">
           <span className={fieldLabel}>Title</span>

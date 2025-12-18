@@ -29,7 +29,7 @@ type WarrantyData = {
 
 type Props = {
   open: boolean;
-  onCloseAction: () => void;
+  onClose: () => void;
   warranty: WarrantyData;
   homeId: string;
 };
@@ -46,7 +46,7 @@ type UploadedAttachment = {
 
 export function EditWarrantyModal({
   open,
-  onCloseAction,
+  onClose,
   warranty,
   homeId,
 }: Props) {
@@ -185,7 +185,7 @@ export function EditWarrantyModal({
       }
 
       push("Warranty updated successfully", "success");
-      onCloseAction();
+      onClose();
       router.refresh();
     } catch (err) {
       push("Failed to update warranty");
@@ -196,7 +196,7 @@ export function EditWarrantyModal({
 
   return (
     <div className="relative z-[100]">
-      <Modal open={open} onCloseAction={onCloseAction} title="Edit Warranty">
+      <Modal open={open} onClose={onClose} title="Edit Warranty">
         <div className="w-full max-w-[520px] mx-auto max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden px-3 pb-4 pt-2 sm:px-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <p className={`text-sm ${textMeta}`}>Update warranty details.</p>
@@ -345,7 +345,7 @@ export function EditWarrantyModal({
             )}
 
             <div className="flex justify-end gap-2 pt-2">
-              <GhostButton type="button" onClick={onCloseAction} disabled={saving}>Cancel</GhostButton>
+              <GhostButton type="button" onClick={onClose} disabled={saving}>Cancel</GhostButton>
               <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save Changes"}</Button>
             </div>
           </form>

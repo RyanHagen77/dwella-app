@@ -18,7 +18,7 @@ type ServiceRecordData = {
 
 type Props = {
   open: boolean;
-  onCloseAction: () => void;
+  onClose: () => void;
   serviceRecord: ServiceRecordData;
   serviceRecordId: string;
 };
@@ -78,7 +78,7 @@ function FileField({
 
 export function EditServiceRecordModal({
   open,
-  onCloseAction,
+  onClose,
   serviceRecord,
   serviceRecordId,
 }: Props) {
@@ -195,7 +195,7 @@ export function EditServiceRecordModal({
         setUploading(false);
       }
 
-      onCloseAction();
+      onClose();
       router.refresh();
     } catch (error) {
       console.error("Failed to update service record:", error);
@@ -209,7 +209,7 @@ export function EditServiceRecordModal({
   const busy = saving || uploading;
 
   return (
-    <Modal open={open} onCloseAction={onCloseAction} title="Edit Service Record">
+    <Modal open={open} onClose={onClose} title="Edit Service Record">
       {/* ✅ Make modal body scrollable so it never gets stuck off-screen */}
       <div className="max-h-[75vh] overflow-y-auto pr-1 -mr-1">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -293,7 +293,7 @@ export function EditServiceRecordModal({
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <GhostButton type="button" onClick={onCloseAction} disabled={busy}>
+            <GhostButton type="button" onClick={onClose} disabled={busy}>
               Cancel
             </GhostButton>
             <Button type="submit" disabled={busy}>

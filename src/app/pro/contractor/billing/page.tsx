@@ -317,7 +317,7 @@ function NewInvoiceModal({
     onClose();
   }
   return (
-    <Modal open={open} onCloseAction={onClose} title="New Invoice">
+    <Modal open={open} onClose={onClose} title="New Invoice">
       <div className="space-y-3">
         <label className="block"><span className={fieldLabel}>Title</span>
           <Input value={form.title} onChange={e => setForm({ ...form, title: (e.target as HTMLInputElement).value })} placeholder="e.g., HVAC Tune-Up" />
@@ -369,7 +369,7 @@ function RecordPaymentModal({
     onClose();
   }
   return (
-    <Modal open onCloseAction={onClose} title={`Record Payment — ${invoice.title}`}>
+    <Modal open onClose={onClose} title={`Record Payment — ${invoice.title}`}>
       <div className="space-y-3">
         <div className={`${glassTight} rounded-xl p-3`}>
           <p className="text-sm">Balance: <strong>{currency(invoice.balance)}</strong></p>
@@ -411,7 +411,7 @@ function PaymentMethodsModal({ open, onClose }: { open: boolean; onClose: () => 
   const refCard = useRef<HTMLInputElement>(null);
 
   return (
-    <Modal open={open} onCloseAction={onClose} title="Payment Methods (Demo)">
+    <Modal open={open} onClose={onClose} title="Payment Methods (Demo)">
       <div className="space-y-3">
         <p className={textMeta}>For the demo, toggle which methods you “support”. In production, wire to Stripe (test mode).</p>
         <div className={`${glassTight} rounded-xl p-3 space-y-2`}>

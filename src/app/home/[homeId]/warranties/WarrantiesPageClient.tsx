@@ -342,7 +342,7 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
 
       <EditWarrantyModal
         open={editOpen}
-        onCloseAction={() => setEditOpen(false)}
+        onClose={() => setEditOpen(false)}
         warranty={warranty}
         homeId={homeId}
       />

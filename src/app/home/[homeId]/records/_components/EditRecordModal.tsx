@@ -215,7 +215,7 @@ export function EditRecordModal({ open, onClose, record, homeId }: Props) {
   }
 
   return (
-    <Modal open={open} onCloseAction={onClose} title="Edit Record">
+    <Modal open={open} onClose={onClose} title="Edit Record">
       <div className="w-full max-w-[520px] mx-auto max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden px-3 pb-4 pt-2 sm:px-4">
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Title */}

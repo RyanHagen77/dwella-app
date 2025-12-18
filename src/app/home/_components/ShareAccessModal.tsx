@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Input, Select, fieldLabel } from "@/components/ui";
+import { Input, Select } from "@/components/ui";
 import { Button, GhostButton } from "@/components/ui/Button";
 import { InviteSchema, type InviteInput } from "@/lib/validators";
 import { uid, loadJSON, saveJSON } from "@/lib/storage";
@@ -17,23 +17,35 @@ type Invite = {
   createdAt: string;
 };
 
-export function ShareAccessModal({
-  open,
-  onCloseAction,
-  homeId, // ← optional
-}: {
+type ShareAccessModalProps = {
   open: boolean;
   onCloseAction: () => void;
   homeId?: string;
-}) {
+};
+
+export function ShareAccessModal({
+  open,
+  onCloseAction: onClose,
+  homeId,
+}: ShareAccessModalProps) {
   const { push } = useToast();
+
   const [email, setEmail] = React.useState("");
   const [role, setRole] = React.useState<InviteInput["role"]>("Viewer");
   const [invites, setInvites] = React.useState<Invite[]>([]);
+  const [origin, setOrigin] = React.useState<string>("");
+
+  // Capture origin safely on client
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      setOrigin(window.location.origin);
+    }
+  }, []);
 
   React.useEffect(() => {
     setInvites(loadJSON<Invite[]>("invites", []));
   }, []);
+
   React.useEffect(() => {
     saveJSON("invites", invites);
   }, [invites]);
@@ -44,11 +56,18 @@ export function ShareAccessModal({
       push("Enter a valid email");
       return;
     }
+
+    if (!origin) {
+      // extremely edge-case, but keeps it safe
+      push("Unable to generate link yet. Please try again.");
+      return;
+    }
+
     const token = uid();
-    // Include homeId if provided so the link opens the right stats/report
     const params = new URLSearchParams({ token });
     if (homeId) params.set("home", homeId);
-    const link = `${location.origin}/report?${params.toString()}`;
+
+    const link = `${origin}/report?${params.toString()}`;
 
     const inv: Invite = {
       id: uid(),
@@ -57,6 +76,7 @@ export function ShareAccessModal({
       link,
       createdAt: new Date().toISOString(),
     };
+
     setInvites((x) => [inv, ...x]);
     setEmail("");
     push("Invite created");
@@ -68,7 +88,7 @@ export function ShareAccessModal({
   }
 
   return (
-    <Modal open={open} onCloseAction={onCloseAction} title="Share Access">
+    <Modal open={open} onClose={onClose} title="Share Access">
       <div className="space-y-3">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <Input
@@ -77,6 +97,7 @@ export function ShareAccessModal({
             onChange={(e) => setEmail(e.target.value)}
             aria-label="Invite email"
           />
+
           <Select
             value={role}
             onChange={(e) => setRole(e.target.value as InviteInput["role"])}
@@ -85,7 +106,10 @@ export function ShareAccessModal({
             <option value="Viewer">Viewer</option>
             <option value="Contributor">Contributor</option>
           </Select>
-          <Button onClick={addInvite}>Generate Link</Button>
+
+          <Button type="button" onClick={addInvite}>
+            Generate Link
+          </Button>
         </div>
 
         <p className={`text-sm ${textMeta}`}>
@@ -119,6 +143,7 @@ export function ShareAccessModal({
                   </td>
                 </tr>
               ))}
+
               {invites.length === 0 && (
                 <tr>
                   <td className="p-4 text-white/70" colSpan={4}>
@@ -131,7 +156,9 @@ export function ShareAccessModal({
         </div>
 
         <div className={`${glass} !p-3`}>
-          <div className={fieldLabel}>Tip</div>
+          <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-white/55">
+            Tip
+          </div>
           <p className="text-sm text-white/85">
             Use “Viewer” for buyers/agents; “Contributor” for your contractor to upload receipts.
           </p>

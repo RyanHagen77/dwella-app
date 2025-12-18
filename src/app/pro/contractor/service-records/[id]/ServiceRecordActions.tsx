@@ -150,7 +150,7 @@ export function ServiceRecordActions({
 
       <EditServiceRecordModal
         open={editOpen}
-        onCloseAction={() => setEditOpen(false)}
+        onClose={() => setEditOpen(false)}
         serviceRecord={serviceRecord}
         serviceRecordId={serviceRecordId}
       />

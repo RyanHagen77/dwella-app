@@ -53,6 +53,7 @@ export function ConnectedPros({ homeId, homeAddress, connections }: ConnectedPro
               Connect with pros who&apos;ve worked on your home
             </p>
             <button
+              type="button"
               onClick={() => setInviteModalOpen(true)}
               className={`${ctaPrimary} text-sm`}
             >
@@ -62,15 +63,12 @@ export function ConnectedPros({ homeId, homeAddress, connections }: ConnectedPro
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {connections.map((conn) => (
-              <ContractorCard
-                key={conn.id}
-                connection={conn}
-                homeId={homeId}
-              />
+              <ContractorCard key={conn.id} connection={conn} homeId={homeId} />
             ))}
 
             {/* Add More Card */}
             <button
+              type="button"
               onClick={() => setInviteModalOpen(true)}
               className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-white/20 bg-white/5 p-4 text-white/60 hover:border-white/40 hover:bg-white/10 hover:text-white transition min-h-[80px]"
             >
@@ -100,14 +98,13 @@ function ContractorCard({
 }) {
   const contractor = connection.contractor;
   const displayName = contractor.proProfile?.businessName || contractor.name || contractor.email;
-  const initials = (displayName || 'C')[0].toUpperCase();
+  const initials = (displayName || "C")[0].toUpperCase();
 
   return (
     <Link
       href={`/home/${homeId}/contractors/${connection.id}`}
       className="flex items-center gap-3 rounded-xl bg-white/5 border border-white/10 p-3 hover:bg-white/10 hover:border-white/20 transition"
     >
-      {/* Avatar */}
       {contractor.image ? (
         <Image
           src={contractor.image}
@@ -122,19 +119,18 @@ function ContractorCard({
         </div>
       )}
 
-      {/* Info */}
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium text-white truncate">{displayName}</p>
         {connection.verifiedServiceCount > 0 ? (
           <p className="text-xs text-green-400">
-            ✓ {connection.verifiedServiceCount} verified service{connection.verifiedServiceCount !== 1 ? 's' : ''}
+            ✓ {connection.verifiedServiceCount} verified service
+            {connection.verifiedServiceCount !== 1 ? "s" : ""}
           </p>
         ) : (
           <p className="text-xs text-white/50">Connected</p>
         )}
       </div>
 
-      {/* Arrow */}
       <span className="text-white/40 flex-shrink-0">→</span>
     </Link>
   );

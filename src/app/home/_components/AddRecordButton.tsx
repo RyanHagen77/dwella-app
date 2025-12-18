@@ -124,7 +124,7 @@ export function AddRecordButton({
         date: payload.date ?? undefined,
         kind: payload.kind ?? undefined,
         vendor: payload.vendor ?? undefined,
-        cost: typeof payload.cost === "number" ? payload.cost : undefined,
+        cost: payload.cost,
         verified: payload.verified ?? undefined,
       });
       await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
@@ -203,7 +203,7 @@ export function AddRecordButton({
 
   return (
     <>
-      <button onClick={() => setAddOpen(true)} className={ctaPrimary}>
+      <button type="button" onClick={() => setAddOpen(true)} className={ctaPrimary}>
         {label}
       </button>
 

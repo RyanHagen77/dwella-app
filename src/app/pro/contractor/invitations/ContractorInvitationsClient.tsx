@@ -405,7 +405,7 @@ export default function ContractorInvitationsClient({
       {/* Address Verification Modal */}
       <Modal
         open={showAddressModal}
-        onCloseAction={() => {
+        onClose={() => {
           setShowAddressModal(false);
           setSelectedInvitation(null);
         }}

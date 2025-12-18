@@ -316,7 +316,7 @@ export default function AccountPage() {
       {/* Shared Access Modal */}
       <ShareAccessModal
         open={shareOpen}
-        onCloseAction={() => setShareOpen(false)}
+        onClose={() => setShareOpen(false)}
       />
     </main>
   );

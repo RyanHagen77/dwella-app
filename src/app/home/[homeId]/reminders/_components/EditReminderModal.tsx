@@ -25,7 +25,7 @@ export type ReminderData = {
 
 type Props = {
   open: boolean;
-  onCloseAction: () => void;
+  onClose: () => void;
   reminder: ReminderData;
   homeId: string;
 };
@@ -42,7 +42,7 @@ type UploadedAttachment = {
 
 export function EditReminderModal({
   open,
-  onCloseAction,
+  onClose,
   reminder,
   homeId,
 }: Props) {
@@ -181,7 +181,7 @@ export function EditReminderModal({
       }
 
       push("Reminder updated successfully", "success");
-      onCloseAction();
+      onClose();
       router.refresh();
     } catch (err) {
       push("Failed to update reminder");
@@ -192,7 +192,7 @@ export function EditReminderModal({
 
   return (
     <div className="relative z-[100]">
-      <Modal open={open} onCloseAction={onCloseAction} title="Edit Reminder">
+      <Modal open={open} onClose={onClose} title="Edit Reminder">
         {/* Fix layout + mobile stability */}
         <div className="w-full max-w-[520px] mx-auto max-h-[calc(100vh-5rem)] overflow-y-auto overflow-x-hidden px-3 pb-4 pt-2 sm:px-4">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -337,7 +337,7 @@ export function EditReminderModal({
 
             {/* ACTIONS */}
             <div className="flex justify-end gap-2 pt-2">
-              <GhostButton type="button" onClick={onCloseAction} disabled={saving}>
+              <GhostButton type="button" onClick={onClose} disabled={saving}>
                 Cancel
               </GhostButton>
               <Button type="submit" disabled={saving}>

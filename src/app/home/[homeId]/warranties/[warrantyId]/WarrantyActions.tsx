@@ -95,7 +95,7 @@ export function WarrantyActions({
 
       <EditWarrantyModal
         open={editOpen}
-        onCloseAction={() => setEditOpen(false)}
+        onClose={() => setEditOpen(false)}
         warranty={warranty}
         homeId={homeId}
       />

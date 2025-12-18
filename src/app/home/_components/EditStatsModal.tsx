@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { heading, textMeta } from "@/lib/glass";
@@ -23,7 +23,7 @@ type EditStatsModalProps = {
 
 export function EditStatsModal({
   open,
-  onCloseAction,
+  onCloseAction: onClose,
   homeId,
   currentStats,
 }: EditStatsModalProps) {
@@ -32,15 +32,32 @@ export function EditStatsModal({
   const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
-    estValue: currentStats.estValue?.toString() || "",
-    beds: currentStats.beds?.toString() || "",
-    baths: currentStats.baths?.toString() || "",
-    sqft: currentStats.sqft?.toString() || "",
-    yearBuilt: currentStats.yearBuilt?.toString() || "",
+    estValue: "",
+    beds: "",
+    baths: "",
+    sqft: "",
+    yearBuilt: "",
   });
+
+  // Reset form whenever modal opens or stats change
+  useEffect(() => {
+    if (!open) return;
+
+    setError("");
+    setLoading(false);
+    setFormData({
+      estValue: currentStats.estValue?.toString() ?? "",
+      beds: currentStats.beds?.toString() ?? "",
+      baths: currentStats.baths?.toString() ?? "",
+      sqft: currentStats.sqft?.toString() ?? "",
+      yearBuilt: currentStats.yearBuilt?.toString() ?? "",
+    });
+  }, [open, currentStats]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
     setError("");
 
@@ -60,12 +77,12 @@ export function EditStatsModal({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to update stats");
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error || "Failed to update stats");
       }
 
       router.refresh();
-      onCloseAction();
+      onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update stats");
     } finally {
@@ -76,26 +93,20 @@ export function EditStatsModal({
   if (!open) return null;
 
   return (
-    <Modal open={open} onCloseAction={onCloseAction}>
+    <Modal open={open} onClose={onClose} title="Edit Home Stats">
       <div className="p-6">
         <h2 className={`mb-2 text-xl font-bold ${heading}`}>Edit Home Stats</h2>
-        <p className={`mb-6 text-sm ${textMeta}`}>
-          Update property information and statistics
-        </p>
+        <p className={`mb-6 text-sm ${textMeta}`}>Update property information and statistics</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Estimated Value */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-white">
-              Estimated Value ($)
-            </label>
+            <label className="mb-1 block text-sm font-medium text-white">Estimated Value ($)</label>
             <input
               type="number"
               min="0"
               value={formData.estValue}
-              onChange={(e) =>
-                setFormData({ ...formData, estValue: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, estValue: e.target.value })}
               className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
               placeholder="450000"
             />
@@ -104,32 +115,24 @@ export function EditStatsModal({
           {/* Beds & Baths */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="mb-1 block text-sm font-medium text-white">
-                Bedrooms
-              </label>
+              <label className="mb-1 block text-sm font-medium text-white">Bedrooms</label>
               <input
                 type="number"
                 min="0"
                 value={formData.beds}
-                onChange={(e) =>
-                  setFormData({ ...formData, beds: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, beds: e.target.value })}
                 className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
                 placeholder="3"
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-white">
-                Bathrooms
-              </label>
+              <label className="mb-1 block text-sm font-medium text-white">Bathrooms</label>
               <input
                 type="number"
                 min="0"
                 step="0.5"
                 value={formData.baths}
-                onChange={(e) =>
-                  setFormData({ ...formData, baths: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, baths: e.target.value })}
                 className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
                 placeholder="2.5"
               />
@@ -138,16 +141,12 @@ export function EditStatsModal({
 
           {/* Square Feet */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-white">
-              Square Feet
-            </label>
+            <label className="mb-1 block text-sm font-medium text-white">Square Feet</label>
             <input
               type="number"
               min="0"
               value={formData.sqft}
-              onChange={(e) =>
-                setFormData({ ...formData, sqft: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, sqft: e.target.value })}
               className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
               placeholder="2400"
             />
@@ -155,17 +154,13 @@ export function EditStatsModal({
 
           {/* Year Built */}
           <div>
-            <label className="mb-1 block text-sm font-medium text-white">
-              Year Built
-            </label>
+            <label className="mb-1 block text-sm font-medium text-white">Year Built</label>
             <input
               type="number"
               min="1800"
               max={new Date().getFullYear()}
               value={formData.yearBuilt}
-              onChange={(e) =>
-                setFormData({ ...formData, yearBuilt: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, yearBuilt: e.target.value })}
               className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
               placeholder="1995"
             />
@@ -186,9 +181,10 @@ export function EditStatsModal({
             >
               {loading ? "Saving..." : "Save Changes"}
             </button>
+
             <button
               type="button"
-              onClick={onCloseAction}
+              onClick={onClose}
               disabled={loading}
               className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white hover:bg-white/10 disabled:opacity-50"
             >

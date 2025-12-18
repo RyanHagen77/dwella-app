@@ -12,8 +12,7 @@ import {
 
 type HomeActionsProps = {
   homeId: string;
-  homeAddress: string; // unused but kept for compatibility
-  unreadMessages?: number; // optional now – we also fetch client-side
+  unreadMessages?: number;
 };
 
 type UnreadResponse = {
@@ -29,13 +28,7 @@ async function fetchUnreadMessages(homeId: string): Promise<number> {
     });
     if (!res.ok) return 0;
 
-    let data: UnreadResponse = {};
-    try {
-      data = (await res.json()) as UnreadResponse;
-    } catch {
-      data = {};
-    }
-
+    const data = (await res.json().catch(() => ({}))) as UnreadResponse;
     return data.total ?? data.count ?? data.unread ?? 0;
   } catch (error) {
     console.error("Failed to fetch unread messages", error);
@@ -43,43 +36,121 @@ async function fetchUnreadMessages(homeId: string): Promise<number> {
   }
 }
 
+type PresignPayload = {
+  url: string;
+  key: string;
+  publicUrl: string | null;
+};
+
+type PersistAttachment = {
+  filename: string;
+  size: number;
+  contentType: string;
+  storageKey: string;
+  url: string | null;
+  visibility: "OWNER" | "HOME" | "PUBLIC";
+  notes?: string;
+};
+
 export function HomeActions({
   homeId,
-  homeAddress, // eslint will ignore unused if you have that rule off; safe to keep
   unreadMessages,
 }: HomeActionsProps) {
   const router = useRouter();
   const [addModalOpen, setAddModalOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState<number>(
-    unreadMessages ?? 0
-  );
+  const [unreadCount, setUnreadCount] = useState<number>(unreadMessages ?? 0);
 
-  // If server ever passes a non-zero unreadMessages, sync once
+  // Sync from server prop if provided
   useEffect(() => {
-    if (typeof unreadMessages === "number") {
-      setUnreadCount(unreadMessages);
-    }
+    if (typeof unreadMessages === "number") setUnreadCount(unreadMessages);
   }, [unreadMessages]);
 
-  // Always refresh unread count on mount / homeId change
+  // Fetch client-side on mount/homeId change
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
       const count = await fetchUnreadMessages(homeId);
-      if (!cancelled) {
-        setUnreadCount(count);
-      }
+      if (!cancelled) setUnreadCount(count);
     }
 
     void load();
-
     return () => {
       cancelled = true;
     };
   }, [homeId]);
 
-  async function handleCreate({
+  async function uploadAndPersistAttachments(args: {
+    homeId: string;
+    recordId?: string;
+    reminderId?: string;
+    warrantyId?: string;
+    files: File[];
+  }) {
+    const { files } = args;
+    if (!files.length) return;
+
+    const uploaded: PersistAttachment[] = [];
+
+    for (const file of files) {
+      const presignRes = await fetch("/api/uploads/presign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          homeId: args.homeId,
+          filename: file.name,
+          contentType: file.type || "application/octet-stream",
+          size: file.size,
+          recordId: args.recordId,
+          reminderId: args.reminderId,
+          warrantyId: args.warrantyId,
+        }),
+      });
+
+      if (!presignRes.ok) continue;
+
+      const { url, key, publicUrl } =
+        (await presignRes.json()) as PresignPayload;
+
+      const put = await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+        body: file,
+      });
+
+      if (!put.ok) continue;
+
+      uploaded.push({
+        filename: file.name,
+        size: file.size,
+        contentType: file.type || "application/octet-stream",
+        storageKey: key,
+        url: publicUrl,
+        visibility: "OWNER",
+      });
+    }
+
+    if (!uploaded.length) return;
+
+    let attachEndpoint = "";
+    if (args.recordId) attachEndpoint = `/api/home/${homeId}/records/${args.recordId}/attachments`;
+    else if (args.reminderId) attachEndpoint = `/api/home/${homeId}/reminders/${args.reminderId}/attachments`;
+    else if (args.warrantyId) attachEndpoint = `/api/home/${homeId}/warranties/${args.warrantyId}/attachments`;
+    if (!attachEndpoint) return;
+
+    const persist = await fetch(attachEndpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(uploaded),
+    });
+
+    if (!persist.ok) {
+      // don’t fail the whole create; attachments can be retried later
+      console.warn("Persist attachments failed:", await persist.text().catch(() => ""));
+    }
+  }
+
+  async function handleCreateAction({
     payload,
     files,
   }: {
@@ -93,26 +164,28 @@ export function HomeActions({
       endpoint = `/api/home/${homeId}/records`;
       body = {
         title: payload.title,
-        note: payload.note,
-        date: payload.date,
-        kind: payload.kind,
-        vendor: payload.vendor,
-        cost: payload.cost,
+        note: payload.note ?? null,
+        date: payload.date ?? null,
+        kind: payload.kind ?? null,
+        vendor: payload.vendor ?? null,
+        cost: payload.cost ?? null,
+        verified: payload.verified ?? null,
       };
     } else if (payload.type === "reminder") {
       endpoint = `/api/home/${homeId}/reminders`;
       body = {
         title: payload.title,
-        dueAt: payload.dueAt,
-        note: payload.note,
+        dueAt: payload.dueAt ?? null,
+        note: payload.note ?? null,
       };
-    } else if (payload.type === "warranty") {
+    } else {
       endpoint = `/api/home/${homeId}/warranties`;
       body = {
-        item: payload.item,
-        provider: payload.provider,
-        expiresAt: payload.expiresAt,
-        note: payload.note,
+        item: payload.item ?? null,
+        provider: payload.provider ?? null,
+        expiresAt: payload.expiresAt ?? null,
+        purchasedAt: payload.purchasedAt ?? null,
+        note: payload.note ?? null,
       };
     }
 
@@ -122,67 +195,17 @@ export function HomeActions({
       body: JSON.stringify(body),
     });
 
-    if (!res.ok) {
-      throw new Error("Failed to create");
-    }
+    const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+    if (!res.ok || !data.id) throw new Error(data.error || "Failed to create");
 
-    const data: { id?: string } = await res.json();
-
-    if (files.length > 0 && data.id) {
-      for (const file of files) {
-        const presignRes = await fetch("/api/uploads/presign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            homeId,
-            filename: file.name,
-            contentType: file.type,
-            size: file.size,
-            recordId: payload.type === "record" ? data.id : undefined,
-            reminderId: payload.type === "reminder" ? data.id : undefined,
-            warrantyId: payload.type === "warranty" ? data.id : undefined,
-          }),
-        });
-
-        if (!presignRes.ok) continue;
-
-        type PresignPayload = {
-          url: string;
-          key: string;
-          publicUrl: string | null;
-        };
-
-        const { url, key, publicUrl } =
-          (await presignRes.json()) as PresignPayload;
-
-        await fetch(url, {
-          method: "PUT",
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-          body: file,
-        });
-
-        const attachEndpoint =
-          payload.type === "record"
-            ? `/api/home/${homeId}/records/${data.id}/attachments`
-            : payload.type === "reminder"
-            ? `/api/home/${homeId}/reminders/${data.id}/attachments`
-            : `/api/home/${homeId}/warranties/${data.id}/attachments`;
-
-        await fetch(attachEndpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify([
-            {
-              filename: file.name,
-              size: file.size,
-              contentType: file.type || "application/octet-stream",
-              storageKey: key,
-              url: publicUrl,
-              visibility: "OWNER" as const,
-            },
-          ]),
-        });
-      }
+    if (files.length) {
+      await uploadAndPersistAttachments({
+        homeId,
+        files,
+        recordId: payload.type === "record" ? data.id : undefined,
+        reminderId: payload.type === "reminder" ? data.id : undefined,
+        warrantyId: payload.type === "warranty" ? data.id : undefined,
+      });
     }
 
     setAddModalOpen(false);
@@ -192,15 +215,14 @@ export function HomeActions({
   return (
     <>
       <div className="flex flex-wrap gap-3 pt-2">
-        {/* Primary: Add Record */}
         <button
+          type="button"
           onClick={() => setAddModalOpen(true)}
           className={`${ctaPrimary} text-sm`}
         >
           + Add Record
         </button>
 
-        {/* Messages */}
         <Link
           href={`/home/${homeId}/messages`}
           className={`${ctaGhost} relative text-sm`}
@@ -213,7 +235,6 @@ export function HomeActions({
           )}
         </Link>
 
-        {/* Request Service → list page */}
         <Link
           href={`/home/${homeId}/completed-service-submissions`}
           className={`${ctaGhost} text-sm`}
@@ -221,7 +242,6 @@ export function HomeActions({
           🔧 Request Service
         </Link>
 
-        {/* Invite Pro → invitations list page */}
         <Link
           href={`/home/${homeId}/invitations`}
           className={`${ctaGhost} text-sm`}
@@ -233,7 +253,7 @@ export function HomeActions({
       <AddRecordModal
         open={addModalOpen}
         onCloseAction={() => setAddModalOpen(false)}
-        onCreateAction={handleCreate}
+        onCreateAction={handleCreateAction}
       />
     </>
   );

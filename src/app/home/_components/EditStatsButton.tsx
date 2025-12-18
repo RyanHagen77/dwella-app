@@ -33,12 +33,12 @@ export function EditStatsButton({
         Edit Stats
       </button>
 
-      <EditStatsModal
-        open={editStatsOpen}
-        onCloseAction={() => setEditStatsOpen(false)}
-        homeId={homeId}
-        currentStats={currentStats}
-      />
+    <EditStatsModal
+      open={editStatsOpen}
+      onCloseAction={() => setEditStatsOpen(false)}
+      homeId={homeId}
+      currentStats={currentStats}
+    />
     </>
   );
 }

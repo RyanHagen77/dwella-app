@@ -1,8 +1,7 @@
 // src/app/stats/_components/index.ts
 
 // Home context / picker
-export { default as HomeContextBar } from "./HomeContextBar";
-export * from "./HomeContextBar";      // re-export named versions if you ever use them
+
 export { HomePicker } from "./HomePicker";
 
 // Modals

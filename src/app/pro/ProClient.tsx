@@ -612,7 +612,7 @@ function AddServiceModal({
   }
 
   return (
-    <Modal open={open} onCloseAction={onClose} title="Add Service / Request">
+    <Modal open={open} onClose={onClose} title="Add Service / Request">
       <div className="space-y-3">
         <label className="block">
           <span className={fieldLabel}>Title</span>
@@ -675,7 +675,7 @@ function VerifyDocsModal({
   onVerified: () => void;
 }) {
   return (
-    <Modal open={open} onCloseAction={onClose} title="Get Verified">
+    <Modal open={open} onClose={onClose} title="Get Verified">
       <div className="space-y-3">
         <p className={`text-sm ${textMeta}`}>
           Upload your license, insurance, and W-9. We’ll review and notify you.
@@ -737,7 +737,7 @@ function EditProfileModal({
   }
 
   return (
-    <Modal open={open} onCloseAction={onClose} title="Edit Profile">
+    <Modal open={open} onClose={onClose} title="Edit Profile">
       <div className="space-y-3">
         <label className="block">
           <span className={fieldLabel}>Business name</span>

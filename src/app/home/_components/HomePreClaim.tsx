@@ -100,7 +100,7 @@ export default function HomePageSample() {
   function requireClaim(e?: React.SyntheticEvent) {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    alert("Claim your first stats to use this feature.");
+    alert("Claim your first home to use this feature.");
     setClaimOpen(true);
   }
 
@@ -191,11 +191,11 @@ export default function HomePageSample() {
       setLoading(false);
     }
 
-    load();
+    void load();
   }, []);
 
   /* ---------- Handler for unified modal ---------- */
-  async function onCreateUnified(args: {
+  async function onCreateUnifiedAction(args: {
     payload: UnifiedRecordPayload;
     files: File[];
   }) {
@@ -210,7 +210,7 @@ export default function HomePageSample() {
         kind: payload.kind || null,
         date: payload.date ? new Date(payload.date) : new Date(),
         vendor: payload.vendor || null,
-        cost: typeof payload.cost === "number" ? payload.cost : null,
+        cost: payload.cost ?? null,
       };
       setData((d) => (d ? { ...d, records: [newRecord, ...d.records] } : d));
     } else if (payload.type === "reminder") {
@@ -219,9 +219,7 @@ export default function HomePageSample() {
         title: payload.title,
         dueAt: new Date(payload.dueAt!),
       };
-      setData((d) =>
-        d ? { ...d, reminders: [newReminder, ...d.reminders] } : d
-      );
+      setData((d) => (d ? { ...d, reminders: [newReminder, ...d.reminders] } : d));
     } else if (payload.type === "warranty") {
       const newWarranty: Warranty = {
         id: crypto?.randomUUID ? crypto.randomUUID() : String(Date.now()),
@@ -229,9 +227,7 @@ export default function HomePageSample() {
         provider: payload.provider || null,
         expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : null,
       };
-      setData((d) =>
-        d ? { ...d, warranties: [newWarranty, ...d.warranties] } : d
-      );
+      setData((d) => (d ? { ...d, warranties: [newWarranty, ...d.warranties] } : d));
     }
 
     setAddOpen(false);
@@ -252,11 +248,9 @@ export default function HomePageSample() {
 
   const { property, records, reminders, warranties } = data;
 
-  const addrLine = `${property.address}${
-    property.city ? `, ${property.city}` : ""
-  }${property.state ? `, ${property.state}` : ""}${
-    property.zip ? ` ${property.zip}` : ""
-  }`;
+  const addrLine = `${property.address}${property.city ? `, ${property.city}` : ""}${
+    property.state ? `, ${property.state}` : ""
+  }${property.zip ? ` ${property.zip}` : ""}`;
 
   const now = new Date();
   const overdueReminders = reminders.filter((r) => new Date(r.dueAt) < now);
@@ -281,9 +275,7 @@ export default function HomePageSample() {
 
       <div className="mx-auto max-w-7xl p-6 space-y-6">
         {/* Claim banner */}
-        <section
-          className={`${glass} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4`}
-        >
+        <section className={`${glass} flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4`}>
           <div>
             <p className="font-medium text-white">This is a sample view.</p>
             <p className={`${textMeta} text-sm`}>
@@ -295,14 +287,9 @@ export default function HomePageSample() {
           </button>
         </section>
 
-        {/* Hero card (matches auth page) */}
-        <section
-          aria-labelledby="home-hero"
-          className={`${glass} overflow-visible relative z-[20]`}
-        >
-          <h2 id="home-hero" className="sr-only">
-            Home overview
-          </h2>
+        {/* Hero */}
+        <section aria-labelledby="home-hero" className={`${glass} overflow-visible relative z-[20]`}>
+          <h2 id="home-hero" className="sr-only">Home overview</h2>
 
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
@@ -317,22 +304,17 @@ export default function HomePageSample() {
                 />
               </div>
 
-              {/* Right side: picker + address + meta */}
+              {/* Right side */}
               <div className="flex flex-col justify-between space-y-3">
                 <div className="space-y-3">
                   <SampleHomePicker address={addrLine} onClick={requireClaim} />
 
-                  <h1 className={`text-2xl font-semibold ${heading}`}>
-                    {addrLine}
-                  </h1>
-                  <p className={`text-sm ${textMeta}`}>
-                    Last updated {formatDate(stats.lastUpdated)}
-                  </p>
+                  <h1 className={`text-2xl font-semibold ${heading}`}>{addrLine}</h1>
+                  <p className={`text-sm ${textMeta}`}>Last updated {formatDate(stats.lastUpdated)}</p>
                 </div>
               </div>
             </div>
 
-            {/* ✅ ClientActions UI clone (no nav, no fetch) */}
             <SampleClientActions
               onAdd={() => requireClaim()}
               onMessages={() => requireClaim()}
@@ -345,17 +327,15 @@ export default function HomePageSample() {
         <div onClickCapture={requireClaim}>
           <PropertyStats homeId={property.id} stats={stats} />
         </div>
+
         {/* Alerts */}
-        {(overdueReminders.length > 0 ||
-          expiringSoonWarranties.length > 0) && (
+        {(overdueReminders.length > 0 || expiringSoonWarranties.length > 0) && (
           <section className="space-y-3">
             {overdueReminders.length > 0 && (
               <div className={`${glass} border-l-4 border-red-400`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3
-                      className={`text-lg font-medium text-red-400 ${heading}`}
-                    >
+                    <h3 className={`text-lg font-medium text-red-400 ${heading}`}>
                       ⚠️ Overdue Reminders ({overdueReminders.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
@@ -367,11 +347,7 @@ export default function HomePageSample() {
                     </ul>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={requireClaim}
-                    className={`${ctaPrimary} text-sm`}
-                  >
+                  <button type="button" onClick={requireClaim} className={`${ctaPrimary} text-sm`}>
                     View All
                   </button>
                 </div>
@@ -382,26 +358,19 @@ export default function HomePageSample() {
               <div className={`${glass} border-l-4 border-yellow-400`}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3
-                      className={`text-lg font-medium text-yellow-400 ${heading}`}
-                    >
+                    <h3 className={`text-lg font-medium text-yellow-400 ${heading}`}>
                       ⏰ Warranties Expiring Soon ({expiringSoonWarranties.length})
                     </h3>
                     <ul className="mt-2 space-y-1">
                       {expiringSoonWarranties.map((w) => (
                         <li key={w.id} className="text-sm text-white/90">
-                          • {w.item}{" "}
-                          {w.expiresAt && <>expires {formatDate(w.expiresAt)}</>}
+                          • {w.item} {w.expiresAt && <>expires {formatDate(w.expiresAt)}</>}
                         </li>
                       ))}
                     </ul>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={requireClaim}
-                    className={`${ctaPrimary} text-sm`}
-                  >
+                  <button type="button" onClick={requireClaim} className={`${ctaPrimary} text-sm`}>
                     View All
                   </button>
                 </div>
@@ -412,15 +381,9 @@ export default function HomePageSample() {
 
         {/* Main grid */}
         <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {/* Left column */}
           <div className="space-y-6 lg:col-span-2">
             <div onClickCapture={requireClaim}>
-              <ClientCard
-                title="Recent Records"
-                viewAllLink="#"
-                homeId={property.id}
-                addType="record"
-              >
+              <ClientCard title="Recent Records" viewAllLink="#" homeId={property.id} addType="record">
                 {records.length === 0 ? (
                   <div className="py-8 text-center text-white/70">
                     <p className="mb-3">No records yet</p>
@@ -431,11 +394,7 @@ export default function HomePageSample() {
                 ) : (
                   <div className="space-y-3">
                     {records.map((r) => (
-                      <RecordRow
-                        key={r.id}
-                        record={r}
-                        onClick={requireClaim}
-                      />
+                      <RecordRow key={r.id} record={r} onClick={requireClaim} />
                     ))}
                   </div>
                 )}
@@ -443,15 +402,9 @@ export default function HomePageSample() {
             </div>
           </div>
 
-          {/* Right column */}
           <div className="space-y-6">
             <div onClickCapture={requireClaim}>
-              <ClientCard
-                title="Upcoming Reminders"
-                viewAllLink="#"
-                homeId={property.id}
-                addType="reminder"
-              >
+              <ClientCard title="Upcoming Reminders" viewAllLink="#" homeId={property.id} addType="reminder">
                 {upcomingReminders.length === 0 ? (
                   <div className="py-8 text-center text-white/70">
                     <p className="mb-2 text-sm">No upcoming reminders</p>
@@ -459,12 +412,7 @@ export default function HomePageSample() {
                 ) : (
                   <ul className="space-y-3">
                     {upcomingReminders.map((m) => (
-                      <ReminderRow
-                        key={m.id}
-                        reminder={m}
-                        now={now}
-                        onClick={requireClaim}
-                      />
+                      <ReminderRow key={m.id} reminder={m} now={now} onClick={requireClaim} />
                     ))}
                   </ul>
                 )}
@@ -472,12 +420,7 @@ export default function HomePageSample() {
             </div>
 
             <div onClickCapture={requireClaim}>
-              <ClientCard
-                title="Active Warranties"
-                viewAllLink="#"
-                homeId={property.id}
-                addType="warranty"
-              >
+              <ClientCard title="Active Warranties" viewAllLink="#" homeId={property.id} addType="warranty">
                 {warranties.length === 0 ? (
                   <div className="py-8 text-center text-white/70">
                     <p className="mb-2 text-sm">No warranties on file</p>
@@ -485,12 +428,7 @@ export default function HomePageSample() {
                 ) : (
                   <ul className="space-y-3">
                     {warranties.map((w) => (
-                      <WarrantyRow
-                        key={w.id}
-                        warranty={w}
-                        now={now}
-                        onClick={requireClaim}
-                      />
+                      <WarrantyRow key={w.id} warranty={w} now={now} onClick={requireClaim} />
                     ))}
                   </ul>
                 )}
@@ -506,23 +444,17 @@ export default function HomePageSample() {
       <AddRecordModal
         open={addOpen}
         onCloseAction={() => setAddOpen(false)}
-        onCreateAction={onCreateUnified}
+        onCreateAction={onCreateUnifiedAction}
       />
 
-      <ShareAccessModal
-        open={shareOpen}
-        onCloseAction={() => setShareOpen(false)}
-      />
+      <ShareAccessModal open={shareOpen} onCloseAction={() => setShareOpen(false)} />
 
-      <ClaimHomeModal
-        open={claimOpen}
-        onCloseAction={() => setClaimOpen(false)}
-      />
+      <ClaimHomeModal open={claimOpen} onCloseAction={() => setClaimOpen(false)} />
     </main>
   );
 }
 
-/* ---------- Sample (non-nav) hero picker ---------- */
+/* ---------- Sample picker ---------- */
 
 function SampleHomePicker({
   address,
@@ -547,7 +479,7 @@ function SampleHomePicker({
   );
 }
 
-/* ---------- ✅ ClientActions UI clone (no fetch, no nav) ---------- */
+/* ---------- Actions clone ---------- */
 
 function SampleClientActions({
   onAdd,
@@ -558,28 +490,18 @@ function SampleClientActions({
   onMessages: () => void;
   onWantTo: () => void;
 }) {
-  // In sample mode, we don’t show counts (or you could hardcode demo counts here)
   const unreadMessagesCount = 0;
   const pendingInvitationsCount = 0;
   const pendingServiceCount = 0;
 
   return (
     <div className="flex flex-col gap-4 pt-4 sm:pt-2">
-      {/* Top row: small pills */}
       <div className="flex flex-wrap gap-2 sm:flex-nowrap">
-        <button
-          type="button"
-          onClick={onAdd}
-          className={`${ctaPrimary} whitespace-nowrap text-sm`}
-        >
+        <button type="button" onClick={onAdd} className={`${ctaPrimary} whitespace-nowrap text-sm`}>
           + Add Record
         </button>
 
-        <button
-          type="button"
-          onClick={onMessages}
-          className={`${ctaGhost} relative whitespace-nowrap text-sm`}
-        >
+        <button type="button" onClick={onMessages} className={`${ctaGhost} relative whitespace-nowrap text-sm`}>
           Messages
           {unreadMessagesCount > 0 && (
             <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">
@@ -589,7 +511,6 @@ function SampleClientActions({
         </button>
       </div>
 
-      {/* Big full-width "I want to..." pill */}
       <button
         type="button"
         onClick={onWantTo}
@@ -621,7 +542,7 @@ function SampleClientActions({
   );
 }
 
-/* ---------- Rows (no nav) ---------- */
+/* ---------- Rows ---------- */
 
 function RecordRow({
   record,
@@ -679,9 +600,7 @@ function ReminderRow({
 }) {
   const dueDate = new Date(reminder.dueAt);
   const isOverdue = dueDate < now;
-  const daysUntilDue = Math.ceil(
-    (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const daysUntilDue = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   return (
     <button
@@ -691,16 +610,10 @@ function ReminderRow({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium text-white">
-            {reminder.title}
-          </h3>
+          <h3 className="truncate font-medium text-white">{reminder.title}</h3>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span
-            className={`text-xs font-medium ${
-              isOverdue ? "text-red-400" : "text-white/70"
-            }`}
-          >
+          <span className={`text-xs font-medium ${isOverdue ? "text-red-400" : "text-white/70"}`}>
             {formatDate(dueDate)}
           </span>
           {!isOverdue && daysUntilDue <= 7 && (
@@ -734,21 +647,13 @@ function WarrantyRow({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium text-white">
-            {warranty.item}
-          </h3>
-          {warranty.provider && (
-            <p className="text-sm text-white/70">{warranty.provider}</p>
-          )}
+          <h3 className="truncate font-medium text-white">{warranty.item}</h3>
+          {warranty.provider && <p className="text-sm text-white/70">{warranty.provider}</p>}
         </div>
         <div className="flex flex-col items-end gap-1">
           {expiresAt ? (
             <>
-              <span
-                className={`text-xs font-medium ${
-                  expiringSoon ? "text-yellow-400" : "text-white/70"
-                }`}
-              >
+              <span className={`text-xs font-medium ${expiringSoon ? "text-yellow-400" : "text-white/70"}`}>
                 {formatDate(expiresAt)}
               </span>
               <span className="text-xs text-white/60">Expires</span>

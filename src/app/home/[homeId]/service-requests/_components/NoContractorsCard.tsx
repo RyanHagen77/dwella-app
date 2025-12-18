@@ -32,7 +32,7 @@ export function NoContractorsCard({ homeId, homeAddress }: NoContractorsCardProp
 
       <InviteProModal
         open={inviteOpen}
-        onCloseAction={() => setInviteOpen(false)}
+        onClose={() => setInviteOpen(false)}
         homeId={homeId}
         homeAddress={homeAddress}
       />

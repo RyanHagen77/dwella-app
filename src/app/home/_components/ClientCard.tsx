@@ -54,8 +54,7 @@ export function ClientCard({
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.id)
-      throw new Error(json?.error || "Failed to create record");
+    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create record");
     return { id: json.id };
   }
 
@@ -70,8 +69,7 @@ export function ClientCard({
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.id)
-      throw new Error(json?.error || "Failed to create reminder");
+    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create reminder");
     return { id: json.id };
   }
 
@@ -88,8 +86,7 @@ export function ClientCard({
       body: JSON.stringify(payload),
     });
     const json = await res.json().catch(() => ({}));
-    if (!res.ok || !json?.id)
-      throw new Error(json?.error || "Failed to create warranty");
+    if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create warranty");
     return { id: json.id };
   }
 
@@ -148,8 +145,7 @@ export function ClientCard({
         headers: { "Content-Type": f.type || "application/octet-stream" },
         body: f,
       });
-      if (!put.ok)
-        throw new Error(`S3 PUT failed: ${await put.text().catch(() => "")}`);
+      if (!put.ok) throw new Error(`S3 PUT failed: ${await put.text().catch(() => "")}`);
 
       uploaded.push({
         filename: f.name,
@@ -163,12 +159,9 @@ export function ClientCard({
     }
 
     let endpoint = "";
-    if (recordId)
-      endpoint = `/api/home/${homeId}/records/${recordId}/attachments`;
-    else if (warrantyId)
-      endpoint = `/api/home/${homeId}/warranties/${warrantyId}/attachments`;
-    else if (reminderId)
-      endpoint = `/api/home/${homeId}/reminders/${reminderId}/attachments`;
+    if (recordId) endpoint = `/api/home/${homeId}/records/${recordId}/attachments`;
+    else if (warrantyId) endpoint = `/api/home/${homeId}/warranties/${warrantyId}/attachments`;
+    else if (reminderId) endpoint = `/api/home/${homeId}/reminders/${reminderId}/attachments`;
     if (!endpoint) return;
 
     const persist = await fetch(endpoint, {
@@ -176,10 +169,7 @@ export function ClientCard({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(uploaded),
     });
-    if (!persist.ok)
-      throw new Error(
-        `Persist attachments failed: ${await persist.text()}`
-      );
+    if (!persist.ok) throw new Error(`Persist attachments failed: ${await persist.text()}`);
   }
 
   async function onCreateUnified({
@@ -196,7 +186,7 @@ export function ClientCard({
         date: payload.date ?? undefined,
         kind: payload.kind ?? undefined,
         vendor: payload.vendor ?? undefined,
-        cost: typeof payload.cost === "number" ? payload.cost : undefined,
+        cost: payload.cost, // ✅ no redundant typeof check
         verified: payload.verified ?? undefined,
       });
       await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
@@ -207,7 +197,7 @@ export function ClientCard({
         note: payload.note ?? undefined,
       });
       await uploadAndPersistAttachments({ homeId, reminderId: reminder.id, files });
-    } else if (payload.type === "warranty") {
+    } else {
       const warranty = await createWarranty({
         item: payload.item!,
         provider: payload.provider ?? undefined,
@@ -226,14 +216,9 @@ export function ClientCard({
 
   const badgeNode =
     showBadge && verificationStatus === "UNVERIFIED" ? (
-      <Link
-        href={`/home/${homeId}/verify`}
-        className="inline-flex items-center gap-2"
-      >
+      <Link href={`/home/${homeId}/verify`} className="inline-flex items-center gap-2">
         <HomeVerificationBadge status={verificationStatus} />
-        <span className="text-[11px] text-indigo-300 hover:text-indigo-200">
-          Verify
-        </span>
+        <span className="text-[11px] text-indigo-300 hover:text-indigo-200">Verify</span>
       </Link>
     ) : showBadge ? (
       <HomeVerificationBadge status={verificationStatus!} />
@@ -247,8 +232,10 @@ export function ClientCard({
             <h2 className={`text-lg font-medium ${heading}`}>{title}</h2>
             {badgeNode}
           </div>
+
           {addType && (
             <button
+              type="button"
               onClick={() => setAddOpen(true)}
               className="text-sm text-white/70 hover:text-white transition-colors"
             >
@@ -256,7 +243,9 @@ export function ClientCard({
             </button>
           )}
         </div>
+
         {children}
+
         {viewAllLink && (
           <div className="mt-4 border-t border-white/10 pt-3 text-right">
             <Link href={viewAllLink} className={`${ctaGhost} text-sm`}>

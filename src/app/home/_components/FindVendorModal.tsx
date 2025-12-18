@@ -1,4 +1,5 @@
 "use client";
+
 import * as React from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Input, fieldLabel } from "@/components/ui";
@@ -8,8 +9,8 @@ import { glassTight, textMeta } from "@/lib/glass";
 export type VendorDirectoryItem = {
   id: string;
   name: string;
-  type: string;         // e.g., "HVAC", "Plumber"
-  rating: number;       // 0-5
+  type: string; // e.g., "HVAC", "Plumber"
+  rating: number; // 0-5
   verified: boolean;
   phone?: string;
   website?: string;
@@ -18,7 +19,7 @@ export type VendorDirectoryItem = {
 type Props = {
   open: boolean;
   onCloseAction: () => void;
-  onAdd: (v: VendorDirectoryItem) => void; // parent will convert to Vendor type
+  onAddAction: (v: VendorDirectoryItem) => void; // parent will convert to Vendor type
 };
 
 // Simple local data (replace with API later if needed)
@@ -29,25 +30,42 @@ const DIRECTORY: VendorDirectoryItem[] = [
   { id: "v4", name: "Spark Electric", type: "Electrician", rating: 4.6, verified: true, phone: "(555) 333-4411", website: "#" },
 ];
 
-export function FindVendorsModal({ open, onCloseAction, onAdd }: Props) {
+export function FindVendorsModal({
+  open,
+  onCloseAction: onClose,
+  onAddAction: onAdd,
+}: Props) {
   const [q, setQ] = React.useState("");
+
   const results = React.useMemo(() => {
     const term = q.toLowerCase().trim();
     if (!term) return DIRECTORY;
-    return DIRECTORY.filter(v =>
-      v.name.toLowerCase().includes(term) || v.type.toLowerCase().includes(term)
+    return DIRECTORY.filter(
+      (v) =>
+        v.name.toLowerCase().includes(term) ||
+        v.type.toLowerCase().includes(term)
     );
   }, [q]);
 
+  // Optional: reset search when opening
+  React.useEffect(() => {
+    if (!open) return;
+    setQ("");
+  }, [open]);
+
   return (
-    <Modal open={open} onCloseAction={onCloseAction} title="Find Vendors">
+    <Modal open={open} onClose={onClose} title="Find Vendors">
       <div className="space-y-3">
         <label className="block">
           <span className={fieldLabel}>Search</span>
-          <Input placeholder="e.g., HVAC, Plumber, Roof" value={q} onChange={(e)=>setQ(e.target.value)} />
+          <Input
+            placeholder="e.g., HVAC, Plumber, Roof"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+          />
         </label>
 
-        <div className={`${glassTight}`}>
+        <div className={glassTight}>
           <p className={`text-sm ${textMeta}`}>
             Add trusted vendors to your Homefax. You can request service from a vendor once added.
           </p>
@@ -55,28 +73,49 @@ export function FindVendorsModal({ open, onCloseAction, onAdd }: Props) {
 
         <ul className="space-y-2">
           {results.map((v) => (
-            <li key={v.id} className="flex items-center justify-between">
-              <div>
-                <div className="text-white">{v.name}</div>
+            <li
+              key={v.id}
+              className="flex items-center justify-between gap-4 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-white">{v.name}</div>
                 <div className={`text-sm ${textMeta}`}>
-                  {v.type} • {v.rating.toFixed(1)} ★ {v.verified ? "• Verified" : "• Unverified"}
+                  {v.type} • {v.rating.toFixed(1)} ★{" "}
+                  {v.verified ? "• Verified" : "• Unverified"}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <GhostButton as-child={undefined} onClick={() => onAdd(v)}>Add</GhostButton>
+
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <GhostButton
+                  type="button"
+                  onClick={() => onAdd(v)}
+                >
+                  Add
+                </GhostButton>
+
                 {v.website && (
-                  <a className="underline text-white/85" href={v.website}>Site</a>
+                  <a
+                    className="text-sm text-white/80 underline hover:text-white"
+                    href={v.website}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Site
+                  </a>
                 )}
               </div>
             </li>
           ))}
+
           {results.length === 0 && (
             <li className={`text-sm ${textMeta}`}>No matches.</li>
           )}
         </ul>
 
         <div className="flex justify-end">
-          <Button onClick={onCloseAction}>Done</Button>
+          <Button type="button" onClick={onClose}>
+            Done
+          </Button>
         </div>
       </div>
     </Modal>

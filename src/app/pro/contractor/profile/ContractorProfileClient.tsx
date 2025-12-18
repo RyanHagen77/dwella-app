@@ -420,7 +420,7 @@ export function ContractorProfileClient({
       {/* Edit Profile Modal */}
       <Modal
         open={editMode}
-        onCloseAction={() => setEditMode(false)}
+        onClose={() => setEditMode(false)}
         title="Edit Contractor Profile"
       >
         <div className="space-y-4">
@@ -523,7 +523,7 @@ export function ContractorProfileClient({
       {/* Logo Modal */}
       <Modal
         open={logoMode}
-        onCloseAction={() => setLogoMode(false)}
+        onClose={() => setLogoMode(false)}
         title="Update Logo"
       >
         <div className="space-y-4">

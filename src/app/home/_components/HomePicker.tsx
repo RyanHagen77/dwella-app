@@ -3,9 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ClaimHomeModal } from "./ClaimHomeModal";
-import { UnreadMessageBadge } from "@/components/ui/UnreadMessageBadge";
-import { UnreadInvitationsBadge } from "@/components/ui//UnreadInvitationsBadge";
-import { PendingServiceBadge } from "@/components/ui/PendingServiceBadge";
+
 
 type Home = {
   id: string;
@@ -20,6 +18,22 @@ type HomeStats = {
   unreadMessages: number;
   pendingInvitations: number;
   pendingService: number;
+};
+
+type MessagesUnreadResponse = {
+  total?: number;
+  count?: number;
+  unread?: number;
+};
+
+type InvitationsResponse = {
+  sentInvitations?: { status: string }[];
+  receivedInvitations?: { status: string }[];
+};
+
+type PendingServiceResponse = {
+  total?: number;
+  totalPending?: number;
 };
 
 export function HomePicker({
@@ -41,55 +55,79 @@ export function HomePicker({
       try {
         const res = await fetch("/api/user/homes");
         if (!res.ok) return;
-        const data = await res.json();
-        setHomes(data.homes || []);
+
+        const data = (await res.json()) as { homes?: Home[] };
+        setHomes(data.homes ?? []);
       } catch (err) {
-        console.error("Failed to fetch stats", err);
+        console.error("Failed to fetch homes", err);
       }
     }
     void fetchHomes();
   }, []);
 
-  // Fetch per-stats stats when dropdown opens
+  // Fetch per-home stats when dropdown opens
   React.useEffect(() => {
     if (!open || homes.length === 0) return;
 
+    let cancelled = false;
+
     async function fetchHomeStats() {
       try {
-        // Fetch stats for each stats
         const statsPromises = homes.map(async (home) => {
           const [messagesRes, invitesRes, serviceRes] = await Promise.all([
-            fetch(`/api/home/${home.id}/messages/unread`),
-            fetch(`/api/home/${home.id}/invitations?status=PENDING`),
-            fetch(`/api/home/${home.id}/completed-service-submissions/pending`), // ← Fixed this line
+            fetch(`/api/home/${home.id}/messages/unread`, { cache: "no-store" }),
+            fetch(`/api/home/${home.id}/invitations?status=PENDING`, {
+              cache: "no-store",
+            }),
+            fetch(`/api/home/${home.id}/completed-service-submissions/pending`, {
+              cache: "no-store",
+            }),
           ]);
 
-          const messagesData = messagesRes.ok ? await messagesRes.json() : {total: 0};
-          const invitesData = invitesRes.ok ? await invitesRes.json() : {};
-          const serviceData = serviceRes.ok ? await serviceRes.json() : {total: 0}; // ← Changed totalPending to total
+          const messagesData: MessagesUnreadResponse = messagesRes.ok
+            ? ((await messagesRes.json()) as MessagesUnreadResponse)
+            : {};
+
+          const invitesData: InvitationsResponse = invitesRes.ok
+            ? ((await invitesRes.json()) as InvitationsResponse)
+            : {};
+
+          const serviceData: PendingServiceResponse = serviceRes.ok
+            ? ((await serviceRes.json()) as PendingServiceResponse)
+            : {};
 
           const pendingInvites =
-              (invitesData.sentInvitations?.filter((inv: { status: string }) => inv.status === 'PENDING').length || 0) +
-              (invitesData.receivedInvitations?.filter((inv: {
-                status: string
-              }) => inv.status === 'PENDING').length || 0);
+            (invitesData.sentInvitations?.filter((inv) => inv.status === "PENDING")
+              .length ?? 0) +
+            (invitesData.receivedInvitations?.filter((inv) => inv.status === "PENDING")
+              .length ?? 0);
+
+          const unread =
+            messagesData.total ?? messagesData.count ?? messagesData.unread ?? 0;
+
+          const pendingService =
+            serviceData.total ?? serviceData.totalPending ?? 0;
 
           return {
             homeId: home.id,
-            unreadMessages: messagesData.total || 0,
+            unreadMessages: unread,
             pendingInvitations: pendingInvites,
-            pendingService: serviceData.total || 0, // ← Changed totalPending to total
-          };
+            pendingService,
+          } satisfies HomeStats;
         });
 
         const stats = await Promise.all(statsPromises);
-        setHomeStats(stats);
+        if (!cancelled) setHomeStats(stats);
       } catch (err) {
-        console.error("Failed to fetch stats stats", err);
+        console.error("Failed to fetch home stats", err);
       }
     }
 
     void fetchHomeStats();
+
+    return () => {
+      cancelled = true;
+    };
   }, [open, homes]);
 
   const currentHome =
@@ -105,6 +143,19 @@ export function HomePicker({
   const displayAddress =
     currentHome != null ? formatAddress(currentHome) : initialAddress;
 
+  function getStatsForHome(homeId: string): HomeStats {
+    return (
+      homeStats.find((s) => s.homeId === homeId) ?? {
+        homeId,
+        unreadMessages: 0,
+        pendingInvitations: 0,
+        pendingService: 0,
+      }
+    );
+  }
+
+  const currentStats = getStatsForHome(currentHomeId);
+
   async function switchHome(homeId: string) {
     setOpen(false);
 
@@ -115,7 +166,7 @@ export function HomePicker({
         body: JSON.stringify({ homeId }),
       });
     } catch (err) {
-      console.error("Failed to update last stats", err);
+      console.error("Failed to update last home", err);
     }
 
     if (typeof window !== "undefined") {
@@ -125,18 +176,8 @@ export function HomePicker({
     router.push(`/home/${homeId}`);
   }
 
-  function getStatsForHome(homeId: string) {
-    return homeStats.find((s) => s.homeId === homeId) || {
-      homeId,
-      unreadMessages: 0,
-      pendingInvitations: 0,
-      pendingService: 0,
-    };
-  }
-
   return (
     <>
-      {/* wrapper gets its own stack level */}
       <div className="relative z-[30] w-full max-w-sm text-left">
         <button
           type="button"
@@ -151,10 +192,30 @@ export function HomePicker({
             {displayAddress}
           </span>
 
-          {/* Badges */}
-          <UnreadMessageBadge />
-          <UnreadInvitationsBadge/>
-          <PendingServiceBadge />
+          {/* ✅ Current-home badges (real counts) */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {currentStats.unreadMessages > 0 && (
+              <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-orange-500 px-2 text-xs font-bold text-white">
+                {currentStats.unreadMessages}
+              </span>
+            )}
+
+            {currentStats.pendingInvitations > 0 && (
+              <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-blue-500 px-2 text-xs font-bold text-white">
+                {currentStats.pendingInvitations}
+              </span>
+            )}
+
+            {currentStats.pendingService > 0 && (
+              <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[#33C17D] px-2 text-xs font-bold text-white">
+                {currentStats.pendingService}
+              </span>
+            )}
+          </div>
+
+          {/* If you still want the component-style badge, you can keep this,
+              but it’s not wired to per-home counts. */}
+          {/* <UnreadInvitationsBadge /> */}
 
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -172,13 +233,8 @@ export function HomePicker({
 
         {open && (
           <>
-            {/* backdrop over page but under menu */}
-            <div
-              className="fixed inset-0 z-[40]"
-              onClick={() => setOpen(false)}
-            />
+            <div className="fixed inset-0 z-[40]" onClick={() => setOpen(false)} />
 
-            {/* dropdown itself */}
             <div
               className="absolute left-0 top-full z-[50] mt-2
                          w-[min(304px,calc(100vw-3rem))]
@@ -195,7 +251,10 @@ export function HomePicker({
                 {homes.map((home) => {
                   const isCurrent = home.id === currentHomeId;
                   const stats = getStatsForHome(home.id);
-                  const hasActivity = stats.unreadMessages > 0 || stats.pendingInvitations > 0 || stats.pendingService > 0;
+                  const hasActivity =
+                    stats.unreadMessages > 0 ||
+                    stats.pendingInvitations > 0 ||
+                    stats.pendingService > 0;
 
                   return (
                     <button
@@ -210,9 +269,7 @@ export function HomePicker({
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
-                          <p className="truncate text-white">
-                            {formatAddress(home)}
-                          </p>
+                          <p className="truncate text-white">{formatAddress(home)}</p>
                           {isCurrent && (
                             <p className="mt-1 text-xs text-emerald-300">
                               Current home
@@ -220,7 +277,6 @@ export function HomePicker({
                           )}
                         </div>
 
-                        {/* Per-stats badges */}
                         {hasActivity && (
                           <div className="flex items-center gap-1.5 flex-shrink-0">
                             {stats.unreadMessages > 0 && (
@@ -276,7 +332,7 @@ export function HomePicker({
           setClaimOpen(false);
           void fetch("/api/user/homes")
             .then((res) => res.json())
-            .then((data) => setHomes(data.homes || []))
+            .then((data: { homes?: Home[] }) => setHomes(data.homes ?? []))
             .catch(console.error);
         }}
       />

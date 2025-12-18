@@ -28,7 +28,7 @@ export function InviteHomeownerButton({
 
       <ContractorInvitationModal
         open={isOpen}
-        onCloseAction={() => setIsOpen(false)}
+        onClose={() => setIsOpen(false)}
       />
     </>
   );

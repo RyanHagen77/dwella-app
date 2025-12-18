@@ -15,6 +15,7 @@ export function ContractorActions({ homeId, homeAddress }: ContractorActionsProp
   return (
     <>
       <button
+        type="button"
         onClick={() => setInviteModalOpen(true)}
         className={`${ctaPrimary} text-sm`}
       >

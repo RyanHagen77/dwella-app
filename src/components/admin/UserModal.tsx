@@ -5,10 +5,10 @@ import { glass, ctaGhost, ctaPrimary, heading, textMeta } from "@/lib/glass";
 import type { AdminUser, Role, UserKind } from "@/app/admin/page";
 
 export function UserModal({
-  open, onCloseAction, value, onSubmit,
+  open, onClose, value, onSubmit,
 }: {
   open: boolean;
-  onCloseAction: () => void;
+  onClose: () => void;
   value: AdminUser | null;
   onSubmit: (u: AdminUser) => void;
 }) {
@@ -25,11 +25,11 @@ export function UserModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-black/60" onClick={onCloseAction} />
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className={`${glass} relative z-10 w-full max-w-lg`}>
         <div className="flex items-start justify-between">
           <h2 className={`text-xl font-semibold ${heading}`}>{isNew ? "Create User" : "Edit User"}</h2>
-          <button className={ctaGhost} onClick={onCloseAction}>Close</button>
+          <button className={ctaGhost} onClick={onClose}>Close</button>
         </div>
 
         <div className="mt-3 space-y-3">
@@ -108,7 +108,7 @@ export function UserModal({
           </div>
 
           <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
-            <button className={ctaGhost} onClick={onCloseAction}>Cancel</button>
+            <button className={ctaGhost} onClick={onClose}>Cancel</button>
             <button className={ctaPrimary} onClick={save}>{isNew ? "Create" : "Save"}</button>
           </div>
         </div>

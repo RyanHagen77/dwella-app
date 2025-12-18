@@ -354,7 +354,7 @@ export function GlobalHeader({
       {/* Claim-stats modal */}
       <ClaimHomeModal
         open={claimOpen}
-        onCloseAction={() => setClaimOpen(false)}
+        onClose={() => setClaimOpen(false)}
       />
     </>
   );
