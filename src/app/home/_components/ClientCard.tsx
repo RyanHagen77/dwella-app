@@ -1,9 +1,10 @@
+// app/home/_components/ClientCard.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { glass, ctaGhost, heading } from "@/lib/glass";
+import { glass, heading } from "@/lib/glass";
 import { AddRecordModal, type UnifiedRecordPayload } from "./AddRecordModal";
 import type { HomeVerificationStatus } from "@prisma/client";
 import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge";
@@ -106,6 +107,7 @@ export function ClientCard({
     if (!files.length) return;
 
     const uploaded: PersistAttachment[] = [];
+
     for (const f of files) {
       const presignPayload: {
         homeId: string;
@@ -186,7 +188,7 @@ export function ClientCard({
         date: payload.date ?? undefined,
         kind: payload.kind ?? undefined,
         vendor: payload.vendor ?? undefined,
-        cost: payload.cost, // ✅ no redundant typeof check
+        cost: payload.cost,
         verified: payload.verified ?? undefined,
       });
       await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
@@ -218,7 +220,9 @@ export function ClientCard({
     showBadge && verificationStatus === "UNVERIFIED" ? (
       <Link href={`/home/${homeId}/verify`} className="inline-flex items-center gap-2">
         <HomeVerificationBadge status={verificationStatus} />
-        <span className="text-[11px] text-indigo-300 hover:text-indigo-200">Verify</span>
+        <span className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap">
+          Verify
+        </span>
       </Link>
     ) : showBadge ? (
       <HomeVerificationBadge status={verificationStatus!} />
@@ -227,7 +231,8 @@ export function ClientCard({
   return (
     <>
       <section className={glass}>
-        <div className="mb-4 flex items-center justify-between">
+        {/* Header */}
+        <div className="mb-4 flex items-center justify-between gap-2">
           <div className="flex items-center gap-3">
             <h2 className={`text-lg font-medium ${heading}`}>{title}</h2>
             {badgeNode}
@@ -237,7 +242,7 @@ export function ClientCard({
             <button
               type="button"
               onClick={() => setAddOpen(true)}
-              className="text-sm text-white/70 hover:text-white transition-colors"
+              className="text-sm text-white/70 hover:text-white transition-colors whitespace-nowrap"
             >
               + Add
             </button>
@@ -246,11 +251,17 @@ export function ClientCard({
 
         {children}
 
+        {/* Bottom right "View All" */}
         {viewAllLink && (
-          <div className="mt-4 border-t border-white/10 pt-3 text-right">
-            <Link href={viewAllLink} className={`${ctaGhost} text-sm`}>
-              View All →
-            </Link>
+          <div className="mt-4 border-t border-white/10 pt-3">
+            <div className="flex justify-end">
+              <Link
+                href={viewAllLink}
+                className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap"
+              >
+                View All
+              </Link>
+            </div>
           </div>
         )}
       </section>

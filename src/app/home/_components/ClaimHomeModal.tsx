@@ -8,7 +8,7 @@ import AddressVerification from "@/components/AddressVerification";
 
 export function ClaimHomeModal({
   open,
-  onCloseAction: onClose,
+  onCloseAction,
 }: {
   open: boolean;
   onCloseAction: () => void;
@@ -34,10 +34,6 @@ export function ClaimHomeModal({
     }
   }, [open]);
 
-  function handleClose() {
-    onClose();
-  }
-
   function handleVerified(address: {
     street: string;
     unit?: string;
@@ -50,10 +46,11 @@ export function ClaimHomeModal({
   }
 
   async function claim() {
-    if (!verifiedAddress) return;
+    if (!verifiedAddress || submitting) return;
 
     setSubmitting(true);
     setError(null);
+
     try {
       const res = await fetch("/api/home/claim", {
         method: "POST",
@@ -68,7 +65,10 @@ export function ClaimHomeModal({
         }),
       });
 
-      const j = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+      const j = (await res.json().catch(() => ({}))) as {
+        id?: string;
+        error?: string;
+      };
 
       if (!res.ok) {
         setError(j.error || "Could not claim home.");
@@ -76,13 +76,12 @@ export function ClaimHomeModal({
       }
 
       push("Home claimed!");
-      onClose(); // close modal first
+      onCloseAction(); // close modal first
 
       // Then navigate
       if (j.id) window.location.href = `/home/${j.id}`;
     } catch (err) {
-      const e = err as Error;
-      setError(e.message || "Error claiming home");
+      setError(err instanceof Error ? err.message : "Error claiming home");
     } finally {
       setSubmitting(false);
     }
@@ -94,31 +93,31 @@ export function ClaimHomeModal({
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Claim Your Home">
+    <Modal open={open} onCloseAction={onCloseAction} title="Claim Your Home">
       <div className="space-y-4">
         {!verifiedAddress ? (
           <>
-            <p className="mb-4 text-sm text-white/80">
+            <p className="text-sm text-white/80">
               Enter your property address. We&apos;ll verify it with USPS to ensure accuracy.
             </p>
 
             <AddressVerification onVerified={handleVerified} />
 
             <div className="flex justify-end">
-              <GhostButton type="button" onClick={handleClose}>
+              <GhostButton type="button" onClick={onCloseAction}>
                 Cancel
               </GhostButton>
             </div>
           </>
         ) : (
           <>
-            <div className="rounded-lg border border-white/20 bg-white/5 p-4">
-              <p className="mb-2 text-xs text-white/60">Verified Address:</p>
+            <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
+              <p className="mb-2 text-xs text-white/60">Verified Address</p>
               <p className="text-sm font-medium text-white">
                 {verifiedAddress.street}
                 {verifiedAddress.unit && ` ${verifiedAddress.unit}`}
               </p>
-              <p className="text-sm text-white">
+              <p className="text-sm text-white/85">
                 {verifiedAddress.city}, {verifiedAddress.state} {verifiedAddress.zip}
               </p>
 
@@ -133,23 +132,30 @@ export function ClaimHomeModal({
             </div>
 
             <p className="text-sm text-white/80">
-              We&apos;ll attach this address to your account. You can manage access and records once it&apos;s claimed.
+              We&apos;ll attach this address to your account. You can manage access and records once
+              it&apos;s claimed.
             </p>
 
             {error && (
-              <div className="rounded-lg border border-red-400/30 bg-red-400/10 p-4">
+              <div className="rounded-2xl border border-red-400/30 bg-red-400/10 p-4">
                 <div className="flex items-start gap-3">
-                  <span className="text-red-400">⚠️</span>
+                  <span className="text-red-300">⚠️</span>
                   <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-red-300">Unable to Claim Home</h4>
-                    <p className="mt-1 text-sm text-red-200">{error}</p>
+                    <div className="text-sm font-semibold text-red-200">
+                      Unable to claim home
+                    </div>
+                    <p className="mt-1 text-sm text-red-100/90">{error}</p>
                   </div>
                 </div>
               </div>
             )}
 
             <div className="flex items-center justify-end gap-2">
-              <GhostButton type="button" onClick={handleClose} disabled={submitting}>
+              <GhostButton
+                type="button"
+                onClick={onCloseAction}
+                disabled={submitting}
+              >
                 Cancel
               </GhostButton>
               <Button type="button" onClick={claim} disabled={submitting}>

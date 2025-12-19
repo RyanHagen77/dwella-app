@@ -1,8 +1,10 @@
+// src/app/home/_components/EditStatsModal.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
+import { Button, GhostButton } from "@/components/ui/Button";
 import { heading, textMeta } from "@/lib/glass";
 
 type HomeStats = {
@@ -21,6 +23,19 @@ type EditStatsModalProps = {
   currentStats: HomeStats;
 };
 
+/** Match your clean modal field system (no rings, focus via border only) */
+const fieldShell =
+  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition " +
+  "focus-within:border-[#33C17D] focus-within:border-2";
+
+const fieldInner =
+  "w-full bg-transparent px-4 py-2 text-white outline-none placeholder:text-white/35 " +
+  "border-0 ring-0 focus:ring-0 focus:outline-none " +
+  "text-base sm:text-sm";
+
+const labelCaps =
+  "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
+
 export function EditStatsModal({
   open,
   onCloseAction: onClose,
@@ -28,10 +43,11 @@ export function EditStatsModal({
   currentStats,
 }: EditStatsModalProps) {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  const [formData, setFormData] = React.useState({
     estValue: "",
     beds: "",
     baths: "",
@@ -40,7 +56,7 @@ export function EditStatsModal({
   });
 
   // Reset form whenever modal opens or stats change
-  useEffect(() => {
+  React.useEffect(() => {
     if (!open) return;
 
     setError("");
@@ -54,6 +70,11 @@ export function EditStatsModal({
     });
   }, [open, currentStats]);
 
+  const close = React.useCallback(() => {
+    if (loading) return;
+    onClose();
+  }, [loading, onClose]);
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (loading) return;
@@ -63,11 +84,11 @@ export function EditStatsModal({
 
     try {
       const payload = {
-        estValue: formData.estValue ? Number(formData.estValue) : null,
-        beds: formData.beds ? Number(formData.beds) : null,
-        baths: formData.baths ? Number(formData.baths) : null,
-        sqft: formData.sqft ? Number(formData.sqft) : null,
-        yearBuilt: formData.yearBuilt ? Number(formData.yearBuilt) : null,
+        estValue: formData.estValue.trim() ? Number(formData.estValue) : null,
+        beds: formData.beds.trim() ? Number(formData.beds) : null,
+        baths: formData.baths.trim() ? Number(formData.baths) : null,
+        sqft: formData.sqft.trim() ? Number(formData.sqft) : null,
+        yearBuilt: formData.yearBuilt.trim() ? Number(formData.yearBuilt) : null,
       };
 
       const res = await fetch(`/api/home/${homeId}/stats`, {
@@ -90,109 +111,112 @@ export function EditStatsModal({
     }
   }
 
-  if (!open) return null;
-
   return (
-    <Modal open={open} onClose={onClose} title="Edit Home Stats">
-      <div className="p-6">
-        <h2 className={`mb-2 text-xl font-bold ${heading}`}>Edit Home Stats</h2>
-        <p className={`mb-6 text-sm ${textMeta}`}>Update property information and statistics</p>
+    <Modal open={open} onCloseAction={close} title="Edit Home Stats">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <h2 className={`text-lg font-semibold ${heading}`}>Edit Home Stats</h2>
+          <p className={`mt-1 text-sm ${textMeta}`}>
+            Update property information and statistics
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Estimated Value */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-white">Estimated Value ($)</label>
+        <label className="block">
+          <span className={labelCaps}>Estimated Value ($)</span>
+          <div className={fieldShell}>
             <input
               type="number"
-              min="0"
+              min={0}
+              inputMode="numeric"
               value={formData.estValue}
-              onChange={(e) => setFormData({ ...formData, estValue: e.target.value })}
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
+              onChange={(e) => setFormData((p) => ({ ...p, estValue: e.target.value }))}
+              className={fieldInner}
               placeholder="450000"
             />
           </div>
+        </label>
 
-          {/* Beds & Baths */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-white">Bedrooms</label>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className={labelCaps}>Bedrooms</span>
+            <div className={fieldShell}>
               <input
                 type="number"
-                min="0"
+                min={0}
+                inputMode="numeric"
                 value={formData.beds}
-                onChange={(e) => setFormData({ ...formData, beds: e.target.value })}
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
+                onChange={(e) => setFormData((p) => ({ ...p, beds: e.target.value }))}
+                className={fieldInner}
                 placeholder="3"
               />
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-white">Bathrooms</label>
+          </label>
+
+          <label className="block">
+            <span className={labelCaps}>Bathrooms</span>
+            <div className={fieldShell}>
               <input
                 type="number"
-                min="0"
+                min={0}
                 step="0.5"
+                inputMode="decimal"
                 value={formData.baths}
-                onChange={(e) => setFormData({ ...formData, baths: e.target.value })}
-                className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
+                onChange={(e) => setFormData((p) => ({ ...p, baths: e.target.value }))}
+                className={fieldInner}
                 placeholder="2.5"
               />
             </div>
-          </div>
+          </label>
+        </div>
 
-          {/* Square Feet */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-white">Square Feet</label>
+        <label className="block">
+          <span className={labelCaps}>Square Feet</span>
+          <div className={fieldShell}>
             <input
               type="number"
-              min="0"
+              min={0}
+              inputMode="numeric"
               value={formData.sqft}
-              onChange={(e) => setFormData({ ...formData, sqft: e.target.value })}
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
+              onChange={(e) => setFormData((p) => ({ ...p, sqft: e.target.value }))}
+              className={fieldInner}
               placeholder="2400"
             />
           </div>
+        </label>
 
-          {/* Year Built */}
-          <div>
-            <label className="mb-1 block text-sm font-medium text-white">Year Built</label>
+        <label className="block">
+          <span className={labelCaps}>Year Built</span>
+          <div className={fieldShell}>
             <input
               type="number"
-              min="1800"
+              min={1800}
               max={new Date().getFullYear()}
+              inputMode="numeric"
               value={formData.yearBuilt}
-              onChange={(e) => setFormData({ ...formData, yearBuilt: e.target.value })}
-              className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/40 focus:border-white/40 focus:outline-none"
+              onChange={(e) =>
+                setFormData((p) => ({ ...p, yearBuilt: e.target.value }))
+              }
+              className={fieldInner}
               placeholder="1995"
             />
           </div>
+        </label>
 
-          {error && (
-            <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-300">
-              {error}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex gap-3">
-            <button
-              type="submit"
-              disabled={loading}
-              className="flex-1 rounded-lg bg-gradient-to-r from-[rgba(243,90,31,0.85)] to-[rgba(243,90,31,0.75)] px-4 py-2 font-medium text-white hover:from-[rgba(243,90,31,0.95)] hover:to-[rgba(243,90,31,0.85)] disabled:opacity-50"
-            >
-              {loading ? "Saving..." : "Save Changes"}
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white hover:bg-white/10 disabled:opacity-50"
-            >
-              Cancel
-            </button>
+        {error ? (
+          <div className="rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-sm text-red-100">
+            {error}
           </div>
-        </form>
-      </div>
+        ) : null}
+
+        <div className="flex justify-end gap-2 pt-2">
+          <GhostButton type="button" onClick={close} disabled={loading}>
+            Cancel
+          </GhostButton>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
+      </form>
     </Modal>
   );
 }

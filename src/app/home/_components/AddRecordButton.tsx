@@ -1,11 +1,17 @@
+// app/home/_components/AddRecordButton.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ctaPrimary } from "@/lib/glass";
-import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
+import { useToast } from "@/components/ui/Toast";
+import {
+  AddRecordModal,
+  type UnifiedRecordPayload,
+} from "@/app/home/_components/AddRecordModal";
 
 type PresignResponse = { key: string; url: string; publicUrl: string | null };
+
 type PersistAttachment = {
   filename: string;
   size: number;
@@ -19,13 +25,14 @@ type PersistAttachment = {
 export function AddRecordButton({
   homeId,
   label = "+ Add Record",
-  defaultType = "record"
+  defaultType = "record",
 }: {
   homeId: string;
   label?: string;
   defaultType?: "record" | "reminder" | "warranty";
 }) {
   const router = useRouter();
+  const { push } = useToast();
   const [addOpen, setAddOpen] = useState(false);
 
   async function uploadAndPersistAttachments({
@@ -44,6 +51,7 @@ export function AddRecordButton({
     if (!files.length) return;
 
     const uploaded: PersistAttachment[] = [];
+
     for (const f of files) {
       const presignPayload: {
         homeId: string;
@@ -71,8 +79,8 @@ export function AddRecordButton({
       });
 
       if (!pre.ok) {
-        const errorText = await pre.text();
-        throw new Error(`Presign failed: ${errorText}`);
+        const errorText = await pre.text().catch(() => "");
+        throw new Error(`Presign failed: ${errorText || pre.statusText}`);
       }
 
       const { key, url, publicUrl } = (await pre.json()) as PresignResponse;
@@ -83,7 +91,11 @@ export function AddRecordButton({
         headers: { "Content-Type": f.type || "application/octet-stream" },
         body: f,
       });
-      if (!put.ok) throw new Error(`S3 PUT failed: ${await put.text().catch(() => "")}`);
+
+      if (!put.ok) {
+        const txt = await put.text().catch(() => "");
+        throw new Error(`Upload failed: ${txt || put.statusText}`);
+      }
 
       uploaded.push({
         filename: f.name,
@@ -107,47 +119,11 @@ export function AddRecordButton({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(uploaded),
     });
-    if (!persist.ok) throw new Error(`Persist attachments failed: ${await persist.text()}`);
-  }
 
-  async function onCreateUnified({
-    payload,
-    files,
-  }: {
-    payload: UnifiedRecordPayload;
-    files: File[];
-  }) {
-    if (payload.type === "record") {
-      const record = await createRecord({
-        title: payload.title,
-        note: payload.note ?? undefined,
-        date: payload.date ?? undefined,
-        kind: payload.kind ?? undefined,
-        vendor: payload.vendor ?? undefined,
-        cost: payload.cost,
-        verified: payload.verified ?? undefined,
-      });
-      await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
-    } else if (payload.type === "reminder") {
-      const reminder = await createReminder({
-        title: payload.title,
-        dueAt: payload.dueAt!,
-        note: payload.note ?? undefined,
-      });
-      await uploadAndPersistAttachments({ homeId, reminderId: reminder.id, files });
-    } else if (payload.type === "warranty") {
-      const warranty = await createWarranty({
-        item: payload.item!,
-        provider: payload.provider ?? undefined,
-        policyNo: undefined,
-        expiresAt: payload.expiresAt ?? undefined,
-        note: payload.note ?? undefined,
-      });
-      await uploadAndPersistAttachments({ homeId, warrantyId: warranty.id, files });
+    if (!persist.ok) {
+      const txt = await persist.text().catch(() => "");
+      throw new Error(`Persist attachments failed: ${txt || persist.statusText}`);
     }
-
-    setAddOpen(false);
-    router.refresh();
   }
 
   async function createRecord(payload: {
@@ -164,7 +140,8 @@ export function AddRecordButton({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const json = await res.json().catch(() => ({}));
+
+    const json = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
     if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create record");
     return { id: json.id };
   }
@@ -179,7 +156,8 @@ export function AddRecordButton({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const json = await res.json().catch(() => ({}));
+
+    const json = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
     if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create reminder");
     return { id: json.id };
   }
@@ -196,14 +174,69 @@ export function AddRecordButton({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    const json = await res.json().catch(() => ({}));
+
+    const json = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
     if (!res.ok || !json?.id) throw new Error(json?.error || "Failed to create warranty");
     return { id: json.id };
   }
 
+  async function onCreateUnified({
+    payload,
+    files,
+  }: {
+    payload: UnifiedRecordPayload;
+    files: File[];
+  }) {
+    try {
+      if (payload.type === "record") {
+        const record = await createRecord({
+          title: payload.title,
+          note: payload.note ?? undefined,
+          date: payload.date ?? undefined,
+          kind: payload.kind ?? undefined,
+          vendor: payload.vendor ?? undefined,
+          cost: payload.cost,
+          verified: payload.verified ?? undefined,
+        });
+
+        await uploadAndPersistAttachments({ homeId, recordId: record.id, files });
+      } else if (payload.type === "reminder") {
+        const reminder = await createReminder({
+          title: payload.title,
+          dueAt: payload.dueAt!,
+          note: payload.note ?? undefined,
+        });
+
+        await uploadAndPersistAttachments({ homeId, reminderId: reminder.id, files });
+      } else if (payload.type === "warranty") {
+        const warranty = await createWarranty({
+          item: payload.item!,
+          provider: payload.provider ?? undefined,
+          policyNo: undefined,
+          expiresAt: payload.expiresAt ?? undefined,
+          note: payload.note ?? undefined,
+        });
+
+        await uploadAndPersistAttachments({ homeId, warrantyId: warranty.id, files });
+      }
+
+      setAddOpen(false);
+      router.refresh();
+      push("Saved.");
+    } catch (err) {
+      console.error(err);
+      push(err instanceof Error ? err.message : "Something went wrong");
+      // keep modal open so user can retry
+    }
+  }
+
   return (
     <>
-      <button type="button" onClick={() => setAddOpen(true)} className={ctaPrimary}>
+      <button
+        type="button"
+        onClick={() => setAddOpen(true)}
+        className={`${ctaPrimary} text-sm`}
+      >
         {label}
       </button>
 

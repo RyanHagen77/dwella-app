@@ -678,11 +678,11 @@ function TypeCard({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-2xl border border-white/15 p-4 text-left transition-all",
+        "rounded-2xl border p-4 text-left transition-all",
         "focus:outline-none",
         selected
-          ? "bg-white/10 ring-2 ring-[#33C17D] ring-offset-0"
-          : "bg-white/5 hover:bg-white/10 hover:border-white/25",
+          ? "border-[#33C17D] bg-white/10 shadow-[0_0_0_1px_rgba(51,193,125,0.35)]"
+          : "border-white/15 bg-white/5 hover:bg-white/10 hover:border-white/25",
       ].join(" ")}
     >
       <div className="mb-2 text-3xl">{icon}</div>
