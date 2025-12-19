@@ -1,3 +1,4 @@
+// app/home/_components/AddRecordModal.tsx
 "use client";
 
 import * as React from "react";
@@ -46,16 +47,21 @@ const fieldShell =
   "focus-within:border-[#33C17D] focus-within:border-2 " +
   "focus-within:shadow-[0_0_0_1px_rgba(51,193,125,0.35)]";
 
+/**
+ * IMPORTANT: text-base on mobile prevents iOS Safari auto-zoom (modal “opens wide”).
+ * Keep text-sm on desktop via sm:text-sm.
+ */
 const fieldInner =
-  "w-full bg-transparent px-4 py-2 text-sm text-white outline-none placeholder:text-white/35 " +
-  "border-0 ring-0 focus:ring-0 focus:outline-none";
+  "w-full bg-transparent px-4 py-2 text-white outline-none placeholder:text-white/35 " +
+  "border-0 ring-0 focus:ring-0 focus:outline-none " +
+  "text-base sm:text-sm";
 
-const selectInner =
-  fieldInner + " appearance-none pr-10";
+const selectInner = fieldInner + " appearance-none pr-10";
 
 const textareaInner =
-  "w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 " +
-  "border-0 ring-0 focus:ring-0 focus:outline-none resize-none min-h-[110px]";
+  "w-full bg-transparent px-4 py-3 text-white outline-none placeholder:text-white/35 " +
+  "border-0 ring-0 focus:ring-0 focus:outline-none resize-none min-h-[110px] " +
+  "text-base sm:text-sm";
 
 const labelCaps =
   "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
@@ -220,7 +226,6 @@ export function AddRecordModal({
 
   return (
     <div className="relative z-[100]">
-      {/* IMPORTANT: your Modal expects onCloseAction */}
       <Modal open={open} onCloseAction={onClose} title="Add to Home">
         <form className="space-y-4" onSubmit={submit}>
           <div className="mb-3">
@@ -268,7 +273,6 @@ export function AddRecordModal({
               <div>
                 <div className={labelCaps}>Upload files (optional)</div>
 
-                {/* “Browse…” pill style like your screenshot */}
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
@@ -295,7 +299,7 @@ export function AddRecordModal({
                 </div>
 
                 <p className={`mt-2 text-sm ${textMeta}`}>
-                  {recordType === "record" && "Optional — add before/after photos."}
+                  {recordType === "record" && "Optional — add before/after photos, manuals, receipts."}
                   {recordType === "reminder" && "Optional — attach supporting documents."}
                   {recordType === "warranty" && "Optional — attach warranty docs, manuals, receipts."}
                 </p>
@@ -593,11 +597,7 @@ export function AddRecordModal({
                       <ReviewField label="Vendor" value={form.vendor} />
                       <ReviewField
                         label="Cost"
-                        value={
-                          form.cost.trim()
-                            ? `$${Number(form.cost).toFixed(2)}`
-                            : ""
-                        }
+                        value={form.cost.trim() ? `$${Number(form.cost).toFixed(2)}` : ""}
                       />
                     </div>
                     {form.verified && <div className="text-sm text-green-400">✓ Verified by vendor</div>}
@@ -678,8 +678,11 @@ function TypeCard({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-2xl border p-4 text-left transition-all",
-        selected ? "border-white/35 bg-white/10" : "border-white/15 bg-white/5 hover:bg-white/10",
+        "rounded-2xl border border-white/15 p-4 text-left transition-all",
+        "focus:outline-none",
+        selected
+          ? "bg-white/10 ring-2 ring-[#33C17D] ring-offset-0"
+          : "bg-white/5 hover:bg-white/10 hover:border-white/25",
       ].join(" ")}
     >
       <div className="mb-2 text-3xl">{icon}</div>

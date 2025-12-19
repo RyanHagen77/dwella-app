@@ -1,3 +1,4 @@
+// app/home/[homeId]/invitations/_components/InviteProModal.tsx
 "use client";
 
 import * as React from "react";
@@ -24,9 +25,15 @@ const fieldShell =
   "rounded-2xl border border-white/25 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
   "focus-within:border-[#33C17D] focus-within:border-2";
 
+/**
+ * IMPORTANT:
+ * - text-base on mobile prevents iOS Safari focus-zoom (modal looks “wide”)
+ * - keep sm:text-sm for desktop density
+ */
 const fieldInner =
-  "w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40 " +
-  "border-0 ring-0 focus:ring-0 focus:outline-none";
+  "w-full bg-transparent text-white outline-none placeholder:text-white/40 " +
+  "border-0 ring-0 focus:ring-0 focus:outline-none " +
+  "text-base sm:text-sm";
 
 const inputInner = `${fieldInner} px-4 py-2`;
 
@@ -127,6 +134,10 @@ export function InviteProModal({
               placeholder="pro@example.com"
               className={inputInner}
               autoFocus
+              inputMode="email"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
             />
           </div>
 
