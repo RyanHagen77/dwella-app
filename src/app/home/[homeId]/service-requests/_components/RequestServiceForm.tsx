@@ -91,9 +91,8 @@ const labelCaps =
 const sectionSurface = "rounded-2xl border border-white/15 bg-black/25 p-4";
 
 const quietButton =
-  "inline-flex items-center gap-2 rounded-full border border-white/25 bg-transparent " +
-  "px-4 py-2 text-sm text-white/90 transition-colors " +
-  "hover:border-white/40 hover:bg-transparent " +
+  "inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/90 " +
+  "transition-colors hover:bg-white/15 " +
   "disabled:cursor-not-allowed disabled:opacity-50";
 
 const helperText = "mt-2 text-sm text-white/60";

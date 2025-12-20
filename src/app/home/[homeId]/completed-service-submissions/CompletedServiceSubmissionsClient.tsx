@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
-import Breadcrumb from "@/components/ui/Breadcrumb";
+import { textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
 
 type Connection = {
   id: string;
@@ -64,7 +64,7 @@ type ServiceRequest = {
   desiredDate: string | null;
   status: string;
   createdAt: string;
-  updatedAt: string; // used for status-change display
+  updatedAt: string;
   respondedAt: string | null;
   contractor: {
     id: string;
@@ -104,15 +104,42 @@ type ServiceStatusFilter =
   | "DECLINED"
   | "CANCELLED";
 
+/* =========================
+   Styling primitives
+   - NO hover
+   - NO transitions
+   - darker surfaces (no washed white)
+   ========================= */
+
+const pillBase = "rounded-full border px-4 py-2 text-sm";
+const pillActive = "border-white/25 bg-black/35 text-white";
+const pillIdle = "border-white/15 bg-black/20 text-white/80";
+
+const filterPillBase = "rounded-full border px-3 py-1 text-xs sm:text-sm";
+const filterActive = "border-white/25 bg-black/35 text-white";
+const filterIdle = "border-white/15 bg-black/20 text-white/70";
+
+const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
+const insetSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
+
+/* link card: looks like a card, no hover effects */
+const cardLink = `${cardSurface} block`;
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString();
+}
+
 export default function CompletedServiceSubmissionsClient({
   homeId,
-  homeAddress,
   pendingService,
   serviceRequests,
 }: {
   homeId: string;
-  homeAddress: string;
-  connections: Connection[];
+  homeAddress: string; // unused intentionally (layout is server-owned)
+  connections: Connection[]; // unused intentionally
   pendingService: PendingService[];
   serviceRequests: ServiceRequest[];
 }) {
@@ -120,148 +147,52 @@ export default function CompletedServiceSubmissionsClient({
 
   const totalRequests = serviceRequests.length;
   const totalPendingApprovals = pendingService.length;
+  const totalAll = totalRequests + totalPendingApprovals;
 
   return (
-    <main className="relative min-h-screen text-white">
-      {/* Background with gradient overlay */}
-      <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
+    <div className="space-y-6">
+      {/* Tabs */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("all")}
+          className={[pillBase, activeTab === "all" ? pillActive : pillIdle].join(" ")}
+        >
+          All{totalAll > 0 ? ` (${totalAll})` : ""}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("requests")}
+          className={[pillBase, activeTab === "requests" ? pillActive : pillIdle].join(" ")}
+        >
+          Service Requests{totalRequests > 0 ? ` (${totalRequests})` : ""}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("submissions")}
+          className={[pillBase, activeTab === "submissions" ? pillActive : pillIdle].join(" ")}
+        >
+          Pending Submissions{totalPendingApprovals > 0 ? ` (${totalPendingApprovals})` : ""}
+        </button>
       </div>
 
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb
-          href={`/home/${homeId}`}
-          label={homeAddress}
-          current="Service Requests"
-        />
+      {/* Content */}
+      <div className="space-y-6">
+        {activeTab === "all" && (
+          <AllTab serviceRequests={serviceRequests} pendingService={pendingService} homeId={homeId} />
+        )}
 
-        {/* Header */}
-        <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Link
-                href={`/home/${homeId}`}
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                aria-label="Back to home"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-                  />
-                </svg>
-              </Link>
-              <div className="flex-1 min-w-0">
-                <h1 className={`text-2xl font-bold ${heading}`}>
-                  Work Requests &amp; Pending Submissions
-                </h1>
-                <p className={`text-sm ${textMeta} mt-1`}>
-                  {totalRequests} active{" "}
-                  {totalRequests === 1 ? "request" : "requests"} •{" "}
-                  {totalPendingApprovals} awaiting approval
-                </p>
-              </div>
-            </div>
+        {activeTab === "requests" && <ServiceRequestsTab serviceRequests={serviceRequests} homeId={homeId} />}
 
-            {/* Request Work Button */}
-            <div className="flex-shrink-0">
-              <Link
-                href={`/home/${homeId}/service-requests/new`}
-                className={ctaPrimary}
-              >
-                + Request Service
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Tabs */}
-        <section className={glass}>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveTab("all")}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === "all"
-                  ? "border-white/40 bg-white/15 text-white"
-                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-              }`}
-            >
-              All
-              {totalRequests + totalPendingApprovals > 0 &&
-                ` (${totalRequests + totalPendingApprovals})`}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("requests")}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === "requests"
-                  ? "border-white/40 bg-white/15 text-white"
-                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-              }`}
-            >
-              Service Requests
-              {totalRequests > 0 && ` (${totalRequests})`}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("submissions")}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === "submissions"
-                  ? "border-white/40 bg-white/15 text-white"
-                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-              }`}
-            >
-              Pending Submissions
-              {totalPendingApprovals > 0 && ` (${totalPendingApprovals})`}
-            </button>
-          </div>
-        </section>
-
-        {/* Content */}
-        <section className={glass}>
-          {activeTab === "all" && (
-            <AllTab
-              serviceRequests={serviceRequests}
-              pendingService={pendingService}
-              homeId={homeId}
-            />
-          )}
-
-          {activeTab === "requests" && (
-            <ServiceRequestsTab
-              serviceRequests={serviceRequests}
-              homeId={homeId}
-            />
-          )}
-
-          {activeTab === "submissions" && (
-            <PendingServiceTab pendingService={pendingService} homeId={homeId} />
-          )}
-        </section>
+        {activeTab === "submissions" && <PendingServiceTab pendingService={pendingService} homeId={homeId} />}
       </div>
-    </main>
+    </div>
   );
 }
 
-/* ---------- All Tab (Combined View) ---------- */
+/* ---------- All Tab ---------- */
 
 function AllTab({
   serviceRequests,
@@ -276,16 +207,11 @@ function AllTab({
 
   if (!hasAny) {
     return (
-      <div className="py-10 text-center text-white/80">
+      <div className="py-10 text-center">
         <div className="mb-4 text-5xl">🔨</div>
-        <p className="text-lg">No requests or pending work yet.</p>
-        <p className={`mt-2 text-sm ${textMeta}`}>
-          Request work from your connected pros to get started.
-        </p>
-        <Link
-          href={`/home/${homeId}/service-requests/new`}
-          className={`${ctaPrimary} inline-block mt-4`}
-        >
+        <p className="text-lg text-white">No requests or pending work yet.</p>
+        <p className={`mt-2 text-sm ${textMeta}`}>Request work from your connected pros to get started.</p>
+        <Link href={`/home/${homeId}/service-requests/new`} className={`${ctaPrimary} mt-4 inline-block`}>
           + Request Service
         </Link>
       </div>
@@ -296,24 +222,19 @@ function AllTab({
     <div className="space-y-8">
       {serviceRequests.length > 0 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Service Requests ({serviceRequests.length})
+          <h2 className="mb-3 text-sm font-semibold text-white/85">
+            Service Requests <span className="text-white/45">({serviceRequests.length})</span>
           </h2>
-          <ServiceRequestsTab
-            serviceRequests={serviceRequests}
-            homeId={homeId}
-          />
+          <ServiceRequestsTab serviceRequests={serviceRequests} homeId={homeId} />
         </div>
       )}
 
-      {serviceRequests.length > 0 && pendingService.length > 0 && (
-        <div className="h-px bg-white/10" />
-      )}
+      {serviceRequests.length > 0 && pendingService.length > 0 && <div className="h-px bg-white/10" />}
 
       {pendingService.length > 0 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-white">
-            Pending Submissions ({pendingService.length})
+          <h2 className="mb-3 text-sm font-semibold text-white/85">
+            Pending Submissions <span className="text-white/45">({pendingService.length})</span>
           </h2>
           <PendingServiceTab pendingService={pendingService} homeId={homeId} />
         </div>
@@ -331,114 +252,79 @@ function ServiceRequestsTab({
   serviceRequests: ServiceRequest[];
   homeId: string;
 }) {
-  const [statusFilter, setStatusFilter] =
-    useState<ServiceStatusFilter>("ALL");
+  const [statusFilter, setStatusFilter] = useState<ServiceStatusFilter>("ALL");
+
+  const statusOptions = useMemo(
+    () => [
+      { label: "All", value: "ALL" },
+      { label: "Pending", value: "PENDING" },
+      { label: "Quoted", value: "QUOTED" },
+      { label: "Accepted", value: "ACCEPTED" },
+      { label: "In Progress", value: "IN_PROGRESS" },
+      { label: "Completed", value: "COMPLETED" },
+      { label: "Declined", value: "DECLINED" },
+      { label: "Cancelled", value: "CANCELLED" },
+    ],
+    []
+  );
 
   if (serviceRequests.length === 0) {
     return (
-      <div className="py-10 text-center text-white/80">
+      <div className="py-10 text-center">
         <div className="mb-4 text-5xl">📋</div>
-        <p className="text-lg">No service requests yet.</p>
-        <p className={`mt-2 text-sm ${textMeta}`}>
-          Request work from your connected pros to get started.
-        </p>
-        <Link
-          href={`/home/${homeId}/service-requests/new`}
-          className={`${ctaPrimary} inline-block mt-4`}
-        >
+        <p className="text-lg text-white">No service requests yet.</p>
+        <p className={`mt-2 text-sm ${textMeta}`}>Request work from your connected pros to get started.</p>
+        <Link href={`/home/${homeId}/service-requests/new`} className={`${ctaPrimary} mt-4 inline-block`}>
           + Request Service
         </Link>
       </div>
     );
   }
 
-  const filteredRequests =
-    statusFilter === "ALL"
-      ? serviceRequests
-      : serviceRequests.filter((req) => req.status === statusFilter);
+  const filtered =
+    statusFilter === "ALL" ? serviceRequests : serviceRequests.filter((req) => req.status === statusFilter);
 
   const getStatusBadge = (status: string) => {
-    const styles = {
-      PENDING: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-      QUOTED: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-      ACCEPTED: "bg-green-500/20 text-green-300 border-green-500/30",
-      IN_PROGRESS: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-      COMPLETED: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-      DECLINED: "bg-red-500/20 text-red-300 border-red-500/30",
-      CANCELLED: "bg-gray-500/20 text-gray-300 border-gray-500/30",
+    const styles: Record<string, string> = {
+      PENDING: "bg-orange-500/15 text-orange-200 border-orange-500/20",
+      QUOTED: "bg-blue-500/15 text-blue-200 border-blue-500/20",
+      ACCEPTED: "bg-green-500/15 text-green-200 border-green-500/20",
+      IN_PROGRESS: "bg-purple-500/15 text-purple-200 border-purple-500/20",
+      COMPLETED: "bg-emerald-500/15 text-emerald-200 border-emerald-500/20",
+      DECLINED: "bg-red-500/15 text-red-200 border-red-500/20",
+      CANCELLED: "bg-gray-500/15 text-gray-200 border-gray-500/20",
     };
-
     return (
-      <span
-        className={`inline-block rounded-full border px-3 py-1 text-xs font-medium ${
-          styles[status as keyof typeof styles] || styles.PENDING
-        }`}
-      >
-        {status.replace("_", " ")}
+      <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${styles[status] ?? styles.PENDING}`}>
+        {status.replaceAll("_", " ")}
       </span>
     );
   };
 
   const getUrgencyBadge = (urgency: string) => {
-    const styles = {
-      EMERGENCY: "bg-red-600/25 text-red-200",
-      HIGH: "bg-orange-500/20 text-orange-300",
-      NORMAL: "bg-blue-500/20 text-blue-300",
-      LOW: "bg-gray-500/20 text-gray-300",
+    const styles: Record<string, string> = {
+      EMERGENCY: "bg-red-600/20 text-red-100 border border-red-600/25",
+      HIGH: "bg-orange-500/15 text-orange-100 border border-orange-500/20",
+      NORMAL: "bg-blue-500/15 text-blue-100 border border-blue-500/20",
+      LOW: "bg-gray-500/15 text-gray-100 border border-gray-500/20",
     };
-
     return (
-      <span
-        className={`inline-block rounded px-2 py-0.5 text-xs ${
-          styles[urgency as keyof typeof styles] || styles.NORMAL
-        }`}
-      >
+      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs ${styles[urgency] ?? styles.NORMAL}`}>
         {urgency}
       </span>
     );
   };
 
-  const getStatusDateLabel = (status: string) => {
-    switch (status) {
-      case "CANCELLED":
-        return "Cancelled on";
-      case "DECLINED":
-        return "Declined on";
-      case "COMPLETED":
-        return "Completed on";
-      case "IN_PROGRESS":
-        return "Updated on";
-      case "ACCEPTED":
-      case "QUOTED":
-        return "Updated on";
-      default:
-        return "Created on";
-    }
-  };
-
   return (
-    <>
-      {/* Status filter row */}
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
-        {[
-          { label: "All", value: "ALL" },
-          { label: "Pending", value: "PENDING" },
-          { label: "Quoted", value: "QUOTED" },
-          { label: "Accepted", value: "ACCEPTED" },
-          { label: "In Progress", value: "IN_PROGRESS" },
-          { label: "Completed", value: "COMPLETED" },
-          { label: "Declined", value: "DECLINED" },
-          { label: "Cancelled", value: "CANCELLED" },
-        ].map((opt) => (
+    <div className="space-y-4">
+      {/* Status filter pills */}
+      <div className="flex flex-wrap items-center gap-2">
+        {statusOptions.map((opt) => (
           <button
             key={opt.value}
             type="button"
             onClick={() => setStatusFilter(opt.value as ServiceStatusFilter)}
-            className={`rounded-full border px-3 py-1 transition ${
-              statusFilter === opt.value
-                ? "border-white/60 bg-white/20 text-white"
-                : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-            }`}
+            className={[filterPillBase, statusFilter === opt.value ? filterActive : filterIdle].join(" ")}
           >
             {opt.label}
           </button>
@@ -446,133 +332,98 @@ function ServiceRequestsTab({
       </div>
 
       <div className="space-y-4">
-        {filteredRequests.map((service) => (
-          <Link
-            key={service.id}
-            href={`/home/${homeId}/service-requests/${service.id}`}
-            className="block rounded-xl border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10"
-          >
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div className="flex-1">
+        {filtered.map((service) => (
+          <Link key={service.id} href={`/home/${homeId}/service-requests/${service.id}`} className={cardLink}>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold text-white">
-                    {service.title}
-                  </h3>
+                  <h3 className="text-base font-semibold text-white sm:text-lg">{service.title}</h3>
                   {getStatusBadge(service.status)}
                   {getUrgencyBadge(service.urgency)}
                 </div>
 
-                <p className="text-sm text-white/70 line-clamp-2">
-                  {service.description}
-                </p>
+                <p className="text-sm text-white/70 line-clamp-2">{service.description}</p>
 
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/60">
-                  {service.contractor.image && (
+                <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-white/60">
+                  {service.contractor.image ? (
                     <Image
                       src={service.contractor.image}
                       alt={service.contractor.name || service.contractor.email}
                       width={24}
                       height={24}
-                      className="rounded-full"
+                      className="h-6 w-6 rounded-full border border-white/10 object-cover"
                     />
+                  ) : (
+                    <div className="h-6 w-6 rounded-full border border-white/10 bg-black/20" />
                   )}
-                  <span>
-                    {service.contractor.proProfile?.businessName ||
-                      service.contractor.name ||
-                      service.contractor.email}
+
+                  <span className="truncate">
+                    {service.contractor.proProfile?.businessName || service.contractor.name || service.contractor.email}
                   </span>
-                  {service.category && <span>• {service.category}</span>}
-                  {service.desiredDate && (
-                    <span>
-                      • Desired:{" "}
-                      {new Date(service.desiredDate).toLocaleDateString()}
-                    </span>
-                  )}
+
+                  {service.category ? <span>• {service.category}</span> : null}
+                  {service.desiredDate ? <span>• Desired: {formatDate(service.desiredDate)}</span> : null}
                 </div>
 
-                {(service.budgetMin || service.budgetMax) && (
+                {(service.budgetMin || service.budgetMax) ? (
                   <div className="mt-2 text-sm text-white/60">
-                    Budget: ${service.budgetMin?.toLocaleString() || "0"} - $
-                    {service.budgetMax?.toLocaleString() || "0"}
+                    Budget: ${service.budgetMin?.toLocaleString() || "0"} – ${service.budgetMax?.toLocaleString() || "0"}
                   </div>
-                )}
+                ) : null}
 
-                {service.quote && (
-                  <div className="mt-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
-                    <div className="flex items-center justify-between">
+                {service.quote ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-medium text-blue-300">
-                          Quote Received
-                        </p>
-                        <p className="text-lg font-bold text-white">
+                        <div className="text-xs font-medium text-white/70">Quote received</div>
+                        <div className="mt-1 text-lg font-semibold text-white">
                           ${Number(service.quote.totalAmount).toLocaleString()}
-                        </p>
+                        </div>
                       </div>
-                      <span className="text-xs text-blue-300/80">
-                        {service.quote.status}
-                      </span>
+                      <div className="text-xs text-white/60">{service.quote.status}</div>
                     </div>
                   </div>
-                )}
+                ) : null}
 
-                {service.serviceRecord && (
-                  <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
-                    <p className="text-sm font-medium text-green-300">
-                      Work Scheduled
-                    </p>
-                    <p className="text-sm text-white/80">
-                      {new Date(
-                        service.serviceRecord.serviceDate
-                      ).toLocaleDateString()}{" "}
-                      • {service.serviceRecord.status}
-                    </p>
+                {service.serviceRecord ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-xs font-medium text-white/70">Work scheduled</div>
+                    <div className="mt-1 text-sm text-white/80">
+                      {formatDate(service.serviceRecord.serviceDate)} • {service.serviceRecord.status}
+                    </div>
                   </div>
-                )}
+                ) : null}
               </div>
 
-              <div className="text-right text-xs text-white/50 space-y-1">
-                <div>
-                  Created:{" "}
-                  {new Date(service.createdAt).toLocaleDateString()}
-                </div>
-                {service.status !== "PENDING" && (
-                  <div>
-                    {getStatusDateLabel(service.status)}{" "}
-                    {new Date(service.updatedAt).toLocaleDateString()}
-                  </div>
-                )}
+              <div className="shrink-0 text-xs text-white/55 sm:text-right">
+                <div>Created: {formatDate(service.createdAt)}</div>
+                {service.status !== "PENDING" ? <div className="mt-1">Updated: {formatDate(service.updatedAt)}</div> : null}
               </div>
             </div>
           </Link>
         ))}
       </div>
-    </>
+    </div>
   );
 }
 
-/* ---------- Pending Approvals Tab ---------- */
+/* ---------- Pending Submissions Tab ---------- */
 
 function PendingServiceTab({
   pendingService,
   homeId,
 }: {
-  pendingService: pendingService[];
+  pendingService: PendingService[]; // ✅ fix your typo: PendingService[], not pendingService[]
   homeId: string;
 }) {
   const router = useRouter();
 
   async function handleApprove(serviceId: string) {
     try {
-      const res = await fetch(
-        `/api/home/${homeId}/completed-service-submissions/${serviceId}/approve`,
-        {
-          method: "POST",
-        }
-      );
-
+      const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${serviceId}/approve`, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error("Failed to approve service");
-
-      alert("Service approved and added to your records!");
       router.refresh();
     } catch (error) {
       console.error("Error approving service:", error);
@@ -584,32 +435,23 @@ function PendingServiceTab({
     if (!confirm("Are you sure you want to reject this service?")) return;
 
     try {
-      const res = await fetch(
-        `/api/home/${homeId}/completed-service-submissions/${serviceId}/reject`,
-        {
-          method: "POST",
-        }
-      );
-
+      const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${serviceId}/reject`, {
+        method: "POST",
+      });
       if (!res.ok) throw new Error("Failed to reject service");
-
-      alert("Service rejected.");
       router.refresh();
     } catch (error) {
       console.error("Error rejecting service:", error);
-      alert("Failed to reject service");
+      alert("Failed to approve service");
     }
   }
 
   if (pendingService.length === 0) {
     return (
-      <div className="py-10 text-center text-white/80">
+      <div className="py-10 text-center">
         <div className="mb-4 text-5xl">✅</div>
-        <p className="text-lg">No services awaiting approval.</p>
-        <p className={`mt-2 text-sm ${textMeta}`}>
-          When contractors submit completed work, it will appear here for your
-          review.
-        </p>
+        <p className="text-lg text-white">No services awaiting approval.</p>
+        <p className={`mt-2 text-sm ${textMeta}`}>When contractors submit completed work, it will appear here for your review.</p>
       </div>
     );
   }
@@ -617,156 +459,114 @@ function PendingServiceTab({
   return (
     <div className="space-y-4">
       {pendingService.map((service) => {
-        const hasImages = service.attachments.some((a) =>
-          a.mimeType?.startsWith("image/")
-        );
-        const hasDocs = service.attachments.some(
-          (a) => a.mimeType && !a.mimeType.startsWith("image/")
-        );
+        const images = service.attachments.filter((a) => a.mimeType?.startsWith("image/"));
+        const docs = service.attachments.filter((a) => a.mimeType && !a.mimeType.startsWith("image/"));
 
         return (
-          <div
-            key={service.id}
-            className="rounded-xl border border-white/10 bg-white/5 p-6"
-          >
-            <div className="mb-4 flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white">
-                  {service.title}
-                </h3>
+          <div key={service.id} className={cardSurface}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold text-white sm:text-lg">{service.title}</h3>
+
                 <p className="mt-1 text-sm text-white/70">
-                  By:{" "}
-                  {service.contractor.proProfile?.businessName ||
-                    service.contractor.name ||
-                    service.contractor.email}
+                  By: {service.contractor.proProfile?.businessName || service.contractor.name || service.contractor.email}
                 </p>
-                {service.serviceDate && (
-                  <p className="mt-1 text-sm text-white/60">
-                    Work Date:{" "}
-                    {new Date(service.serviceDate).toLocaleDateString()}
-                  </p>
-                )}
-                {service.cost !== null && (
-                  <p className="mt-1 text-sm font-medium text-green-300">
-                    Cost: ${Number(service.cost).toLocaleString()}
-                  </p>
-                )}
+
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-white/60">
+                  {service.serviceDate ? <span>Work date: {formatDate(service.serviceDate)}</span> : null}
+                  {service.cost !== null ? (
+                    <span className="font-medium text-green-200">• Cost: ${Number(service.cost).toLocaleString()}</span>
+                  ) : null}
+                </div>
               </div>
-              <div className="text-xs text-white/50">
-                {new Date(service.createdAt).toLocaleDateString()}
-              </div>
+
+              <div className="text-xs text-white/55">{formatDate(service.createdAt)}</div>
             </div>
 
-            {service.description && (
-              <div className="mb-4 rounded-lg border border-white/10 bg-white/5 p-3">
-                <p className="text-sm text-white/80 whitespace-pre-wrap">
-                  {service.description}
-                </p>
+            {service.description ? (
+              <div className="mt-4">
+                <div className={insetSurface}>
+                  <p className="text-sm text-white/80 whitespace-pre-wrap">{service.description}</p>
+                </div>
               </div>
-            )}
+            ) : null}
 
-            {/* Attachments preview */}
-            {service.attachments.length > 0 && (
-              <div className="mb-4 space-y-4">
-                {hasImages && (
+            {service.attachments.length > 0 ? (
+              <div className="mt-5 space-y-4">
+                {images.length > 0 ? (
                   <div>
-                    <h4 className={`mb-2 text-sm font-medium ${textMeta}`}>
-                      Photos (
-                      {
-                        service.attachments.filter((a) =>
-                          a.mimeType?.startsWith("image/")
-                        ).length
-                      }
-                      )
-                    </h4>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+                      Photos ({images.length})
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                      {service.attachments
-                        .filter((a) => a.mimeType?.startsWith("image/"))
-                        .map((attachment) => (
-                          <a
-                            key={attachment.id}
-                            href={`/api/home/${homeId}/attachments/${attachment.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-white/5 transition hover:opacity-90"
-                          >
-                            <Image
-                              src={`/api/home/${homeId}/attachments/${attachment.id}`}
-                              alt={attachment.filename}
-                              fill
-                              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                              className="object-cover"
-                            />
-                            <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/20">
-                              <span className="text-xs text-white opacity-0 group-hover:opacity-100">
-                                View
-                              </span>
-                            </div>
-                          </a>
-                        ))}
+                      {images.map((attachment) => (
+                        <a
+                          key={attachment.id}
+                          href={`/api/home/${homeId}/attachments/${attachment.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="relative aspect-square overflow-hidden rounded-2xl border border-white/10 bg-black/20"
+                        >
+                          <Image
+                            src={`/api/home/${homeId}/attachments/${attachment.id}`}
+                            alt={attachment.filename}
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                            className="object-cover"
+                          />
+                        </a>
+                      ))}
                     </div>
                   </div>
-                )}
+                ) : null}
 
-                {hasDocs && (
+                {docs.length > 0 ? (
                   <div>
-                    <h4 className={`mb-2 text-sm font-medium ${textMeta}`}>
-                      Documents (
-                      {
-                        service.attachments.filter(
-                          (a) =>
-                            a.mimeType && !a.mimeType.startsWith("image/")
-                        ).length
-                      }
-                      )
-                    </h4>
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-white/55">
+                      Documents ({docs.length})
+                    </div>
+
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                      {service.attachments
-                        .filter(
-                          (a) =>
-                            a.mimeType && !a.mimeType.startsWith("image/")
-                        )
-                        .map((attachment) => (
-                          <a
-                            key={attachment.id}
-                            href={`/api/home/${homeId}/attachments/${attachment.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 p-3 transition-colors hover:bg-white/10"
-                          >
-                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded bg-white/10">
-                              {attachment.mimeType?.includes("pdf") ? (
-                                <span className="text-xl">📄</span>
-                              ) : (
-                                <span className="text-xl">📎</span>
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-white">
-                                {attachment.filename}
-                              </p>
-                              <p className="text-xs text-white/60">
-                                {(attachment.size / 1024).toFixed(1)} KB
-                              </p>
-                            </div>
-                          </a>
-                        ))}
+                      {docs.map((attachment) => (
+                        <a
+                          key={attachment.id}
+                          href={`/api/home/${homeId}/attachments/${attachment.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-4"
+                        >
+                          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20">
+                            <span className="text-lg">{attachment.mimeType?.includes("pdf") ? "📄" : "📎"}</span>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="truncate text-sm font-medium text-white">{attachment.filename}</div>
+                            <div className="text-xs text-white/60">{(attachment.size / 1024).toFixed(1)} KB</div>
+                          </div>
+
+                          <span className={ctaGhost}>Open</span>
+                        </a>
+                      ))}
                     </div>
                   </div>
-                )}
+                ) : null}
               </div>
-            )}
+            ) : null}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-wrap gap-2">
               <button
+                type="button"
                 onClick={() => handleApprove(service.id)}
-                className="rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-medium text-white transition-all hover:from-green-600 hover:to-emerald-600"
+                className="rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-black"
               >
                 ✓ Approve &amp; Add to Records
               </button>
+
               <button
+                type="button"
                 onClick={() => handleReject(service.id)}
-                className="rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
+                className="rounded-full bg-white/10 px-4 py-2 text-sm text-white/90"
               >
                 ✗ Reject
               </button>
