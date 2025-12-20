@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useRef } from "react";
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { fieldLabel } from "@/components/ui";
 import { Button, GhostButton } from "@/components/ui/Button";
 import { X, Upload } from "lucide-react";
 
@@ -55,15 +54,54 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PHOTOS = 10;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
+/* =========================
+   Modal-standard field system
+   - NO rings
+   - focus is green border only
+   - removes iOS tap highlight + autofill tint “brown”
+   ========================= */
+
+const fieldShell =
+  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
+  "focus-within:border-[#33C17D] focus-within:border-2";
+
+const controlReset =
+  "border-0 ring-0 outline-none focus:ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 " +
+  "[-webkit-tap-highlight-color:transparent] " +
+  "autofill:shadow-[0_0_0px_1000px_rgba(0,0,0,0.35)_inset] " +
+  "autofill:[-webkit-text-fill-color:#fff]";
+
+const fieldInner =
+  "w-full bg-transparent px-4 py-2 text-white placeholder:text-white/35 " +
+  "text-base sm:text-sm " +
+  controlReset;
+
+const textareaInner =
+  "w-full bg-transparent px-4 py-3 text-white placeholder:text-white/35 " +
+  "resize-none min-h-[140px] " +
+  "text-base sm:text-sm " +
+  controlReset;
+
+const selectInner =
+  "w-full bg-transparent px-4 py-2 text-white appearance-none pr-10 " +
+  "text-base sm:text-sm " +
+  controlReset;
+
+const labelCaps =
+  "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
+
+/* ========================= */
+
 export function RequestServiceForm({ homeId, connections }: Props) {
   const router = useRouter();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadingPhotos, setUploadingPhotos] = useState(false);
-  const [photos, setPhotos] = useState<PhotoFile[]>([]);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
+  const [submitting, setSubmitting] = React.useState(false);
+  const [uploadingPhotos, setUploadingPhotos] = React.useState(false);
+  const [photos, setPhotos] = React.useState<PhotoFile[]>([]);
+  const [uploadError, setUploadError] = React.useState<string | null>(null);
+
+  const [form, setForm] = React.useState({
     connectionId: "",
     contractorId: "",
     title: "",
@@ -75,14 +113,32 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     timeframe: "",
   });
 
+  // cleanup previews on unmount
+  React.useEffect(() => {
+    return () => {
+      photos.forEach((p) => URL.revokeObjectURL(p.preview));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
+    setForm((f) => ({ ...f, [k]: v }));
+  }
+
   const handleContractorChange = (connectionId: string) => {
     const connection = connections.find((c) => c.id === connectionId);
     if (connection?.contractor) {
-      setForm({
-        ...form,
+      setForm((f) => ({
+        ...f,
         connectionId,
-        contractorId: connection.contractor.id,
-      });
+        contractorId: connection.contractor!.id,
+      }));
+    } else {
+      setForm((f) => ({
+        ...f,
+        connectionId,
+        contractorId: "",
+      }));
     }
   };
 
@@ -96,45 +152,39 @@ export function RequestServiceForm({ homeId, connections }: Props) {
       return;
     }
 
-    // Validate each file
     const validFiles: PhotoFile[] = [];
     for (const file of files) {
-      // Check file type
       if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-        setUploadError(`${file.name} is not a supported image format. Please use JPG, PNG, or WebP.`);
+        setUploadError(
+          `${file.name} is not a supported image format. Please use JPG, PNG, or WebP.`
+        );
         continue;
       }
 
-      // Check file size
       if (file.size > MAX_FILE_SIZE) {
         setUploadError(`${file.name} is too large. Maximum file size is 10MB.`);
         continue;
       }
 
-      // Create preview
       const preview = URL.createObjectURL(file);
       validFiles.push({ file, preview });
     }
 
-    setPhotos([...photos, ...validFiles]);
+    if (validFiles.length) setPhotos((p) => [...p, ...validFiles]);
 
-    // Reset input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    // Reset input so selecting the same file again still triggers change
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const removePhoto = (index: number) => {
-    const newPhotos = [...photos];
-    // Revoke the object URL to free memory
-    URL.revokeObjectURL(newPhotos[index].preview);
-    newPhotos.splice(index, 1);
-    setPhotos(newPhotos);
+    const target = photos[index];
+    if (target) URL.revokeObjectURL(target.preview);
+    setPhotos((p) => p.filter((_, i) => i !== index));
   };
 
   /**
-   * Upload photos using the existing presigned URL system
-   * This follows the same pattern as work record attachments
+   * Upload photos using presigned URL endpoint
+   * NOTE: this mirrors your existing “work record attachments” pattern
    */
   const uploadPhotos = async (serviceRequestId: string): Promise<string[]> => {
     if (photos.length === 0) return [];
@@ -144,47 +194,42 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
     try {
       for (const photo of photos) {
-        // Step 1: Get presigned URL from your existing endpoint
         const presignRes = await fetch("/api/uploads/presign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             homeId,
-            recordId: serviceRequestId, // Using service request ID as the entity ID
+            recordId: serviceRequestId, // keeping your existing behavior
             filename: photo.file.name,
-            contentType: photo.file.type,
+            contentType: photo.file.type || "application/octet-stream",
             size: photo.file.size,
           }),
         });
 
         if (!presignRes.ok) {
-          const error = await presignRes.json();
-          throw new Error(error.error || "Failed to get upload URL");
+          const err = await presignRes.json().catch(() => ({}));
+          throw new Error(err.error || "Failed to get upload URL");
         }
 
-        const { url, publicUrl } = await presignRes.json();
+        const { url, publicUrl } = (await presignRes.json()) as {
+          url: string;
+          publicUrl: string;
+        };
 
-        // Step 2: Upload file to S3 using presigned URL
         const uploadRes = await fetch(url, {
           method: "PUT",
           body: photo.file,
-          headers: {
-            "Content-Type": photo.file.type,
-          },
+          headers: { "Content-Type": photo.file.type || "application/octet-stream" },
         });
 
         if (!uploadRes.ok) {
           throw new Error(`Failed to upload ${photo.file.name}`);
         }
 
-        // Step 3: Store the public URL
         uploadedUrls.push(publicUrl);
       }
 
       return uploadedUrls;
-    } catch (error) {
-      console.error("Error uploading photos:", error);
-      throw error;
     } finally {
       setUploadingPhotos(false);
     }
@@ -194,13 +239,14 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     e.preventDefault();
 
     if (!form.connectionId || !form.contractorId || !form.title || !form.description) {
+      // keep behavior but avoid ugly alert if you prefer toast later
       alert("Please fill in contractor, title, and description");
       return;
     }
 
     setSubmitting(true);
     try {
-      // Convert timeframe to actual date
+      // Convert timeframe to desiredDate
       let desiredDate: string | null = null;
       const today = new Date();
 
@@ -218,9 +264,11 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         const oneWeek = new Date(today);
         oneWeek.setDate(oneWeek.getDate() + 7);
         desiredDate = oneWeek.toISOString();
+      } else {
+        desiredDate = null;
       }
 
-      // Step 1: Create job request first (without photos)
+      // Step 1: Create service request (without photos first)
       const res = await fetch(`/api/home/${homeId}/service-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -234,47 +282,44 @@ export function RequestServiceForm({ homeId, connections }: Props) {
           budgetMin: form.budgetMin ? parseFloat(form.budgetMin) : null,
           budgetMax: form.budgetMax ? parseFloat(form.budgetMax) : null,
           desiredDate,
-          photos: [], // Empty for now
+          photos: [],
         }),
       });
 
       if (!res.ok) {
-        const error = await res.json();
+        const error = await res.json().catch(() => ({}));
         throw new Error(error.error || "Failed to create service request");
       }
 
-      const { serviceRequest } = await res.json();
+      const { serviceRequest } = (await res.json()) as { serviceRequest: { id: string } };
 
-      // Step 2: Upload photos using presigned URLs (if any)
-      let photoUrls: string[] = [];
+      // Step 2: Upload photos and PATCH back
       if (photos.length > 0) {
         try {
-          photoUrls = await uploadPhotos(serviceRequest.id);
+          const photoUrls = await uploadPhotos(serviceRequest.id);
 
-          // Step 3: Update job request with photo URLs
-          const updateRes = await fetch(`/api/home/${homeId}/service-requests/${serviceRequest.id}`, {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              photos: photoUrls,
-            }),
-          });
+          const updateRes = await fetch(
+            `/api/home/${homeId}/service-requests/${serviceRequest.id}`,
+            {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ photos: photoUrls }),
+            }
+          );
 
           if (!updateRes.ok) {
             console.error("Failed to update job request with photos");
-            // Don't fail the whole request if photo update fails
           }
         } catch (photoError) {
           console.error("Error uploading photos:", photoError);
-          // Continue anyway - job request was created
           alert("Job request created but some photos failed to upload");
         }
       }
 
-      // Clean up object URLs
-      photos.forEach((photo) => URL.revokeObjectURL(photo.preview));
+      // Clean up previews
+      photos.forEach((p) => URL.revokeObjectURL(p.preview));
+      setPhotos([]);
 
-      // Redirect to the job request detail page
       router.push(`/home/${homeId}/service-requests/${serviceRequest.id}`);
     } catch (error) {
       console.error("Error creating job request:", error);
@@ -284,126 +329,134 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     }
   };
 
+  const selectedConn = form.connectionId
+    ? connections.find((c) => c.id === form.connectionId)
+    : null;
+
+  const contractor = selectedConn?.contractor ?? null;
+  const profile = contractor?.proProfile ?? null;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Contractor Selection */}
       <div>
         <label className="block">
-          <span className={`${fieldLabel} flex items-center gap-1`}>
-            Select Contractor
-            <span className="text-red-400">*</span>
+          <span className={labelCaps}>
+            Select Contractor <span className="text-red-400">*</span>
           </span>
-          <select
-            value={form.connectionId}
-            onChange={(e) => handleContractorChange(e.target.value)}
-            className="mt-1 block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-            required
-          >
-            <option value="">Choose a contractor...</option>
-            {connections.map((conn) => (
-              <option key={conn.id} value={conn.id}>
-                {conn.contractor?.proProfile?.businessName ||
-                  conn.contractor?.name ||
-                  conn.contractor?.email}
-                {conn.contractor?.proProfile?.verified && " ✓"}
+
+          <div className={`${fieldShell} relative`}>
+            <select
+              value={form.connectionId}
+              onChange={(e) => handleContractorChange(e.target.value)}
+              className={selectInner}
+              required
+            >
+              <option value="" className="bg-gray-900">
+                Choose a contractor…
               </option>
-            ))}
-          </select>
+              {connections.map((conn) => (
+                <option key={conn.id} value={conn.id} className="bg-gray-900">
+                  {conn.contractor?.proProfile?.businessName ||
+                    conn.contractor?.name ||
+                    conn.contractor?.email}
+                  {conn.contractor?.proProfile?.verified ? " ✓" : ""}
+                </option>
+              ))}
+            </select>
+
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+              ▾
+            </span>
+          </div>
         </label>
 
-        {/* Show contractor details when selected */}
-        {form.connectionId && (() => {
-          const selected = connections.find((c) => c.id === form.connectionId);
-          const contractor = selected?.contractor;
-          const profile = contractor?.proProfile;
-
-          if (!contractor) return null;
-
-          return (
-            <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-4">
-              <div className="flex items-start gap-3">
-                {contractor.image && (
-                  <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full">
-                    <Image
-                      src={contractor.image}
-                      alt={contractor.name || "Contractor"}
-                      fill
-                      className="object-cover"
-                      sizes="48px"
-                    />
-                  </div>
-                )}
-                <div className="flex-1">
-                  <p className="font-medium text-white">
-                    {profile?.businessName || contractor.name}
-                    {profile?.verified && (
-                      <span className="ml-2 text-xs text-green-400">✓ Verified</span>
-                    )}
-                  </p>
-                  {profile?.specialties && profile.specialties.length > 0 && (
-                    <p className="mt-1 text-xs text-white/60">
-                      {profile.specialties.join(", ")}
-                    </p>
-                  )}
-                  {profile?.rating && (
-                    <p className="mt-1 text-xs text-white/60">
-                      ⭐ {profile.rating.toFixed(1)}
-                    </p>
-                  )}
+        {/* Contractor details */}
+        {contractor && (
+          <div className="mt-3 rounded-2xl border border-white/15 bg-white/5 p-4">
+            <div className="flex items-start gap-3">
+              {contractor.image ? (
+                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/15">
+                  <Image
+                    src={contractor.image}
+                    alt={contractor.name || "Contractor"}
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                  />
                 </div>
+              ) : (
+                <div className="h-12 w-12 flex-shrink-0 rounded-full border border-white/15 bg-white/5" />
+              )}
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-medium text-white">
+                    {profile?.businessName || contractor.name || contractor.email}
+                  </p>
+                  {profile?.verified ? (
+                    <span className="text-xs text-green-400">✓ Verified</span>
+                  ) : null}
+                </div>
+
+                {profile?.specialties?.length ? (
+                  <p className="mt-1 text-xs text-white/60">
+                    {profile.specialties.join(", ")}
+                  </p>
+                ) : null}
+
+                {profile?.rating ? (
+                  <p className="mt-1 text-xs text-white/60">⭐ {profile.rating.toFixed(1)}</p>
+                ) : null}
               </div>
             </div>
-          );
-        })()}
+          </div>
+        )}
       </div>
 
       {/* Work Title */}
-      <div>
-        <label className="block">
-          <span className={`${fieldLabel} flex items-center gap-1`}>
-            What work do you need?
-            <span className="text-red-400">*</span>
-          </span>
+      <label className="block">
+        <span className={labelCaps}>
+          What work do you need? <span className="text-red-400">*</span>
+        </span>
+        <div className={fieldShell}>
           <input
             type="text"
             value={form.title}
-            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            onChange={(e) => set("title", e.target.value)}
             placeholder="e.g. Fix leaking faucet in master bathroom"
-            className="mt-1 block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className={fieldInner}
             maxLength={100}
             required
           />
-        </label>
-      </div>
+        </div>
+      </label>
 
       {/* Description */}
-      <div>
-        <label className="block">
-          <span className={`${fieldLabel} flex items-center gap-1`}>
-            Description
-            <span className="text-red-400">*</span>
-          </span>
+      <label className="block">
+        <span className={labelCaps}>
+          Description <span className="text-red-400">*</span>
+        </span>
+        <div className={fieldShell}>
           <textarea
             value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            onChange={(e) => set("description", e.target.value)}
             rows={6}
-            placeholder="Describe the work you need done in detail. Include any specific requirements, preferences, or concerns..."
-            className="mt-1 block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            placeholder="Describe the work you need done in detail..."
+            className={textareaInner}
             required
           />
-        </label>
-      </div>
+        </div>
+      </label>
 
       {/* Photo Upload */}
       <div>
-        <label className="block">
-          <span className={fieldLabel}>Photos (Optional)</span>
-          <p className="mt-1 text-xs text-white/60">
-            Add photos to help the contractor understand the work needed. Max {MAX_PHOTOS} photos, 10MB each.
-          </p>
-        </label>
+        <div className={labelCaps}>Photos (optional)</div>
+        <p className="mt-1 text-xs text-white/60">
+          Add photos to help the contractor understand the work needed. Max {MAX_PHOTOS} photos, 10MB
+          each.
+        </p>
 
-        {/* Upload Button */}
         <div className="mt-2">
           <input
             ref={fileInputRef}
@@ -411,50 +464,48 @@ export function RequestServiceForm({ homeId, connections }: Props) {
             accept="image/jpeg,image/jpg,image/png,image/webp"
             multiple
             onChange={handlePhotoSelect}
-            className="hidden"
+            className="sr-only"
           />
+
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={photos.length >= MAX_PHOTOS}
-            className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm text-white/90 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Upload className="h-5 w-5" />
+            <Upload className="h-4 w-4" />
             <span>Upload Photos</span>
           </button>
         </div>
 
-        {/* Upload Error */}
         {uploadError && (
-          <div className="mt-2 rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-400">
+          <div className="mt-2 rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-sm text-red-100">
             {uploadError}
           </div>
         )}
 
-        {/* Photo Previews */}
         {photos.length > 0 && (
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+          <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
             {photos.map((photo, index) => (
               <div
                 key={index}
-                className="group relative aspect-square overflow-hidden rounded-lg border border-white/10 bg-white/5"
+                className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/15 bg-white/5"
               >
                 <Image
                   src={photo.preview}
                   alt={`Preview ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 25vw"
+                  width={96}
+                  height={96}
+                  className="h-24 w-24 object-cover"
                 />
                 <button
                   type="button"
                   onClick={() => removePhoto(index)}
-                  className="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white opacity-0 transition group-hover:opacity-100"
+                  className="absolute -right-1.5 -top-1.5 rounded-full border border-white/25 bg-black/70 px-2 py-0.5 text-xs text-white/90 hover:bg-black/85"
                   aria-label="Remove photo"
                 >
-                  <X className="h-4 w-4" />
+                  ×
                 </button>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 transition group-hover:opacity-100" />
               </div>
             ))}
           </div>
@@ -469,98 +520,139 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       {/* Category & Urgency */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className="block">
-            <span className={fieldLabel}>Category</span>
+        <label className="block">
+          <span className={labelCaps}>Category</span>
+          <div className={`${fieldShell} relative`}>
             <select
               value={form.category}
-              onChange={(e) => setForm({ ...form, category: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              onChange={(e) => set("category", e.target.value)}
+              className={selectInner}
             >
-              <option value="">Select category...</option>
+              <option value="" className="bg-gray-900">
+                Select category…
+              </option>
               {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
+                <option key={cat} value={cat} className="bg-gray-900">
                   {cat}
                 </option>
               ))}
             </select>
-          </label>
-        </div>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+              ▾
+            </span>
+          </div>
+        </label>
 
-        <div>
-          <label className="block">
-            <span className={fieldLabel}>Urgency</span>
+        <label className="block">
+          <span className={labelCaps}>Urgency</span>
+          <div className={`${fieldShell} relative`}>
             <select
               value={form.urgency}
-              onChange={(e) => setForm({ ...form, urgency: e.target.value })}
-              className="mt-1 block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              onChange={(e) => set("urgency", e.target.value)}
+              className={selectInner}
             >
-              <option value="LOW">Low - Can wait</option>
-              <option value="NORMAL">Normal</option>
-              <option value="HIGH">High - Soon</option>
-              <option value="EMERGENCY">Emergency</option>
+              <option value="LOW" className="bg-gray-900">
+                Low - Can wait
+              </option>
+              <option value="NORMAL" className="bg-gray-900">
+                Normal
+              </option>
+              <option value="HIGH" className="bg-gray-900">
+                High - Soon
+              </option>
+              <option value="EMERGENCY" className="bg-gray-900">
+                Emergency
+              </option>
             </select>
-          </label>
-        </div>
+            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+              ▾
+            </span>
+          </div>
+        </label>
       </div>
 
       {/* Budget Range */}
       <div>
-        <span className={`${fieldLabel} mb-2 block`}>Budget Range (Optional)</span>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block">
-              <span className="mb-1 block text-xs text-white/60">Minimum ($)</span>
-              <input
-                type="number"
-                value={form.budgetMin}
-                onChange={(e) => setForm({ ...form, budgetMin: e.target.value })}
-                placeholder="Min"
-                min="0"
-                step="0.01"
-                className="block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
-              />
-            </label>
-          </div>
+        <div className={labelCaps}>Budget Range (optional)</div>
 
-          <div>
-            <label className="block">
-              <span className="mb-1 block text-xs text-white/60">Maximum ($)</span>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="block">
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/45">
+              Minimum ($)
+            </span>
+            <div className={fieldShell}>
               <input
                 type="number"
-                value={form.budgetMax}
-                onChange={(e) => setForm({ ...form, budgetMax: e.target.value })}
-                placeholder="Max"
-                min="0"
+                min={0}
                 step="0.01"
-                className="block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                inputMode="decimal"
+                value={form.budgetMin}
+                onChange={(e) => set("budgetMin", e.target.value)}
+                placeholder="Min"
+                className={fieldInner}
               />
-            </label>
-          </div>
+            </div>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/45">
+              Maximum ($)
+            </span>
+            <div className={fieldShell}>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                inputMode="decimal"
+                value={form.budgetMax}
+                onChange={(e) => set("budgetMax", e.target.value)}
+                placeholder="Max"
+                className={fieldInner}
+              />
+            </div>
+          </label>
         </div>
       </div>
 
       {/* Timeframe */}
-      <div>
-        <label className="block">
-          <span className={fieldLabel}>When do you need this done?</span>
+      <label className="block">
+        <span className={labelCaps}>When do you need this done?</span>
+
+        <div className={`${fieldShell} relative`}>
           <select
             value={form.timeframe}
-            onChange={(e) => setForm({ ...form, timeframe: e.target.value })}
-            className="mt-1 block w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white backdrop-blur-sm focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            onChange={(e) => set("timeframe", e.target.value)}
+            className={selectInner}
           >
-            <option value="">Select timeframe...</option>
-            <option value="TODAY">Today</option>
-            <option value="ASAP">ASAP (within 1-2 days)</option>
-            <option value="SOON">Soon (within 3-5 days)</option>
-            <option value="1-2_WEEKS">1-2 Weeks</option>
-            <option value="NO_RUSH">No Rush</option>
+            <option value="" className="bg-gray-900">
+              Select timeframe…
+            </option>
+            <option value="TODAY" className="bg-gray-900">
+              Today
+            </option>
+            <option value="ASAP" className="bg-gray-900">
+              ASAP (within 1-2 days)
+            </option>
+            <option value="SOON" className="bg-gray-900">
+              Soon (within 3-5 days)
+            </option>
+            <option value="1-2_WEEKS" className="bg-gray-900">
+              1-2 Weeks
+            </option>
+            <option value="NO_RUSH" className="bg-gray-900">
+              No Rush
+            </option>
           </select>
-          <p className="mt-1 text-xs text-white/60">
-            Give the contractor an idea of your timeline
-          </p>
-        </label>
-      </div>
+
+          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+            ▾
+          </span>
+        </div>
+
+        <p className="mt-2 text-sm text-white/60">
+          Give the contractor an idea of your timeline.
+        </p>
+      </label>
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4">

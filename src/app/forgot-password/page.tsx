@@ -1,8 +1,37 @@
+// app/forgot-password/page.tsx
 "use client";
 
+import * as React from "react";
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+
+/* =========================
+   Standard field system
+   - NO rings
+   - focus is green border only
+   - removes iOS tap highlight + autofill tint “brown”
+   ========================= */
+
+const fieldShell =
+  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
+  "focus-within:border-[#33C17D] focus-within:border-2";
+
+const controlReset =
+  "border-0 ring-0 outline-none focus:ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 " +
+  "[-webkit-tap-highlight-color:transparent] " +
+  "autofill:shadow-[0_0_0px_1000px_rgba(0,0,0,0.35)_inset] " +
+  "autofill:[-webkit-text-fill-color:#fff]";
+
+const fieldInner =
+  "w-full bg-transparent px-4 py-2.5 text-white placeholder:text-white/40 " +
+  "text-base sm:text-sm " +
+  controlReset;
+
+const labelCaps =
+  "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
+
+/* ========================= */
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -26,12 +55,10 @@ export default function ForgotPasswordPage() {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
-        setError(data.error || "Something went wrong");
+        setError((data as { error?: string })?.error || "Something went wrong");
       } else {
-        setMessage(
-          "If an account exists with that email, you'll receive a password reset link shortly."
-        );
-        setEmail(""); // Clear form
+        setMessage("If an account exists with that email, you'll receive a password reset link shortly.");
+        setEmail("");
       }
     } catch (err) {
       console.error("Forgot password error:", err);
@@ -43,7 +70,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center px-4 py-10 text-white">
-      {/* Background */}
+      {/* Background (match login/register darkness) */}
       <div className="fixed inset-0 -z-50">
         <Image
           src="/myhomedox_home3.webp"
@@ -53,8 +80,8 @@ export default function ForgotPasswordPage() {
           className="object-cover object-center"
           priority
         />
-        <div className="absolute inset-0 bg-black/55" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_55%,rgba(0,0,0,0.55))]" />
+        <div className="absolute inset-0 bg-black/65" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_55%,rgba(0,0,0,0.65))]" />
       </div>
 
       {/* Card */}
@@ -62,49 +89,50 @@ export default function ForgotPasswordPage() {
         <div className="mb-6">
           <Link
             href="/login"
-            className="inline-flex items-center gap-1 text-xs text-white/70 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-white/70 transition-colors hover:text-white"
           >
             <span aria-hidden>←</span>
             <span>Back to login</span>
           </Link>
         </div>
 
-        <h1 className="mb-2 text-xl sm:text-2xl font-semibold tracking-tight">
+        <h1 className="mb-2 text-xl font-semibold tracking-tight sm:text-2xl">
           Forgot your password?
         </h1>
         <p className="mb-6 text-sm text-white/75">
-          Enter your email and we'll send you a link to reset your password.
+          Enter your email and we&apos;ll send you a link to reset your password.
         </p>
 
         {/* Success message */}
-        {message && (
-          <div className="mb-6 rounded-lg border border-[#33C17D]/40 bg-[#33C17D]/15 px-4 py-3 text-sm text-white">
+        {message ? (
+          <div className="mb-6 rounded-2xl border border-[#33C17D]/35 bg-[#33C17D]/10 px-4 py-3 text-sm text-white">
             {message}
           </div>
-        )}
+        ) : null}
 
         {/* Error message */}
-        {error && (
-          <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/15 px-4 py-3 text-sm text-red-200">
+        {error ? (
+          <div className="mb-6 rounded-2xl border border-red-500/35 bg-red-500/10 px-4 py-3 text-sm text-red-100">
             {error}
           </div>
-        )}
+        ) : null}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-xs text-white/70">
-              Email address
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm text-white placeholder:text-white/40 outline-none focus:border-[#F35A1F]/70 focus:ring-2 focus:ring-[#F35A1F]/30"
-              placeholder="you@example.com"
-              required
-              disabled={loading}
-            />
-          </div>
+          <label className="block">
+            <span className={labelCaps}>Email address</span>
+            <div className={fieldShell}>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={fieldInner}
+                placeholder="you@example.com"
+                required
+                disabled={loading}
+                autoComplete="email"
+              />
+            </div>
+          </label>
 
           <button
             type="submit"
@@ -117,10 +145,7 @@ export default function ForgotPasswordPage() {
 
         <p className="mt-6 text-center text-xs text-white/65">
           Remember your password?{" "}
-          <Link
-            href="/login"
-            className="text-[#33C17D] hover:text-[#33C17D]/80 transition-colors"
-          >
+          <Link href="/login" className="text-[#33C17D] transition-colors hover:text-[#33C17D]/80">
             Sign in
           </Link>
         </p>

@@ -12,41 +12,51 @@ import { RequestServiceForm } from "../_components/RequestServiceForm";
 import { NoContractorsCard } from "../_components/NoContractorsCard";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 
-
 type PageProps = {
   params: Promise<{ homeId: string }>;
 };
+
+function BackButton({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 transition-colors hover:bg-white/15"
+      aria-label={label}
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth={2}
+        stroke="currentColor"
+        className="h-5 w-5"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
+        />
+      </svg>
+    </Link>
+  );
+}
 
 export default async function RequestServicePage({ params }: PageProps) {
   const { homeId } = await params;
   const session = await getServerSession(authConfig);
 
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
-
+  if (!session?.user?.id) redirect("/login");
   await requireHomeAccess(homeId, session.user.id);
 
-  // Get stats details
   const home = await prisma.home.findUnique({
     where: { id: homeId },
-    select: {
-      id: true,
-      address: true,
-      city: true,
-      state: true,
-    },
+    select: { id: true, address: true, city: true, state: true },
   });
 
-  if (!home) {
-    redirect("/home");
-  }
+  if (!home) redirect("/home");
 
-  const homeAddress = [home.address, home.city, home.state]
-    .filter(Boolean)
-    .join(", ");
+  const homeAddress = [home.address, home.city, home.state].filter(Boolean).join(", ");
 
-  // Get active connections with contractors – ONLY select fields needed by RequestWorkForm
   const connections = await prisma.connection.findMany({
     where: {
       homeId,
@@ -75,111 +85,54 @@ export default async function RequestServicePage({ params }: PageProps) {
         },
       },
     },
-    orderBy: {
-      lastServiceDate: "desc", // can order by this even if it's not selected
-    },
+    orderBy: { lastServiceDate: "desc" },
   });
 
-  if (connections.length === 0) {
-    return (
-      <main className="relative min-h-screen text-white">
-        <div className="mx-auto max-w-7xl p-6 space-y-6">
-          {/* Breadcrumb */}
-          <Breadcrumb
-            items={[
-              { label: homeAddress, href: `/home/${homeId}` },
-              { label: "Requests & Submissions", href: `/home/${homeId}/completed-service-submissions` },
-              { label: "Request Service" },
-            ]}
-          />
-          {/* Header */}
-          <section className={glass}>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Link
-                  href={`/home/${homeId}/completed-service-submissions`}
-                  className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                  aria-label="Back to requests"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    strokeWidth={2}
-                    stroke="currentColor"
-                    className="w-5 h-5"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                  </svg>
-                </Link>
-                <div className="flex-1 min-w-0">
-                  <h1 className={`text-2xl font-bold ${heading}`}>Request Work</h1>
-                  <p className={`text-sm ${textMeta} mt-1`}>
-                    No connected contractors
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
+  const backHref = `/home/${homeId}/completed-service-submissions`;
 
-          <NoContractorsCard homeId={homeId} homeAddress={homeAddress} />
-        </div>
-      </main>
-    );
-  }
+  const breadcrumbItems = [
+    { label: homeAddress, href: `/home/${homeId}` },
+    { label: "Requests & Submissions", href: backHref },
+    { label: "Request Service" },
+  ];
+
+  const hasConnections = connections.length > 0;
 
   return (
     <main className="relative min-h-screen text-white">
-
-      <div className="mx-auto max-w-4xl space-y-6 p-6">
-        {/* Breadcrumb */}
-        <Breadcrumb
-          items={[
-            { label: homeAddress, href: `/home/${homeId}` },
-            { label: "Requests & Submissions", href: `/home/${homeId}/completed-service-submissions` },
-            { label: "Request Service" },
-          ]}
-        />
+      <div className={`mx-auto space-y-6 p-6 ${hasConnections ? "max-w-4xl" : "max-w-7xl"}`}>
+        <Breadcrumb items={breadcrumbItems} />
 
         {/* Header */}
         <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Link
-                href={`/home/${homeId}/completed-service-submissions`}
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                aria-label="Back to requests"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                </svg>
-              </Link>
-              <div className="flex-1 min-w-0">
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <BackButton href={backHref} label="Back to requests" />
+
+              <div className="min-w-0 flex-1">
                 <h1 className={`text-2xl font-bold ${heading}`}>
-                  Request Service
+                  {hasConnections ? "Request Service" : "Request Work"}
                 </h1>
-                <p className={`text-sm ${textMeta} mt-1`}>
-                  {connections.length} connected {connections.length === 1 ? "contractor" : "contractors"}
+
+                <p className={`mt-1 text-sm ${textMeta}`}>
+                  {hasConnections
+                    ? `${connections.length} connected ${
+                        connections.length === 1 ? "contractor" : "contractors"
+                      }`
+                    : "No connected contractors"}
                 </p>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Form */}
-        <div className={glass}>
-          <RequestServiceForm
-            homeId={homeId}
-            connections={connections}
-          />
-        </div>
+        {hasConnections ? (
+          <div className={glass}>
+            <RequestServiceForm homeId={homeId} connections={connections} />
+          </div>
+        ) : (
+          <NoContractorsCard homeId={homeId} homeAddress={homeAddress} />
+        )}
       </div>
     </main>
   );

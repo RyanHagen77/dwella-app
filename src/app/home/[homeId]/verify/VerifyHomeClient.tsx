@@ -1,10 +1,23 @@
 // app/home/[homeId]/verify/VerifyHomeClient.tsx
 "use client";
 
-import { useState } from "react";
+import * as React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+
+/** New modal/input standard (no rings, focus via border only) */
+const fieldShell =
+  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition overflow-hidden " +
+  "focus-within:border-[#33C17D] focus-within:border-2";
+
+const fieldInner =
+  "w-full bg-transparent px-4 py-2 text-white outline-none placeholder:text-white/35 " +
+  "border-0 ring-0 focus:ring-0 focus:outline-none " +
+  "text-base sm:text-sm";
+
+const labelCaps =
+  "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
 
 type VerifyHomeClientProps = {
   homeId: string;
@@ -13,11 +26,11 @@ type VerifyHomeClientProps = {
 export default function VerifyHomeClient({ homeId }: VerifyHomeClientProps) {
   const router = useRouter();
 
-  const [code, setCode] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [sendingPostcard, setSendingPostcard] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [code, setCode] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [sendingPostcard, setSendingPostcard] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -29,7 +42,7 @@ export default function VerifyHomeClient({ homeId }: VerifyHomeClientProps) {
       const res = await fetch(`/api/home/${homeId}/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: code.trim() }),
       });
 
       const data = await res.json().catch(() => ({}));
@@ -68,9 +81,7 @@ export default function VerifyHomeClient({ homeId }: VerifyHomeClientProps) {
         return;
       }
 
-      setSuccessMessage(
-        "We’ve requested a new postcard. Most postcards arrive within 5–7 business days."
-      );
+      setSuccessMessage("We’ve requested a new postcard. Most postcards arrive within 5–7 business days.");
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -94,7 +105,7 @@ export default function VerifyHomeClient({ homeId }: VerifyHomeClientProps) {
       </div>
 
       {/* Card – aligned similar to register */}
-      <div className="w-full max-w-md rounded-2xl border border-white/15 bg-black/70 p-7 shadow-[0_22px_55px_rgba(0,0,0,0.8)] backdrop-blur-xl sm:p-8 mt-[-40px]">
+      <div className="mt-[-40px] w-full max-w-md rounded-2xl border border-white/15 bg-black/70 p-7 shadow-[0_22px_55px_rgba(0,0,0,0.8)] backdrop-blur-xl sm:p-8">
         {/* Header row: back to home + logo */}
         <div className="mb-6 flex items-center justify-between">
           <Link
@@ -116,42 +127,52 @@ export default function VerifyHomeClient({ homeId }: VerifyHomeClientProps) {
         </p>
 
         {/* What to expect */}
-        <div className="mb-5 rounded-xl border border-white/15 bg-black/60 p-4 text-xs text-white/80 sm:text-sm">
+        <div className="mb-5 rounded-2xl border border-white/15 bg-black/60 p-4 text-xs text-white/80 sm:text-sm">
           <p className="font-medium text-white">What to expect</p>
-          <ul className="mt-2 space-y-1 list-disc list-inside">
+          <ul className="mt-2 list-inside list-disc space-y-1">
             <li>We print and mail your postcard shortly after you claim your home.</li>
-            <li>Most postcards arrive within <span className="font-semibold">5–7 business days</span>.</li>
-            <li>Look for a MyDwella postcard with a <span className="font-semibold">6–8 digit code</span>.</li>
-            <li>Enter that code here to unlock the <span className="font-semibold">Verified Owner</span> badge.</li>
+            <li>
+              Most postcards arrive within <span className="font-semibold">5–7 business days</span>.
+            </li>
+            <li>
+              Look for a MyDwella postcard with a <span className="font-semibold">6–8 digit code</span>.
+            </li>
+            <li>
+              Enter that code here to unlock the <span className="font-semibold">Verified Owner</span> badge.
+            </li>
           </ul>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-white/80 sm:text-sm">
+          <label className="block">
+            <span className={labelCaps}>
               Verification code <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="\d*"
-              maxLength={8}
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              className="w-full rounded-lg border border-white/20 bg-black/50 px-3 py-2.5 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-[#33C17D]/70"
-              placeholder="123456"
-              required
-            />
-            <p className="mt-1 text-xs text-white/55">
+            </span>
+
+            <div className={fieldShell}>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="\d*"
+                maxLength={8}
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                className={fieldInner}
+                placeholder="123456"
+                required
+              />
+            </div>
+
+            <p className="mt-2 text-xs text-white/55">
               Enter the exact digits from your postcard. You can try again if you mistype it.
             </p>
-          </div>
+          </label>
 
           <button
             type="submit"
             disabled={submitting || !code.trim()}
-            className="mt-2 w-full rounded-xl bg-[rgba(243,90,31,0.95)] py-2.5 text-sm font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
+            className="mt-1 w-full rounded-xl bg-[rgba(243,90,31,0.95)] py-2.5 text-sm font-medium text-white shadow-[0_12px_32px_rgba(243,90,31,0.35)] transition-colors hover:bg-[rgba(243,90,31,1)] disabled:opacity-60"
           >
             {submitting ? "Verifying..." : "Verify home"}
           </button>
@@ -159,32 +180,31 @@ export default function VerifyHomeClient({ homeId }: VerifyHomeClientProps) {
 
         {/* Status + errors */}
         {error && (
-          <p className="mt-4 rounded-xl border border-red-500/40 bg-red-500/15 px-3 py-2 text-sm text-red-50">
+          <div className="mt-4 rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-sm text-red-100">
             {error}
-          </p>
+          </div>
         )}
 
         {successMessage && (
-          <p className="mt-4 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-sm text-emerald-50">
+          <div className="mt-4 rounded-2xl border border-emerald-500/35 bg-emerald-500/10 p-3 text-sm text-emerald-50">
             {successMessage}
-          </p>
+          </div>
         )}
 
         {/* Resend postcard row */}
-        <div className="mt-6 flex items-center justify-between rounded-xl border border-white/15 bg-black/60 px-3 py-3 text-xs text-white/80 sm:text-sm">
+        <div className="mt-6 flex items-center justify-between rounded-2xl border border-white/15 bg-black/60 px-4 py-3 text-xs text-white/80 sm:text-sm">
           <div className="flex flex-col">
-            <span className="font-medium text-white">
-              Didn&apos;t receive a postcard?
-            </span>
+            <span className="font-medium text-white">Didn&apos;t receive a postcard?</span>
             <span className="text-[11px] text-white/60 sm:text-xs">
               If it&apos;s been more than a week or your address changed, request a new postcard.
             </span>
           </div>
+
           <button
             type="button"
             onClick={handleResendPostcard}
             disabled={sendingPostcard}
-            className="ml-3 whitespace-nowrap text-xs font-medium text-[#33C17D] hover:text-[#33C17D]/80 disabled:opacity-60"
+            className="ml-3 whitespace-nowrap text-sm text-[#33C17D] hover:text-[#33C17D]/80 disabled:opacity-60"
           >
             {sendingPostcard ? "Resending..." : "Resend postcard"}
           </button>

@@ -23,9 +23,9 @@ type EditStatsModalProps = {
   currentStats: HomeStats;
 };
 
-/** Match your clean modal field system (no rings, focus via border only) */
+/** Clean glass controls: NO rings, focus via border only */
 const fieldShell =
-  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition " +
+  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition overflow-hidden " +
   "focus-within:border-[#33C17D] focus-within:border-2";
 
 const fieldInner =
@@ -55,6 +55,11 @@ export function EditStatsModal({
     yearBuilt: "",
   });
 
+  const close = React.useCallback(() => {
+    if (loading) return;
+    onClose();
+  }, [loading, onClose]);
+
   // Reset form whenever modal opens or stats change
   React.useEffect(() => {
     if (!open) return;
@@ -69,11 +74,6 @@ export function EditStatsModal({
       yearBuilt: currentStats.yearBuilt?.toString() ?? "",
     });
   }, [open, currentStats]);
-
-  const close = React.useCallback(() => {
-    if (loading) return;
-    onClose();
-  }, [loading, onClose]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -103,7 +103,7 @@ export function EditStatsModal({
       }
 
       router.refresh();
-      onClose();
+      close();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update stats");
     } finally {
@@ -193,9 +193,7 @@ export function EditStatsModal({
               max={new Date().getFullYear()}
               inputMode="numeric"
               value={formData.yearBuilt}
-              onChange={(e) =>
-                setFormData((p) => ({ ...p, yearBuilt: e.target.value }))
-              }
+              onChange={(e) => setFormData((p) => ({ ...p, yearBuilt: e.target.value }))}
               className={fieldInner}
               placeholder="1995"
             />
@@ -213,7 +211,7 @@ export function EditStatsModal({
             Cancel
           </GhostButton>
           <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : "Save Changes"}
+            {loading ? "Saving…" : "Save Changes"}
           </Button>
         </div>
       </form>
