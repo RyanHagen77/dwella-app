@@ -115,7 +115,6 @@ export function EditStatsModal({
     <Modal open={open} onCloseAction={close} title="Edit Home Stats">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <h2 className={`text-lg font-semibold ${heading}`}>Edit Home Stats</h2>
           <p className={`mt-1 text-sm ${textMeta}`}>
             Update property information and statistics
           </p>

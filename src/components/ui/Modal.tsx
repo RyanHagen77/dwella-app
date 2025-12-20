@@ -10,15 +10,27 @@ export type ModalProps = {
   title?: string;
   children: React.ReactNode;
   onCloseAction: () => void;
-  maxWidthClassName?: string; // optional override (rarely needed)
+
+  /**
+   * Optional override. If you pass this, it will replace the default sizing.
+   * Example: "max-w-lg"
+   */
+  maxWidthClassName?: string;
 };
+
+const defaultPanelWidth =
+  [
+    "max-w-lg", // mobile + desktop default (your current standard)
+    // tablet-only widen (md range), keep desktop unchanged
+    "[@media(min-width:768px)_and_(max-width:1023px)]:max-w-2xl",
+  ].join(" ");
 
 export function Modal({
   open,
   title,
   children,
   onCloseAction,
-  maxWidthClassName = "max-w-lg",
+  maxWidthClassName,
 }: ModalProps) {
   const [mounted, setMounted] = React.useState(false);
 
@@ -49,6 +61,8 @@ export function Modal({
 
   if (!open || !mounted) return null;
 
+  const panelWidth = maxWidthClassName ?? defaultPanelWidth;
+
   return createPortal(
     <div
       className="fixed inset-0 z-[9999] grid place-items-center p-4"
@@ -67,9 +81,11 @@ export function Modal({
       <div
         className={[
           "relative w-full",
-          maxWidthClassName,
+          panelWidth,
           "rounded-2xl border border-white/15 bg-black/80 p-6",
           "text-white shadow-2xl backdrop-blur-xl",
+          // keep big forms sane on desktop
+          "max-h-[calc(100vh-2rem)] overflow-auto",
         ].join(" ")}
       >
         {/* Header */}

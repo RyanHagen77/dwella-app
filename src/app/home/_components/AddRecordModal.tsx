@@ -226,7 +226,16 @@ export function AddRecordModal({
 
   return (
     <div className="relative z-[100]">
-      <Modal open={open} onCloseAction={onClose} title="Add to Home">
+      <Modal
+        open={open}
+        onCloseAction={onClose}
+        title="Add to Home"
+        // keep default desktop + mobile, widen only on tablets
+        maxWidthClassName={[
+          "max-w-lg",
+          "[@media(min-width:768px)_and_(max-width:1023px)]:max-w-2xl",
+        ].join(" ")}
+      >
         <form className="space-y-4" onSubmit={submit}>
           <div className="mb-3">
             <Stepper step={step} labels={stepLabels} />
@@ -236,6 +245,7 @@ export function AddRecordModal({
           {step === 1 && (
             <div className="space-y-3">
               <div className="mb-3 text-sm text-white/70">What would you like to add?</div>
+
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <TypeCard
                   selected={recordType === "record"}
@@ -259,6 +269,7 @@ export function AddRecordModal({
                   description="Store warranty info and docs"
                 />
               </div>
+
               <div className="flex justify-end pt-2">
                 <Button type="button" onClick={next}>
                   Next
@@ -600,7 +611,9 @@ export function AddRecordModal({
                         value={form.cost.trim() ? `$${Number(form.cost).toFixed(2)}` : ""}
                       />
                     </div>
-                    {form.verified && <div className="text-sm text-green-400">✓ Verified by vendor</div>}
+                    {form.verified && (
+                      <div className="text-sm text-green-400">✓ Verified by vendor</div>
+                    )}
                     {form.note && <ReviewField label="Notes" value={form.note} />}
                   </>
                 )}
@@ -678,7 +691,7 @@ function TypeCard({
       type="button"
       onClick={onClick}
       className={[
-        "rounded-2xl border p-4 text-left transition-all",
+        "rounded-2xl border p-4 text-left transition-colors",
         "focus:outline-none",
         selected
           ? "border-[#33C17D] bg-white/10 shadow-[0_0_0_1px_rgba(51,193,125,0.35)]"
