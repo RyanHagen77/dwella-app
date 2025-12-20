@@ -4,7 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button, GhostButton } from "@/components/ui/Button";
-import { X, Upload } from "lucide-react";
+import { Upload } from "lucide-react";
 
 type Connection = {
   id: string;
@@ -29,10 +29,7 @@ type Props = {
   connections: Connection[];
 };
 
-type PhotoFile = {
-  file: File;
-  preview: string;
-};
+type PhotoFile = { file: File; preview: string };
 
 const CATEGORIES = [
   "Plumbing",
@@ -55,10 +52,7 @@ const MAX_PHOTOS = 10;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 /* =========================
-   Modal-standard field system
-   - NO rings
-   - focus is green border only
-   - removes iOS tap highlight + autofill tint “brown”
+   Field system (no rings)
    ========================= */
 
 const fieldShell =
@@ -72,25 +66,45 @@ const controlReset =
   "autofill:[-webkit-text-fill-color:#fff]";
 
 const fieldInner =
-  "w-full bg-transparent px-4 py-2 text-white placeholder:text-white/35 " +
+  "w-full bg-transparent px-4 py-2.5 text-white placeholder:text-white/40 " +
   "text-base sm:text-sm " +
   controlReset;
 
 const textareaInner =
-  "w-full bg-transparent px-4 py-3 text-white placeholder:text-white/35 " +
+  "w-full bg-transparent px-4 py-3 text-white placeholder:text-white/40 " +
   "resize-none min-h-[140px] " +
   "text-base sm:text-sm " +
   controlReset;
 
 const selectInner =
-  "w-full bg-transparent px-4 py-2 text-white appearance-none pr-10 " +
+  "w-full bg-transparent px-4 py-2.5 text-white appearance-none pr-10 " +
   "text-base sm:text-sm " +
   controlReset;
 
 const labelCaps =
   "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
 
-/* ========================= */
+/* =========================
+   Clean surfaces (NO washed cards)
+   ========================= */
+
+const sectionSurface = "rounded-2xl border border-white/15 bg-black/25 p-4";
+
+const quietButton =
+  "inline-flex items-center gap-2 rounded-full border border-white/25 bg-transparent " +
+  "px-4 py-2 text-sm text-white/90 transition-colors " +
+  "hover:border-white/40 hover:bg-transparent " +
+  "disabled:cursor-not-allowed disabled:opacity-50";
+
+const helperText = "mt-2 text-sm text-white/60";
+
+function Chevron() {
+  return (
+    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+      ▾
+    </span>
+  );
+}
 
 export function RequestServiceForm({ homeId, connections }: Props) {
   const router = useRouter();
@@ -115,15 +129,12 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
   // cleanup previews on unmount
   React.useEffect(() => {
-    return () => {
-      photos.forEach((p) => URL.revokeObjectURL(p.preview));
-    };
+    return () => photos.forEach((p) => URL.revokeObjectURL(p.preview));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function set<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
+  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
-  }
 
   const handleContractorChange = (connectionId: string) => {
     const connection = connections.find((c) => c.id === connectionId);
@@ -134,11 +145,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         contractorId: connection.contractor!.id,
       }));
     } else {
-      setForm((f) => ({
-        ...f,
-        connectionId,
-        contractorId: "",
-      }));
+      setForm((f) => ({ ...f, connectionId, contractorId: "" }));
     }
   };
 
@@ -146,7 +153,6 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     const files = Array.from(e.target.files || []);
     setUploadError(null);
 
-    // Validate total number of photos
     if (photos.length + files.length > MAX_PHOTOS) {
       setUploadError(`You can only upload up to ${MAX_PHOTOS} photos`);
       return;
@@ -155,24 +161,17 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     const validFiles: PhotoFile[] = [];
     for (const file of files) {
       if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-        setUploadError(
-          `${file.name} is not a supported image format. Please use JPG, PNG, or WebP.`
-        );
+        setUploadError(`${file.name} is not supported. Use JPG, PNG, or WebP.`);
         continue;
       }
-
       if (file.size > MAX_FILE_SIZE) {
-        setUploadError(`${file.name} is too large. Maximum file size is 10MB.`);
+        setUploadError(`${file.name} is too large. Max file size is 10MB.`);
         continue;
       }
-
-      const preview = URL.createObjectURL(file);
-      validFiles.push({ file, preview });
+      validFiles.push({ file, preview: URL.createObjectURL(file) });
     }
 
     if (validFiles.length) setPhotos((p) => [...p, ...validFiles]);
-
-    // Reset input so selecting the same file again still triggers change
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -182,10 +181,6 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     setPhotos((p) => p.filter((_, i) => i !== index));
   };
 
-  /**
-   * Upload photos using presigned URL endpoint
-   * NOTE: this mirrors your existing “work record attachments” pattern
-   */
   const uploadPhotos = async (serviceRequestId: string): Promise<string[]> => {
     if (photos.length === 0) return [];
 
@@ -199,7 +194,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             homeId,
-            recordId: serviceRequestId, // keeping your existing behavior
+            recordId: serviceRequestId,
             filename: photo.file.name,
             contentType: photo.file.type || "application/octet-stream",
             size: photo.file.size,
@@ -222,9 +217,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
           headers: { "Content-Type": photo.file.type || "application/octet-stream" },
         });
 
-        if (!uploadRes.ok) {
-          throw new Error(`Failed to upload ${photo.file.name}`);
-        }
+        if (!uploadRes.ok) throw new Error(`Failed to upload ${photo.file.name}`);
 
         uploadedUrls.push(publicUrl);
       }
@@ -239,36 +232,31 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     e.preventDefault();
 
     if (!form.connectionId || !form.contractorId || !form.title || !form.description) {
-      // keep behavior but avoid ugly alert if you prefer toast later
       alert("Please fill in contractor, title, and description");
       return;
     }
 
     setSubmitting(true);
     try {
-      // Convert timeframe to desiredDate
+      // timeframe -> desiredDate
       let desiredDate: string | null = null;
       const today = new Date();
 
-      if (form.timeframe === "TODAY") {
-        desiredDate = today.toISOString();
-      } else if (form.timeframe === "ASAP") {
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        desiredDate = tomorrow.toISOString();
+      if (form.timeframe === "TODAY") desiredDate = today.toISOString();
+      else if (form.timeframe === "ASAP") {
+        const t = new Date(today);
+        t.setDate(t.getDate() + 1);
+        desiredDate = t.toISOString();
       } else if (form.timeframe === "SOON") {
-        const threeDays = new Date(today);
-        threeDays.setDate(threeDays.getDate() + 3);
-        desiredDate = threeDays.toISOString();
+        const t = new Date(today);
+        t.setDate(t.getDate() + 3);
+        desiredDate = t.toISOString();
       } else if (form.timeframe === "1-2_WEEKS") {
-        const oneWeek = new Date(today);
-        oneWeek.setDate(oneWeek.getDate() + 7);
-        desiredDate = oneWeek.toISOString();
-      } else {
-        desiredDate = null;
+        const t = new Date(today);
+        t.setDate(t.getDate() + 7);
+        desiredDate = t.toISOString();
       }
 
-      // Step 1: Create service request (without photos first)
       const res = await fetch(`/api/home/${homeId}/service-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -293,11 +281,9 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       const { serviceRequest } = (await res.json()) as { serviceRequest: { id: string } };
 
-      // Step 2: Upload photos and PATCH back
       if (photos.length > 0) {
         try {
           const photoUrls = await uploadPhotos(serviceRequest.id);
-
           const updateRes = await fetch(
             `/api/home/${homeId}/service-requests/${serviceRequest.id}`,
             {
@@ -306,17 +292,13 @@ export function RequestServiceForm({ homeId, connections }: Props) {
               body: JSON.stringify({ photos: photoUrls }),
             }
           );
-
-          if (!updateRes.ok) {
-            console.error("Failed to update job request with photos");
-          }
+          if (!updateRes.ok) console.error("Failed to update job request with photos");
         } catch (photoError) {
           console.error("Error uploading photos:", photoError);
           alert("Job request created but some photos failed to upload");
         }
       }
 
-      // Clean up previews
       photos.forEach((p) => URL.revokeObjectURL(p.preview));
       setPhotos([]);
 
@@ -338,11 +320,11 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Contractor Selection */}
+      {/* Contractor */}
       <div>
         <label className="block">
           <span className={labelCaps}>
-            Select Contractor <span className="text-red-400">*</span>
+            Select contractor <span className="text-red-400">*</span>
           </span>
 
           <div className={`${fieldShell} relative`}>
@@ -364,19 +346,15 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                 </option>
               ))}
             </select>
-
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
-              ▾
-            </span>
+            <Chevron />
           </div>
         </label>
 
-        {/* Contractor details */}
         {contractor && (
-          <div className="mt-3 rounded-2xl border border-white/15 bg-white/5 p-4">
+          <div className={`mt-3 ${sectionSurface}`}>
             <div className="flex items-start gap-3">
               {contractor.image ? (
-                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/15">
+                <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/20">
                   <Image
                     src={contractor.image}
                     alt={contractor.name || "Contractor"}
@@ -386,23 +364,19 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                   />
                 </div>
               ) : (
-                <div className="h-12 w-12 flex-shrink-0 rounded-full border border-white/15 bg-white/5" />
+                <div className="h-12 w-12 flex-shrink-0 rounded-full border border-white/15 bg-black/20" />
               )}
 
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-medium text-white">
                     {profile?.businessName || contractor.name || contractor.email}
                   </p>
-                  {profile?.verified ? (
-                    <span className="text-xs text-green-400">✓ Verified</span>
-                  ) : null}
+                  {profile?.verified ? <span className="text-xs text-green-400">✓ Verified</span> : null}
                 </div>
 
                 {profile?.specialties?.length ? (
-                  <p className="mt-1 text-xs text-white/60">
-                    {profile.specialties.join(", ")}
-                  </p>
+                  <p className="mt-1 text-xs text-white/60">{profile.specialties.join(", ")}</p>
                 ) : null}
 
                 {profile?.rating ? (
@@ -414,7 +388,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         )}
       </div>
 
-      {/* Work Title */}
+      {/* Title */}
       <label className="block">
         <span className={labelCaps}>
           What work do you need? <span className="text-red-400">*</span>
@@ -449,15 +423,14 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         </div>
       </label>
 
-      {/* Photo Upload */}
+      {/* Photos */}
       <div>
         <div className={labelCaps}>Photos (optional)</div>
         <p className="mt-1 text-xs text-white/60">
-          Add photos to help the contractor understand the work needed. Max {MAX_PHOTOS} photos, 10MB
-          each.
+          Max {MAX_PHOTOS} photos, 10MB each. JPG / PNG / WebP.
         </p>
 
-        <div className="mt-2">
+        <div className="mt-3">
           <input
             ref={fileInputRef}
             type="file"
@@ -471,63 +444,59 @@ export function RequestServiceForm({ homeId, connections }: Props) {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={photos.length >= MAX_PHOTOS}
-            className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm text-white/90 hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-50"
+            className={quietButton}
           >
             <Upload className="h-4 w-4" />
-            <span>Upload Photos</span>
+            Upload photos
           </button>
         </div>
 
         {uploadError && (
-          <div className="mt-2 rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-sm text-red-100">
+          <div className="mt-3 rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-sm text-red-100">
             {uploadError}
           </div>
         )}
 
         {photos.length > 0 && (
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
-            {photos.map((photo, index) => (
-              <div
-                key={index}
-                className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/15 bg-white/5"
-              >
-                <Image
-                  src={photo.preview}
-                  alt={`Preview ${index + 1}`}
-                  width={96}
-                  height={96}
-                  className="h-24 w-24 object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() => removePhoto(index)}
-                  className="absolute -right-1.5 -top-1.5 rounded-full border border-white/25 bg-black/70 px-2 py-0.5 text-xs text-white/90 hover:bg-black/85"
-                  aria-label="Remove photo"
+          <>
+            <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
+              {photos.map((photo, index) => (
+                <div
+                  key={index}
+                  className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/20"
                 >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+                  <Image
+                    src={photo.preview}
+                    alt={`Preview ${index + 1}`}
+                    width={96}
+                    height={96}
+                    className="h-24 w-24 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(index)}
+                    className="absolute -right-1.5 -top-1.5 rounded-full border border-white/25 bg-black/70 px-2 py-0.5 text-xs text-white/90 transition-colors hover:border-white/40"
+                    aria-label="Remove photo"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
 
-        {photos.length > 0 && (
-          <p className="mt-2 text-xs text-white/60">
-            {photos.length} of {MAX_PHOTOS} photos selected
-          </p>
+            <p className="mt-2 text-xs text-white/60">
+              {photos.length} of {MAX_PHOTOS} selected
+            </p>
+          </>
         )}
       </div>
 
-      {/* Category & Urgency */}
+      {/* Category + Urgency */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="block">
           <span className={labelCaps}>Category</span>
           <div className={`${fieldShell} relative`}>
-            <select
-              value={form.category}
-              onChange={(e) => set("category", e.target.value)}
-              className={selectInner}
-            >
+            <select value={form.category} onChange={(e) => set("category", e.target.value)} className={selectInner}>
               <option value="" className="bg-gray-900">
                 Select category…
               </option>
@@ -537,20 +506,14 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                 </option>
               ))}
             </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
-              ▾
-            </span>
+            <Chevron />
           </div>
         </label>
 
         <label className="block">
           <span className={labelCaps}>Urgency</span>
           <div className={`${fieldShell} relative`}>
-            <select
-              value={form.urgency}
-              onChange={(e) => set("urgency", e.target.value)}
-              className={selectInner}
-            >
+            <select value={form.urgency} onChange={(e) => set("urgency", e.target.value)} className={selectInner}>
               <option value="LOW" className="bg-gray-900">
                 Low - Can wait
               </option>
@@ -564,16 +527,14 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                 Emergency
               </option>
             </select>
-            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
-              ▾
-            </span>
+            <Chevron />
           </div>
         </label>
       </div>
 
-      {/* Budget Range */}
+      {/* Budget */}
       <div>
-        <div className={labelCaps}>Budget Range (optional)</div>
+        <div className={labelCaps}>Budget range (optional)</div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
@@ -619,11 +580,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         <span className={labelCaps}>When do you need this done?</span>
 
         <div className={`${fieldShell} relative`}>
-          <select
-            value={form.timeframe}
-            onChange={(e) => set("timeframe", e.target.value)}
-            className={selectInner}
-          >
+          <select value={form.timeframe} onChange={(e) => set("timeframe", e.target.value)} className={selectInner}>
             <option value="" className="bg-gray-900">
               Select timeframe…
             </option>
@@ -643,32 +600,19 @@ export function RequestServiceForm({ homeId, connections }: Props) {
               No Rush
             </option>
           </select>
-
-          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
-            ▾
-          </span>
+          <Chevron />
         </div>
 
-        <p className="mt-2 text-sm text-white/60">
-          Give the contractor an idea of your timeline.
-        </p>
+        <p className={helperText}>Give the contractor an idea of your timeline.</p>
       </label>
 
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4">
-        <GhostButton
-          type="button"
-          onClick={() => router.back()}
-          disabled={submitting || uploadingPhotos}
-        >
+        <GhostButton type="button" onClick={() => router.back()} disabled={submitting || uploadingPhotos}>
           Cancel
         </GhostButton>
         <Button type="submit" disabled={submitting || uploadingPhotos}>
-          {uploadingPhotos
-            ? "Uploading photos..."
-            : submitting
-            ? "Sending Request..."
-            : "Send Request"}
+          {uploadingPhotos ? "Uploading photos..." : submitting ? "Sending Request..." : "Send Request"}
         </Button>
       </div>
     </form>

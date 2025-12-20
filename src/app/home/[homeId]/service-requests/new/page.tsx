@@ -116,9 +116,7 @@ export default async function RequestServicePage({ params }: PageProps) {
 
                 <p className={`mt-1 text-sm ${textMeta}`}>
                   {hasConnections
-                    ? `${connections.length} connected ${
-                        connections.length === 1 ? "contractor" : "contractors"
-                      }`
+                    ? `${connections.length} connected ${connections.length === 1 ? "contractor" : "contractors"}`
                     : "No connected contractors"}
                 </p>
               </div>
@@ -127,9 +125,10 @@ export default async function RequestServicePage({ params }: PageProps) {
         </section>
 
         {hasConnections ? (
-          <div className={glass}>
+          // IMPORTANT: do NOT wrap in `glass` here (it adds the washed/hover multi-layer look)
+          <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
             <RequestServiceForm homeId={homeId} connections={connections} />
-          </div>
+          </section>
         ) : (
           <NoContractorsCard homeId={homeId} homeAddress={homeAddress} />
         )}

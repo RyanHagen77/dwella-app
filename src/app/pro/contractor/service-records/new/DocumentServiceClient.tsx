@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-import { glass, heading, textMeta, ctaGhost } from "@/lib/glass";
+import { heading, textMeta, ctaGhost } from "@/lib/glass";
 import { fieldLabel } from "@/components/ui";
 import { Button } from "@/components/ui/Button";
 import AddressVerification from "@/components/AddressVerification";
@@ -63,26 +63,40 @@ type PresignResponse = {
   }[];
 };
 
-/* ========================
-   Field styles (MATCH service records list controls)
-======================== */
+/* =========================
+   Static section shell (NO hover / no washed layers)
+========================= */
+const sectionShell =
+  "rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl";
+
+/* =========================
+   Standard field system
+   - NO rings
+   - focus is green border only
+   - removes iOS tap highlight + autofill tint
+========================= */
 
 const fieldShell =
-  "rounded-2xl border border-white/10 bg-black/35 backdrop-blur transition " +
-  "focus-within:border-white/18 focus-within:bg-black/45";
+  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
+  "focus-within:border-[#33C17D] focus-within:border-2";
+
+const controlReset =
+  "border-0 ring-0 outline-none focus:ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 " +
+  "[-webkit-tap-highlight-color:transparent] " +
+  "autofill:shadow-[0_0_0px_1000px_rgba(0,0,0,0.35)_inset] " +
+  "autofill:[-webkit-text-fill-color:#fff]";
 
 const fieldInner =
-  "w-full bg-transparent px-4 py-2 text-sm text-white outline-none placeholder:text-white/35";
-
-const selectInner =
-  fieldInner + " appearance-none pr-10 focus:outline-none ring-0 focus:ring-0";
+  "w-full bg-transparent px-4 py-2.5 text-white placeholder:text-white/40 " +
+  "text-base sm:text-sm " +
+  controlReset;
 
 const textareaInner =
-  "w-full bg-transparent px-4 py-3 text-sm text-white outline-none placeholder:text-white/35 resize-none min-h-[110px]";
+  "w-full bg-transparent px-4 py-3 text-white placeholder:text-white/40 resize-none min-h-[120px] " +
+  "text-base sm:text-sm " +
+  controlReset;
 
-/* ========================
-   File field
-======================== */
+const selectInner = fieldInner + " appearance-none pr-10";
 
 function FileField({
   label,
@@ -100,6 +114,7 @@ function FileField({
   return (
     <label className="block">
       <span className={fieldLabel}>{label}</span>
+
       <div className={fieldShell}>
         <input
           type="file"
@@ -107,22 +122,18 @@ function FileField({
           multiple={multiple}
           onChange={onChange}
           className={[
-            "w-full bg-transparent px-4 py-2 text-sm text-white outline-none",
-            "placeholder:text-white/35",
-            "file:mr-4 file:rounded-lg file:border-0 file:bg-white/15 file:px-3 file:py-2 file:text-xs file:text-white",
-            "hover:file:bg-white/20",
-            "focus:outline-none focus:ring-0",
+            "w-full bg-transparent px-4 py-2.5 text-sm text-white",
+            controlReset,
+            "file:mr-4 file:rounded-full file:border-0 file:bg-white/15 file:px-3 file:py-2 file:text-xs file:text-white",
+            "file:hover:bg-white/20",
           ].join(" ")}
         />
       </div>
-      {helper ? <div className="mt-1 text-xs text-white/55">{helper}</div> : null}
+
+      {helper ? <div className="mt-2 text-xs text-white/55">{helper}</div> : null}
     </label>
   );
 }
-
-/* ========================
-   Component
-======================== */
 
 export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientProps) {
   const router = useRouter();
@@ -160,10 +171,6 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
 
   const selectedHome = connectedHomes.find((h) => h.id === form.homeId) || null;
 
-  /* ========================
-     Upload helper
-  ======================== */
-
   async function uploadFileWithRecordId(
     file: File,
     recordId: string,
@@ -195,10 +202,6 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
     if (!upload.ok) throw new Error("Upload failed");
     return info.publicUrl;
   }
-
-  /* ========================
-     Submit
-  ======================== */
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -255,16 +258,13 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
       setUploading(true);
 
       const photos: string[] = [];
-      for (const f of photoFiles) {
-        photos.push(await uploadFileWithRecordId(f, recordId, "photo"));
-      }
+      for (const f of photoFiles) photos.push(await uploadFileWithRecordId(f, recordId, "photo"));
 
       const invoice = invoiceFile ? await uploadFileWithRecordId(invoiceFile, recordId, "invoice") : null;
       const warranty = warrantyFile ? await uploadFileWithRecordId(warrantyFile, recordId, "warranty") : null;
 
       setUploading(false);
 
-      // patch
       const patchBody: Record<string, unknown> = {
         ...(photos.length ? { photos } : {}),
         ...(invoice ? { invoice } : {}),
@@ -306,14 +306,10 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
 
   const isSubmitting = saving || uploading;
 
-  /* ========================
-     Render
-  ======================== */
-
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Property */}
-      <section className={glass}>
+      <section className={sectionShell}>
         <h2 className={`mb-4 text-lg font-semibold ${heading}`}>Property</h2>
 
         {connectedHomes.length > 0 ? (
@@ -321,10 +317,8 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
             <button
               type="button"
               onClick={() => setMode("connected")}
-              className={`px-3 py-1 rounded-full transition ${
-                mode === "connected"
-                  ? "bg-white/90 text-black font-medium"
-                  : "text-white/70 hover:bg-white/10"
+              className={`rounded-full px-3 py-1 transition ${
+                mode === "connected" ? "bg-white/90 text-black font-medium" : "text-white/70 hover:bg-white/10"
               }`}
             >
               Connected client home
@@ -332,10 +326,8 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
             <button
               type="button"
               onClick={() => setMode("address")}
-              className={`px-3 py-1 rounded-full transition ${
-                mode === "address"
-                  ? "bg-white/90 text-black font-medium"
-                  : "text-white/70 hover:bg-white/10"
+              className={`rounded-full px-3 py-1 transition ${
+                mode === "address" ? "bg-white/90 text-black font-medium" : "text-white/70 hover:bg-white/10"
               }`}
             >
               Any property by address
@@ -343,8 +335,8 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
           </div>
         ) : (
           <p className={`mb-4 text-xs ${textMeta}`}>
-            You don&apos;t have any connected homeowners yet. That&apos;s okay — you can still
-            document work for any property by verified address.
+            You don&apos;t have any connected homeowners yet. That&apos;s okay — you can still document work
+            for any property by verified address.
           </p>
         )}
 
@@ -378,7 +370,7 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
             </label>
 
             {selectedHome ? (
-              <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+              <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
                 <div className="text-xs text-white/55">Selected property</div>
                 <div className="mt-1 text-sm text-white">{selectedHome.address}</div>
                 <div className={`mt-1 text-xs ${textMeta}`}>
@@ -391,16 +383,16 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
         ) : (
           <div className="space-y-4">
             <p className={`text-xs ${textMeta}`}>
-              Verify the service address. We&apos;ll attach this record to that home, even if no
-              homeowner has claimed it yet.
+              Verify the service address. We&apos;ll attach this record to that home, even if no homeowner has
+              claimed it yet.
             </p>
 
-            <div className="rounded-2xl border border-white/10 bg-black/25 p-4">
+            <div className="rounded-2xl border border-white/15 bg-white/5 p-4">
               <AddressVerification onVerified={setVerifiedAddress} />
             </div>
 
             {verifiedAddress ? (
-              <div className="rounded-2xl border border-white/10 bg-black/35 px-4 py-3">
+              <div className="rounded-2xl border border-white/15 bg-white/5 px-4 py-3">
                 <div className="text-xs text-white/55">Verified address</div>
                 <div className="mt-1 text-sm text-white">
                   {verifiedAddress.street}
@@ -416,7 +408,7 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
       </section>
 
       {/* Work Details */}
-      <section className={glass}>
+      <section className={sectionShell}>
         <h2 className={`mb-4 text-lg font-semibold ${heading}`}>Work Details</h2>
 
         <div className="space-y-4">
@@ -477,7 +469,7 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
       </section>
 
       {/* Documentation */}
-      <section className={glass}>
+      <section className={sectionShell}>
         <h2 className={`mb-4 text-lg font-semibold ${heading}`}>Documentation</h2>
 
         <div className="space-y-4">
@@ -508,7 +500,7 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
       </section>
 
       {/* Warranty Details */}
-      <section className={glass}>
+      <section className={sectionShell}>
         <h2 className={`mb-4 text-lg font-semibold ${heading}`}>Warranty Details</h2>
 
         <div className="space-y-4">
@@ -608,6 +600,7 @@ export function DocumentServiceClient({ connectedHomes }: DocumentServiceClientP
         <Link href="/pro/contractor/service-records" className={ctaGhost}>
           Cancel
         </Link>
+
         <Button
           type="submit"
           disabled={

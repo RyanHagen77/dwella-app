@@ -230,312 +230,256 @@ export function AddRecordModal({
         open={open}
         onCloseAction={onClose}
         title="Add to Home"
-        // keep default desktop + mobile, widen only on tablets
+        // desktop stays max-w-lg; tablet gets wider; large desktop remains max-w-lg (as requested)
         maxWidthClassName={[
           "max-w-lg",
           "[@media(min-width:768px)_and_(max-width:1023px)]:max-w-2xl",
         ].join(" ")}
       >
-        <form className="space-y-4" onSubmit={submit}>
-          <div className="mb-3">
-            <Stepper step={step} labels={stepLabels} />
-          </div>
-
-          {/* Step 1: Choose Type */}
-          {step === 1 && (
-            <div className="space-y-3">
-              <div className="mb-3 text-sm text-white/70">What would you like to add?</div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <TypeCard
-                  selected={recordType === "record"}
-                  onClick={() => setRecordType("record")}
-                  icon="🔧"
-                  label="Record"
-                  description="Track projects, repairs, upgrades, and maintenance"
-                />
-                <TypeCard
-                  selected={recordType === "reminder"}
-                  onClick={() => setRecordType("reminder")}
-                  icon="⏰"
-                  label="Reminder"
-                  description="Schedule future tasks"
-                />
-                <TypeCard
-                  selected={recordType === "warranty"}
-                  onClick={() => setRecordType("warranty")}
-                  icon="📄"
-                  label="Warranty"
-                  description="Store warranty info and docs"
-                />
-              </div>
-
-              <div className="flex justify-end pt-2">
-                <Button type="button" onClick={next}>
-                  Next
-                </Button>
-              </div>
+        {/* Desktop “mess” fix: keep modal content scrollable instead of stretching */}
+        <div className="max-h-[80vh] overflow-y-auto pr-1">
+          <form className="space-y-4" onSubmit={submit}>
+            <div className="mb-3">
+              <Stepper step={step} labels={stepLabels} />
             </div>
-          )}
 
-          {/* Step 2: Upload */}
-          {step === 2 && (
-            <div className="space-y-4">
-              <div>
-                <div className={labelCaps}>Upload files (optional)</div>
+            {/* Step 1: Choose Type */}
+            {step === 1 && (
+              <div className="space-y-3">
+                <div className="mb-3 text-sm text-white/70">What would you like to add?</div>
 
-                <div className="flex items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm text-white/90 hover:bg-white/15"
-                  >
-                    Browse…
-                  </button>
-
-                  <div className="text-sm text-white/70">
-                    {files.length === 0
-                      ? "No files selected."
-                      : `${files.length} file${files.length === 1 ? "" : "s"} selected.`}
-                  </div>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,.pdf"
-                    onChange={(e) => onFiles(e.target.files)}
-                    className="sr-only"
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <TypeCard
+                    selected={recordType === "record"}
+                    onClick={() => setRecordType("record")}
+                    icon="🔧"
+                    label="Record"
+                    description="Track projects, repairs, upgrades, and maintenance"
+                  />
+                  <TypeCard
+                    selected={recordType === "reminder"}
+                    onClick={() => setRecordType("reminder")}
+                    icon="⏰"
+                    label="Reminder"
+                    description="Schedule future tasks"
+                  />
+                  <TypeCard
+                    selected={recordType === "warranty"}
+                    onClick={() => setRecordType("warranty")}
+                    icon="📄"
+                    label="Warranty"
+                    description="Store warranty info and docs"
                   />
                 </div>
 
-                <p className={`mt-2 text-sm ${textMeta}`}>
-                  {recordType === "record" && "Optional — add before/after photos, manuals, receipts."}
-                  {recordType === "reminder" && "Optional — attach supporting documents."}
-                  {recordType === "warranty" && "Optional — attach warranty docs, manuals, receipts."}
-                </p>
-              </div>
-
-              {previews.length > 0 && (
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {previews.map((u, i) => (
-                    <div key={i} className="relative flex-shrink-0">
-                      <Image
-                        src={u}
-                        alt={`Preview ${i + 1}`}
-                        width={80}
-                        height={80}
-                        className="h-20 w-20 rounded-xl border border-white/20 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeFile(i)}
-                        className="absolute -right-1.5 -top-1.5 rounded-full border border-white/25 bg-black/70 px-2 py-0.5 text-xs text-white/90 hover:bg-black/85"
-                        aria-label="Remove file"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                <div className="flex justify-end pt-2">
+                  <Button type="button" onClick={next}>
+                    Next
+                  </Button>
                 </div>
-              )}
-
-              <div className="flex items-center justify-between pt-1">
-                <GhostButton type="button" onClick={back}>
-                  Back
-                </GhostButton>
-                <Button type="button" onClick={next}>
-                  Next
-                </Button>
               </div>
-            </div>
-          )}
+            )}
 
-          {/* Step 3: Details */}
-          {step === 3 && (
-            <div className="space-y-4">
-              {recordType === "record" && (
-                <>
-                  <label className="block">
-                    <span className={labelCaps}>Title</span>
-                    <div className={fieldShell}>
-                      <input
-                        value={form.title}
-                        onChange={(e) => set("title", e.target.value)}
-                        placeholder="e.g., HVAC Tune-up"
-                        className={fieldInner}
-                      />
+            {/* Step 2: Upload */}
+            {step === 2 && (
+              <div className="space-y-4">
+                <div>
+                  <div className={labelCaps}>Upload files (optional)</div>
+
+                  {/* Browse button pattern (no native input UI) */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-full bg-white/10 px-4 py-2 text-sm text-white/90 hover:bg-white/15"                    >
+                      Browse…
+                    </button>
+
+                    <div className="text-sm text-white/70">
+                      {files.length === 0
+                        ? "No files selected."
+                        : `${files.length} file${files.length === 1 ? "" : "s"} selected.`}
                     </div>
-                  </label>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <label className="block">
-                      <span className={labelCaps}>Date</span>
-                      <div className={fieldShell}>
-                        <input
-                          type="date"
-                          value={form.date}
-                          onChange={(e) => set("date", e.target.value)}
-                          className={fieldInner}
-                        />
-                      </div>
-                    </label>
-
-                    <label className="block">
-                      <span className={labelCaps}>Category</span>
-                      <div className={`${fieldShell} relative`}>
-                        <select
-                          value={form.category}
-                          onChange={(e) => set("category", e.target.value)}
-                          className={selectInner}
-                        >
-                          <option className="bg-gray-900">Maintenance</option>
-                          <option className="bg-gray-900">Repair</option>
-                          <option className="bg-gray-900">Upgrade</option>
-                          <option className="bg-gray-900">Inspection</option>
-                        </select>
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
-                          ▾
-                        </span>
-                      </div>
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <label className="block">
-                      <span className={labelCaps}>Vendor</span>
-                      <div className={fieldShell}>
-                        <input
-                          value={form.vendor}
-                          onChange={(e) => set("vendor", e.target.value)}
-                          placeholder="e.g., ChillRight Heating"
-                          className={fieldInner}
-                        />
-                      </div>
-                    </label>
-
-                    <label className="block">
-                      <span className={labelCaps}>Cost</span>
-                      <div className={fieldShell}>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={form.cost}
-                          onChange={(e) => set("cost", e.target.value)}
-                          placeholder="0.00"
-                          className={fieldInner}
-                        />
-                      </div>
-                    </label>
-                  </div>
-
-                  <label className="flex items-center gap-3">
                     <input
-                      type="checkbox"
-                      checked={form.verified}
-                      onChange={(e) => set("verified", e.target.checked)}
-                      className="h-4 w-4 rounded border-white/30 bg-black/30"
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf"
+                      onChange={(e) => onFiles(e.target.files)}
+                      className="sr-only"
                     />
-                    <span className="text-sm text-white/85">Mark as verified by vendor</span>
-                  </label>
+                  </div>
 
-                  <label className="block">
-                    <span className={labelCaps}>
-                      Notes <span className="text-white/35">(optional)</span>
-                    </span>
-                    <div className={fieldShell}>
-                      <textarea
-                        rows={3}
-                        value={form.note}
-                        onChange={(e) => set("note", e.target.value)}
-                        placeholder="Optional details…"
-                        className={textareaInner}
-                      />
-                    </div>
-                  </label>
-                </>
-              )}
+                  <p className={`mt-2 text-sm ${textMeta}`}>
+                    {recordType === "record" && "Optional — add before/after photos, manuals, receipts."}
+                    {recordType === "reminder" && "Optional — attach supporting documents."}
+                    {recordType === "warranty" && "Optional — attach warranty docs, manuals, receipts."}
+                  </p>
+                </div>
 
-              {recordType === "reminder" && (
-                <>
-                  <label className="block">
-                    <span className={labelCaps}>Title</span>
-                    <div className={fieldShell}>
-                      <input
-                        value={form.title}
-                        onChange={(e) => set("title", e.target.value)}
-                        placeholder="e.g., Replace HVAC filter"
-                        className={fieldInner}
-                      />
-                    </div>
-                  </label>
+                {previews.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {previews.map((u, i) => (
+                      <div key={i} className="relative flex-shrink-0">
+                        <Image
+                          src={u}
+                          alt={`Preview ${i + 1}`}
+                          width={80}
+                          height={80}
+                          className="h-20 w-20 rounded-xl border border-white/20 object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="absolute -right-1.5 -top-1.5 rounded-full border border-white/25 bg-black/70 px-2 py-0.5 text-xs text-white/90 hover:bg-black/85"
+                          aria-label="Remove file"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
-                  <label className="block">
-                    <span className={labelCaps}>Due Date</span>
-                    <div className={fieldShell}>
-                      <input
-                        type="date"
-                        value={form.dueAt}
-                        onChange={(e) => set("dueAt", e.target.value)}
-                        className={fieldInner}
-                      />
-                    </div>
-                  </label>
+                <div className="flex items-center justify-between pt-1">
+                  <GhostButton type="button" onClick={back}>
+                    Back
+                  </GhostButton>
+                  <Button type="button" onClick={next}>
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
 
-                  <label className="block">
-                    <span className={labelCaps}>
-                      Notes <span className="text-white/35">(optional)</span>
-                    </span>
-                    <div className={fieldShell}>
-                      <textarea
-                        rows={3}
-                        value={form.note}
-                        onChange={(e) => set("note", e.target.value)}
-                        placeholder="Additional details…"
-                        className={textareaInner}
-                      />
-                    </div>
-                  </label>
-                </>
-              )}
-
-              {recordType === "warranty" && (
-                <>
-                  <label className="block">
-                    <span className={labelCaps}>Item</span>
-                    <div className={fieldShell}>
-                      <input
-                        value={form.item}
-                        onChange={(e) => set("item", e.target.value)}
-                        placeholder="e.g., Water Heater"
-                        className={fieldInner}
-                      />
-                    </div>
-                  </label>
-
-                  <label className="block">
-                    <span className={labelCaps}>
-                      Provider <span className="text-white/35">(optional)</span>
-                    </span>
-                    <div className={fieldShell}>
-                      <input
-                        value={form.provider}
-                        onChange={(e) => set("provider", e.target.value)}
-                        placeholder="e.g., AO Smith"
-                        className={fieldInner}
-                      />
-                    </div>
-                  </label>
-
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Step 3: Details */}
+            {step === 3 && (
+              <div className="space-y-4">
+                {recordType === "record" && (
+                  <>
                     <label className="block">
-                      <span className={labelCaps}>Purchase Date</span>
+                      <span className={labelCaps}>Title</span>
+                      <div className={fieldShell}>
+                        <input
+                          value={form.title}
+                          onChange={(e) => set("title", e.target.value)}
+                          placeholder="e.g., HVAC Tune-up"
+                          className={fieldInner}
+                        />
+                      </div>
+                    </label>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className={labelCaps}>Date</span>
+                        <div className={fieldShell}>
+                          <input
+                            type="date"
+                            value={form.date}
+                            onChange={(e) => set("date", e.target.value)}
+                            className={fieldInner}
+                          />
+                        </div>
+                      </label>
+
+                      <label className="block">
+                        <span className={labelCaps}>Category</span>
+                        <div className={`${fieldShell} relative`}>
+                          <select
+                            value={form.category}
+                            onChange={(e) => set("category", e.target.value)}
+                            className={selectInner}
+                          >
+                            <option className="bg-gray-900">Maintenance</option>
+                            <option className="bg-gray-900">Repair</option>
+                            <option className="bg-gray-900">Upgrade</option>
+                            <option className="bg-gray-900">Inspection</option>
+                          </select>
+                          <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/50">
+                            ▾
+                          </span>
+                        </div>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className={labelCaps}>Vendor</span>
+                        <div className={fieldShell}>
+                          <input
+                            value={form.vendor}
+                            onChange={(e) => set("vendor", e.target.value)}
+                            placeholder="e.g., ChillRight Heating"
+                            className={fieldInner}
+                          />
+                        </div>
+                      </label>
+
+                      <label className="block">
+                        <span className={labelCaps}>Cost</span>
+                        <div className={fieldShell}>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={form.cost}
+                            onChange={(e) => set("cost", e.target.value)}
+                            placeholder="0.00"
+                            className={fieldInner}
+                          />
+                        </div>
+                      </label>
+                    </div>
+
+                    <label className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={form.verified}
+                        onChange={(e) => set("verified", e.target.checked)}
+                        className="h-4 w-4 rounded border-white/30 bg-black/30"
+                      />
+                      <span className="text-sm text-white/85">Mark as verified by vendor</span>
+                    </label>
+
+                    <label className="block">
+                      <span className={labelCaps}>
+                        Notes <span className="text-white/35">(optional)</span>
+                      </span>
+                      <div className={fieldShell}>
+                        <textarea
+                          rows={3}
+                          value={form.note}
+                          onChange={(e) => set("note", e.target.value)}
+                          placeholder="Optional details…"
+                          className={textareaInner}
+                        />
+                      </div>
+                    </label>
+                  </>
+                )}
+
+                {recordType === "reminder" && (
+                  <>
+                    <label className="block">
+                      <span className={labelCaps}>Title</span>
+                      <div className={fieldShell}>
+                        <input
+                          value={form.title}
+                          onChange={(e) => set("title", e.target.value)}
+                          placeholder="e.g., Replace HVAC filter"
+                          className={fieldInner}
+                        />
+                      </div>
+                    </label>
+
+                    <label className="block">
+                      <span className={labelCaps}>Due Date</span>
                       <div className={fieldShell}>
                         <input
                           type="date"
-                          value={form.purchasedAt}
-                          onChange={(e) => set("purchasedAt", e.target.value)}
+                          value={form.dueAt}
+                          onChange={(e) => set("dueAt", e.target.value)}
                           className={fieldInner}
                         />
                       </div>
@@ -543,131 +487,190 @@ export function AddRecordModal({
 
                     <label className="block">
                       <span className={labelCaps}>
-                        Expires <span className="text-white/35">(optional)</span>
+                        Notes <span className="text-white/35">(optional)</span>
                       </span>
                       <div className={fieldShell}>
-                        <input
-                          type="date"
-                          value={form.expiresAt}
-                          onChange={(e) => set("expiresAt", e.target.value)}
-                          className={fieldInner}
+                        <textarea
+                          rows={3}
+                          value={form.note}
+                          onChange={(e) => set("note", e.target.value)}
+                          placeholder="Additional details…"
+                          className={textareaInner}
                         />
                       </div>
                     </label>
-                  </div>
-
-                  <label className="block">
-                    <span className={labelCaps}>
-                      Notes <span className="text-white/35">(optional)</span>
-                    </span>
-                    <div className={fieldShell}>
-                      <textarea
-                        rows={3}
-                        value={form.note}
-                        onChange={(e) => set("note", e.target.value)}
-                        placeholder="Coverage details, serial numbers, etc."
-                        className={textareaInner}
-                      />
-                    </div>
-                  </label>
-                </>
-              )}
-
-              <div className="flex justify-between pt-2">
-                <GhostButton type="button" onClick={back}>
-                  Back
-                </GhostButton>
-                <Button type="button" onClick={next}>
-                  Review
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Review */}
-          {step === maxSteps && (
-            <div className="space-y-4">
-              <div className="space-y-3 rounded-2xl border border-white/20 bg-white/5 p-4">
-                <div className="mb-2 flex items-center gap-2">
-                  <span className="text-2xl">
-                    {recordType === "record" ? "🔧" : recordType === "reminder" ? "⏰" : "📄"}
-                  </span>
-                  <span className="text-sm uppercase tracking-wide text-white/60">
-                    {typeLabels[recordType]}
-                  </span>
-                </div>
-
-                {recordType === "record" && (
-                  <>
-                    <ReviewField label="Title" value={form.title} />
-                    <div className="grid grid-cols-2 gap-4">
-                      <ReviewField label="Date" value={form.date} />
-                      <ReviewField label="Category" value={form.category} />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <ReviewField label="Vendor" value={form.vendor} />
-                      <ReviewField
-                        label="Cost"
-                        value={form.cost.trim() ? `$${Number(form.cost).toFixed(2)}` : ""}
-                      />
-                    </div>
-                    {form.verified && (
-                      <div className="text-sm text-green-400">✓ Verified by vendor</div>
-                    )}
-                    {form.note && <ReviewField label="Notes" value={form.note} />}
-                  </>
-                )}
-
-                {recordType === "reminder" && (
-                  <>
-                    <ReviewField label="Title" value={form.title} />
-                    <ReviewField label="Due Date" value={form.dueAt} />
-                    {form.note && <ReviewField label="Notes" value={form.note} />}
                   </>
                 )}
 
                 {recordType === "warranty" && (
                   <>
-                    <ReviewField label="Item" value={form.item} />
-                    {form.provider && <ReviewField label="Provider" value={form.provider} />}
-                    <div className="grid grid-cols-2 gap-4">
-                      <ReviewField label="Purchased" value={form.purchasedAt} />
-                      {form.expiresAt && <ReviewField label="Expires" value={form.expiresAt} />}
+                    <label className="block">
+                      <span className={labelCaps}>Item</span>
+                      <div className={fieldShell}>
+                        <input
+                          value={form.item}
+                          onChange={(e) => set("item", e.target.value)}
+                          placeholder="e.g., Water Heater"
+                          className={fieldInner}
+                        />
+                      </div>
+                    </label>
+
+                    <label className="block">
+                      <span className={labelCaps}>
+                        Provider <span className="text-white/35">(optional)</span>
+                      </span>
+                      <div className={fieldShell}>
+                        <input
+                          value={form.provider}
+                          onChange={(e) => set("provider", e.target.value)}
+                          placeholder="e.g., AO Smith"
+                          className={fieldInner}
+                        />
+                      </div>
+                    </label>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className="block">
+                        <span className={labelCaps}>Purchase Date</span>
+                        <div className={fieldShell}>
+                          <input
+                            type="date"
+                            value={form.purchasedAt}
+                            onChange={(e) => set("purchasedAt", e.target.value)}
+                            className={fieldInner}
+                          />
+                        </div>
+                      </label>
+
+                      <label className="block">
+                        <span className={labelCaps}>
+                          Expires <span className="text-white/35">(optional)</span>
+                        </span>
+                        <div className={fieldShell}>
+                          <input
+                            type="date"
+                            value={form.expiresAt}
+                            onChange={(e) => set("expiresAt", e.target.value)}
+                            className={fieldInner}
+                          />
+                        </div>
+                      </label>
                     </div>
-                    {form.note && <ReviewField label="Notes" value={form.note} />}
+
+                    <label className="block">
+                      <span className={labelCaps}>
+                        Notes <span className="text-white/35">(optional)</span>
+                      </span>
+                      <div className={fieldShell}>
+                        <textarea
+                          rows={3}
+                          value={form.note}
+                          onChange={(e) => set("note", e.target.value)}
+                          placeholder="Coverage details, serial numbers, etc."
+                          className={textareaInner}
+                        />
+                      </div>
+                    </label>
                   </>
                 )}
 
-                {previews.length > 0 && (
-                  <div>
-                    <div className="mb-2 text-xs uppercase tracking-wide text-white/60">
-                      Attachments
-                    </div>
-                    <div className="flex gap-2 overflow-x-auto">
-                      {previews.map((u, i) => (
-                        <Image
-                          key={i}
-                          src={u}
-                          alt={`Attachment ${i + 1}`}
-                          width={60}
-                          height={60}
-                          className="h-16 w-16 rounded-xl border border-white/20 object-cover"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
+                <div className="flex justify-between pt-2">
+                  <GhostButton type="button" onClick={back}>
+                    Back
+                  </GhostButton>
+                  <Button type="button" onClick={next}>
+                    Review
+                  </Button>
+                </div>
               </div>
+            )}
 
-              <div className="flex justify-between">
-                <GhostButton type="button" onClick={back}>
-                  Back
-                </GhostButton>
-                <Button type="submit">Save {typeLabels[recordType]}</Button>
+            {/* Step 4: Review */}
+            {step === maxSteps && (
+              <div className="space-y-4">
+                <div className="space-y-3 rounded-2xl border border-white/20 bg-white/5 p-4">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span className="text-2xl">
+                      {recordType === "record" ? "🔧" : recordType === "reminder" ? "⏰" : "📄"}
+                    </span>
+                    <span className="text-sm uppercase tracking-wide text-white/60">
+                      {typeLabels[recordType]}
+                    </span>
+                  </div>
+
+                  {recordType === "record" && (
+                    <>
+                      <ReviewField label="Title" value={form.title} />
+                      <div className="grid grid-cols-2 gap-4">
+                        <ReviewField label="Date" value={form.date} />
+                        <ReviewField label="Category" value={form.category} />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <ReviewField label="Vendor" value={form.vendor} />
+                        <ReviewField
+                          label="Cost"
+                          value={form.cost.trim() ? `$${Number(form.cost).toFixed(2)}` : ""}
+                        />
+                      </div>
+                      {form.verified ? (
+                        <div className="text-sm text-green-400">✓ Verified by vendor</div>
+                      ) : null}
+                      {form.note ? <ReviewField label="Notes" value={form.note} /> : null}
+                    </>
+                  )}
+
+                  {recordType === "reminder" && (
+                    <>
+                      <ReviewField label="Title" value={form.title} />
+                      <ReviewField label="Due Date" value={form.dueAt} />
+                      {form.note ? <ReviewField label="Notes" value={form.note} /> : null}
+                    </>
+                  )}
+
+                  {recordType === "warranty" && (
+                    <>
+                      <ReviewField label="Item" value={form.item} />
+                      {form.provider ? <ReviewField label="Provider" value={form.provider} /> : null}
+                      <div className="grid grid-cols-2 gap-4">
+                        <ReviewField label="Purchased" value={form.purchasedAt} />
+                        {form.expiresAt ? <ReviewField label="Expires" value={form.expiresAt} /> : null}
+                      </div>
+                      {form.note ? <ReviewField label="Notes" value={form.note} /> : null}
+                    </>
+                  )}
+
+                  {previews.length > 0 && (
+                    <div>
+                      <div className="mb-2 text-xs uppercase tracking-wide text-white/60">
+                        Attachments
+                      </div>
+                      <div className="flex gap-2 overflow-x-auto">
+                        {previews.map((u, i) => (
+                          <Image
+                            key={i}
+                            src={u}
+                            alt={`Attachment ${i + 1}`}
+                            width={60}
+                            height={60}
+                            className="h-16 w-16 rounded-xl border border-white/20 object-cover"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex justify-between">
+                  <GhostButton type="button" onClick={back}>
+                    Back
+                  </GhostButton>
+                  <Button type="submit">Save {typeLabels[recordType]}</Button>
+                </div>
               </div>
-            </div>
-          )}
-        </form>
+            )}
+          </form>
+        </div>
       </Modal>
     </div>
   );
@@ -709,9 +712,7 @@ function ReviewField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <div className="mb-1 text-xs uppercase tracking-wide text-white/60">{label}</div>
-      <div className="text-white">
-        {value ? value : <span className="text-white/40">Not specified</span>}
-      </div>
+      <div className="text-white">{value ? value : <span className="text-white/40">Not specified</span>}</div>
     </div>
   );
 }
