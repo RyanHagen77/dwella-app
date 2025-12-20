@@ -558,18 +558,38 @@ function PendingServiceTab({
               <button
                 type="button"
                 onClick={() => handleApprove(service.id)}
-                className="rounded-full bg-white/90 px-4 py-2 text-sm font-medium text-black"
+                className="
+                  rounded-full
+                  border border-emerald-400/30
+                  bg-emerald-400/15
+                  px-4 py-2
+                  text-sm font-medium text-emerald-200
+                  backdrop-blur
+                  transition-colors
+                  hover:bg-emerald-400/25
+                  hover:border-emerald-400/40
+                "
               >
-                ✓ Approve &amp; Add to Records
+                ✓ Approve &amp; add to records
               </button>
 
               <button
-                type="button"
-                onClick={() => handleReject(service.id)}
-                className="rounded-full bg-white/10 px-4 py-2 text-sm text-white/90"
-              >
-                ✗ Reject
-              </button>
+              type="button"
+              onClick={() => handleReject(service.id)}
+              className="
+                rounded-full
+                border border-red-400/30
+                bg-red-400/15
+                px-4 py-2
+                text-sm font-medium text-red-200
+                backdrop-blur
+                transition-colors
+                hover:bg-red-400/25
+                hover:border-red-400/40
+              "
+            >
+              ✗ Reject
+            </button>
             </div>
           </div>
         );
