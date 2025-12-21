@@ -1,4 +1,3 @@
-// app/home/[homeId]/completed-service-submissions/page.tsx
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
@@ -9,28 +8,13 @@ import { notFound } from "next/navigation";
 import { ServiceSubmissionStatus } from "@prisma/client";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import { glass, heading, textMeta, ctaPrimary } from "@/lib/glass";
 import Link from "next/link";
+import { ctaPrimary } from "@/lib/glass";
 
 import CompletedServiceSubmissionsClient from "./CompletedServiceSubmissionsClient";
+import { PageHeader } from "@/components/ui/PageHeader";
 
-type PageProps = {
-  params: Promise<{ homeId: string }>;
-};
-
-function BackButton({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 transition-colors hover:bg-white/15"
-      aria-label={label}
-    >
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-      </svg>
-    </Link>
-  );
-}
+type PageProps = { params: Promise<{ homeId: string }> };
 
 export default async function WorkPage({ params }: PageProps) {
   const { homeId } = await params;
@@ -51,7 +35,6 @@ export default async function WorkPage({ params }: PageProps) {
     `${home.state ? `, ${home.state}` : ""}` +
     `${home.zip ? ` ${home.zip}` : ""}`;
 
-  // Connected contractors
   const connectionsRaw = await prisma.connection.findMany({
     where: { homeId, status: "ACTIVE" },
     include: {
@@ -70,7 +53,6 @@ export default async function WorkPage({ params }: PageProps) {
     orderBy: { createdAt: "desc" },
   });
 
-  // Pending work submissions
   const pendingServiceRaw = await prisma.serviceRecord.findMany({
     where: {
       homeId,
@@ -91,7 +73,6 @@ export default async function WorkPage({ params }: PageProps) {
     orderBy: { createdAt: "desc" },
   });
 
-  // Service requests
   const serviceRequestsRaw = await prisma.serviceRequest.findMany({
     where: { homeId, homeownerId: session.user.id },
     include: {
@@ -110,14 +91,9 @@ export default async function WorkPage({ params }: PageProps) {
     orderBy: { createdAt: "desc" },
   });
 
-  // Serialize
   const connections = connectionsRaw
     .filter((c) => c.contractor)
-    .map((c) => ({
-      id: c.id,
-      contractor: c.contractor!,
-      createdAt: c.createdAt.toISOString(),
-    }));
+    .map((c) => ({ id: c.id, contractor: c.contractor!, createdAt: c.createdAt.toISOString() }));
 
   const pendingService = pendingServiceRaw
     .filter((s) => s.contractor)
@@ -172,6 +148,8 @@ export default async function WorkPage({ params }: PageProps) {
     }));
 
   const backHref = `/home/${homeId}`;
+  const requestHref = `/home/${homeId}/service-requests/new`;
+
   const breadcrumbItems = [{ label: homeAddress, href: backHref }, { label: "Requests & Submissions" }];
 
   return (
@@ -179,30 +157,27 @@ export default async function WorkPage({ params }: PageProps) {
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={breadcrumbItems} />
 
-        {/* Header */}
-        <section className={glass}>
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <BackButton href={backHref} label="Back to home" />
-              <div className="min-w-0 flex-1">
-                <h1 className={`text-2xl font-bold ${heading}`}>Requests &amp; Submissions</h1>
-                <p className={`mt-1 text-sm ${textMeta}`}>
-                  {serviceRequests.length} active {serviceRequests.length === 1 ? "request" : "requests"} •{" "}
-                  {pendingService.length} awaiting approval
-                </p>
-              </div>
-            </div>
-
-            <Link href={`/home/${homeId}/service-requests/new`} className={ctaPrimary}>
+        <PageHeader
+          backHref={backHref}
+          backLabel="Back to home"
+          title="Requests & Submissions"
+          meta={
+            <>
+              {serviceRequests.length} active {serviceRequests.length === 1 ? "request" : "requests"} •{" "}
+              {pendingService.length} awaiting approval
+            </>
+          }
+          rightDesktop={
+            <Link href={requestHref} className={ctaPrimary}>
               + Request Service
             </Link>
-          </div>
-        </section>
+          }
+        />
 
-        {/* ✅ Client content: NOT wrapped in glass (prevents washed stacking) */}
+        {/* ✅ NOT glass: avoids “washed / double layer / hover slab” */}
         <CompletedServiceSubmissionsClient
           homeId={homeId}
-          homeAddress={homeAddress}
+          requestHref={requestHref}
           connections={connections}
           pendingService={pendingService}
           serviceRequests={serviceRequests}
