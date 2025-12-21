@@ -199,7 +199,7 @@ function ServiceRequestsTab({
   const [statusFilter, setStatusFilter] = useState<ServiceStatusFilter>("ALL");
   const [showFilters, setShowFilters] = useState(false);
 
-  // ✅ tweak #1: active filter count for the Filters button (badge when not ALL)
+  // Filters button badge count (how many filters are “active”)
   const activeFilterCount = statusFilter === "ALL" ? 0 : 1;
 
   const statusOptions = useMemo(
@@ -216,8 +216,31 @@ function ServiceRequestsTab({
     []
   );
 
+  // ✅ NEW: count items per status for pill badges
+  const statusCounts = useMemo(() => {
+    const counts: Record<ServiceStatusFilter, number> = {
+      ALL: serviceRequests.length,
+      PENDING: 0,
+      QUOTED: 0,
+      ACCEPTED: 0,
+      IN_PROGRESS: 0,
+      COMPLETED: 0,
+      DECLINED: 0,
+      CANCELLED: 0,
+    };
+
+    for (const r of serviceRequests) {
+      const k = r.status as ServiceStatusFilter;
+      if (counts[k] !== undefined) counts[k] += 1;
+    }
+
+    return counts;
+  }, [serviceRequests]);
+
   const filtered =
-    statusFilter === "ALL" ? serviceRequests : serviceRequests.filter((req) => req.status === statusFilter);
+    statusFilter === "ALL"
+      ? serviceRequests
+      : serviceRequests.filter((req) => req.status === statusFilter);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -256,15 +279,21 @@ function ServiceRequestsTab({
     );
   };
 
+  const CountBadge = ({ n }: { n: number }) =>
+    n > 0 ? (
+      <span className="ml-2 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-white/15 bg-white/10 px-1.5 text-[11px] font-semibold leading-none text-white/90">
+        {n}
+      </span>
+    ) : null;
+
   return (
     <div className="space-y-4">
-      {/* ✅ Mobile row: Request + Filters (same line) */}
+      {/* Mobile row: Request + Filters (same line) */}
       <div className="flex items-center justify-between gap-3 sm:hidden">
         <Link href={requestHref} className={ctaPrimary}>
           + Request Service
         </Link>
 
-        {/* ✅ tweak #1: (All) vs badge count */}
         <button
           type="button"
           onClick={() => setShowFilters((v) => !v)}
@@ -286,7 +315,7 @@ function ServiceRequestsTab({
         </button>
       </div>
 
-      {/* ✅ tweak #2: subtle animated drawer on mobile (no hover slabs) */}
+      {/* Animated filters drawer on mobile; always visible on desktop */}
       <div
         className={[
           "overflow-hidden sm:overflow-visible",
@@ -296,20 +325,26 @@ function ServiceRequestsTab({
         ].join(" ")}
       >
         <div className="flex flex-wrap items-center gap-2 pt-3 sm:pt-0">
-          {statusOptions.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => {
-                setStatusFilter(opt.value as ServiceStatusFilter);
-                // nice on mobile: choose -> collapse
-                setShowFilters(false);
-              }}
-              className={[filterPillBase, statusFilter === opt.value ? filterActive : filterIdle].join(" ")}
-            >
-              {opt.label}
-            </button>
-          ))}
+          {statusOptions.map((opt) => {
+            const v = opt.value as ServiceStatusFilter;
+            const isActive = statusFilter === v;
+            const n = statusCounts[v] ?? 0;
+
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => {
+                  setStatusFilter(v);
+                  setShowFilters(false); // mobile: choose -> collapse
+                }}
+                className={[filterPillBase, isActive ? filterActive : filterIdle].join(" ")}
+              >
+                <span>{opt.label}</span>
+                <CountBadge n={n} />
+              </button>
+            );
+          })}
         </div>
       </div>
 
