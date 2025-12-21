@@ -1,10 +1,10 @@
 "use client";
 
-import {useState} from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import {formatDistanceToNow} from "date-fns";
-import {glassTight, textMeta} from "@/lib/glass";
+import { formatDistanceToNow } from "date-fns";
+import { glassTight, textMeta } from "@/lib/glass";
 
 type Conversation = {
   connectionId: string;
@@ -35,51 +35,56 @@ export function MessagesListClient({
 
   const conversations = view === "active" ? activeConversations : archivedConversations;
 
+  const hasArchived = archivedConversations.length > 0;
+
   return (
     <>
-      {/* Pills - only show if there are archived conversations */}
-      {archivedConversations.length > 0 && (
-        <div className="flex gap-2 mb-4">
+      {/* Tabs (landing-style segmented toggle) */}
+      {hasArchived && (
+        <div className="mb-4 inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm">
           <button
+            type="button"
             onClick={() => setView("active")}
-            className={`rounded-full border px-4 py-2 text-sm transition ${
+            className={[
+              "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
               view === "active"
-                ? "border-white/40 bg-white/15 text-white"
-                : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-            }`}
+                ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+                : "text-white/80 hover:text-white hover:bg-white/5",
+            ].join(" ")}
           >
-            Active ({activeConversations.length})
+            Active{activeConversations.length > 0 ? ` (${activeConversations.length})` : ""}
           </button>
+
           <button
+            type="button"
             onClick={() => setView("archived")}
-            className={`rounded-full border px-4 py-2 text-sm transition ${
+            className={[
+              "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
               view === "archived"
-                ? "border-white/40 bg-white/15 text-white"
-                : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-            }`}
+                ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+                : "text-white/80 hover:text-white hover:bg-white/5",
+            ].join(" ")}
           >
-            Archived ({archivedConversations.length})
+            Archived{archivedConversations.length > 0 ? ` (${archivedConversations.length})` : ""}
           </button>
         </div>
       )}
 
       {/* Conversations List */}
       {conversations.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+        <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
           {view === "active" ? (
             <>
               <p className="mb-2 text-white/80">No active conversations</p>
               <p className={`text-sm ${textMeta}`}>
-                Messages will appear here when contractors reach out or when you
-                start a conversation with a connected contractor.
+                Messages will appear here when contractors reach out or when you start a conversation with a connected
+                contractor.
               </p>
             </>
           ) : (
             <>
               <p className="mb-2 text-white/80">No archived conversations</p>
-              <p className={`text-sm ${textMeta}`}>
-                Conversations with disconnected contractors will appear here.
-              </p>
+              <p className={`text-sm ${textMeta}`}>Conversations with disconnected contractors will appear here.</p>
             </>
           )}
         </div>
@@ -89,9 +94,12 @@ export function MessagesListClient({
             <Link
               key={conv.connectionId}
               href={`/home/${homeId}/messages/${conv.connectionId}`}
-              className={`${glassTight} flex items-center gap-4 hover:bg-white/10 transition-colors ${
-                conv.isArchived ? "opacity-75" : ""
-              }`}
+              className={[
+                glassTight,
+                "flex items-center gap-4 transition-colors",
+                "hover:bg-white/10",
+                conv.isArchived ? "opacity-75" : "",
+              ].join(" ")}
             >
               {/* Avatar */}
               <div className="flex-shrink-0">
@@ -101,51 +109,50 @@ export function MessagesListClient({
                     alt={conv.contractor.name}
                     width={48}
                     height={48}
-                    className="rounded-full"
+                    className="h-12 w-12 rounded-full border border-white/10 object-cover"
                   />
                 ) : (
-                  <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center">
-                    <span className="text-xl font-medium">
-                      {conv.contractor.name[0]?.toUpperCase() || "?"}
-                    </span>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-black/20">
+                    <span className="text-xl font-medium">{conv.contractor.name[0]?.toUpperCase() || "?"}</span>
                   </div>
                 )}
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <p className="font-medium text-white truncate">
-                      {conv.contractor.name}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="truncate font-medium text-white">{conv.contractor.name}</p>
+
                     {conv.isArchived && (
-                      <span className="inline-block rounded-full bg-gray-500/20 px-2 py-0.5 text-xs text-gray-400 flex-shrink-0">
+                      <span className="flex-shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/60">
                         Archived
                       </span>
                     )}
                   </div>
+
                   {conv.lastMessage && (
-                    <p className={`text-xs ${textMeta} flex-shrink-0`}>
-                      {formatDistanceToNow(new Date(conv.lastMessage.createdAt), {
-                        addSuffix: true,
-                      })}
+                    <p className={`flex-shrink-0 text-xs ${textMeta}`}>
+                      {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: true })}
                     </p>
                   )}
                 </div>
-                {conv.lastMessage && (
+
+                {conv.lastMessage ? (
                   <p
-                    className={`mt-1 truncate text-sm ${
-                      conv.unreadCount > 0 && !conv.isArchived
-                        ? "text-white font-medium"
-                        : textMeta
-                    }`}
+                    className={[
+                      "mt-1 truncate text-sm",
+                      conv.unreadCount > 0 && !conv.isArchived ? "font-medium text-white" : textMeta,
+                    ].join(" ")}
                   >
                     {conv.lastMessage.content}
                   </p>
+                ) : (
+                  <p className={`mt-1 truncate text-sm ${textMeta}`}>No messages yet</p>
                 )}
+
                 {conv.isArchived && conv.archivedAt && (
-                  <p className="mt-1 text-xs text-gray-500">
+                  <p className="mt-1 text-xs text-white/40">
                     Disconnected {formatDistanceToNow(new Date(conv.archivedAt), { addSuffix: true })}
                   </p>
                 )}
@@ -153,23 +160,21 @@ export function MessagesListClient({
 
               {/* Unread badge - only for active conversations */}
               {!conv.isArchived && conv.unreadCount > 0 && (
-                <div className="flex-shrink-0 h-6 min-w-[24px] px-1.5 rounded-full bg-orange-500 flex items-center justify-center">
-                  <span className="text-xs font-bold text-white">
-                    {conv.unreadCount > 99 ? "99+" : conv.unreadCount}
-                  </span>
+                <div className="flex h-6 min-w-[24px] flex-shrink-0 items-center justify-center rounded-full bg-orange-500 px-1.5">
+                  <span className="text-xs font-bold text-white">{conv.unreadCount > 99 ? "99+" : conv.unreadCount}</span>
                 </div>
               )}
 
-              {/* Read-only indicator for archived */}
+              {/* Archived indicator */}
               {conv.isArchived && (
-                <div className="flex-shrink-0 text-gray-500">
+                <div className="flex-shrink-0 text-white/35">
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     fill="none"
                     viewBox="0 0 24 24"
                     strokeWidth={1.5}
                     stroke="currentColor"
-                    className="w-5 h-5"
+                    className="h-5 w-5"
                   >
                     <path
                       strokeLinecap="round"

@@ -143,8 +143,6 @@ export default function CompletedServiceSubmissionsClient({
   requestHref,
 }: {
   homeId: string;
-  homeAddress: string;
-  connections: Connection[];
   pendingService: PendingService[];
   serviceRequests: ServiceRequest[];
   requestHref: string;
@@ -157,33 +155,33 @@ export default function CompletedServiceSubmissionsClient({
   return (
     <div className="space-y-6">
       {/* Tabs (match landing AudienceToggle style) */}
-<div className="inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm">
-  <button
-    type="button"
-    onClick={() => setActiveTab("requests")}
-    className={[
-      "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
-      activeTab === "requests"
-        ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
-        : "text-white/80 hover:text-white hover:bg-white/5",
-    ].join(" ")}
-  >
-    Service Requests{totalRequests > 0 ? ` (${totalRequests})` : ""}
-  </button>
+      <div className="inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={() => setActiveTab("requests")}
+          className={[
+            "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
+            activeTab === "requests"
+              ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+              : "text-white/80 hover:text-white hover:bg-white/5",
+          ].join(" ")}
+        >
+          Service Requests{totalRequests > 0 ? ` (${totalRequests})` : ""}
+        </button>
 
-  <button
-    type="button"
-    onClick={() => setActiveTab("submissions")}
-    className={[
-      "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
-      activeTab === "submissions"
-        ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
-        : "text-white/80 hover:text-white hover:bg-white/5",
-    ].join(" ")}
-  >
-    Pending Submissions{totalPendingApprovals > 0 ? ` (${totalPendingApprovals})` : ""}
-  </button>
-</div>
+        <button
+          type="button"
+          onClick={() => setActiveTab("submissions")}
+          className={[
+            "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
+            activeTab === "submissions"
+              ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+              : "text-white/80 hover:text-white hover:bg-white/5",
+          ].join(" ")}
+        >
+          Pending Submissions{totalPendingApprovals > 0 ? ` (${totalPendingApprovals})` : ""}
+        </button>
+      </div>
 
       {/* Content */}
       {activeTab === "requests" ? (

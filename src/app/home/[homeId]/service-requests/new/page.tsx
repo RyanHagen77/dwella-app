@@ -6,40 +6,16 @@ import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { requireHomeAccess } from "@/lib/authz";
-import Link from "next/link";
-import { glass, heading, textMeta } from "@/lib/glass";
+
+import Breadcrumb from "@/components/ui/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
+
 import { RequestServiceForm } from "../_components/RequestServiceForm";
 import { NoContractorsCard } from "../_components/NoContractorsCard";
-import Breadcrumb from "@/components/ui/Breadcrumb";
 
 type PageProps = {
   params: Promise<{ homeId: string }>;
 };
-
-function BackButton({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10"
-      aria-label={label}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={2}
-        stroke="currentColor"
-        className="h-5 w-5"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-        />
-      </svg>
-    </Link>
-  );
-}
 
 export default async function RequestServicePage({ params }: PageProps) {
   const { homeId } = await params;
@@ -88,42 +64,30 @@ export default async function RequestServicePage({ params }: PageProps) {
     orderBy: { lastServiceDate: "desc" },
   });
 
+  const hasConnections = connections.length > 0;
+
   const backHref = `/home/${homeId}/completed-service-submissions`;
 
   const breadcrumbItems = [
     { label: homeAddress, href: `/home/${homeId}` },
     { label: "Requests & Submissions", href: backHref },
-    { label: "Request Service" },
+    { label: hasConnections ? "Request Service" : "Request Work" },
   ];
-
-  const hasConnections = connections.length > 0;
 
   return (
     <main className="relative min-h-screen text-white">
-      <div className={`mx-auto space-y-6 p-6 ${hasConnections ? "max-w-4xl" : "max-w-7xl"}`}>
+      <div className="mx-auto max-w-4xl space-y-6 p-6">
         <Breadcrumb items={breadcrumbItems} />
 
-        {/* Header */}
-        <section className={glass}>
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <BackButton href={backHref} label="Back to requests" />
-
-              <div className="min-w-0 flex-1">
-                <h1 className={`text-2xl font-bold ${heading}`}>
-                  {hasConnections ? "Request Service" : "Request Work"}
-                </h1>
-
-                <p className={`mt-1 text-sm ${textMeta}`}>
-                  Request work from a contractor you’re connected with
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+        <PageHeader
+          backHref={backHref}
+          backLabel="Back to requests"
+          title={hasConnections ? "Request Service" : "Request Work"}
+          meta="Request work from a contractor you’re connected with"
+        />
 
         {hasConnections ? (
-          // IMPORTANT: do NOT wrap in `glass` here (it adds the washed/hover multi-layer look)
+          // ✅ Single layer body surface (no glass-on-glass)
           <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
             <RequestServiceForm homeId={homeId} connections={connections} />
           </section>

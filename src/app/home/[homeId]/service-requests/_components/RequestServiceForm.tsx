@@ -14,7 +14,6 @@ import {
   formLabelCaps,
   formHelperText,
   formSectionSurface,
-  formQuietButton,
 } from "@/components/ui/formFields";
 
 type Connection = {
@@ -76,8 +75,20 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
   const [submitting, setSubmitting] = React.useState(false);
   const [uploadingPhotos, setUploadingPhotos] = React.useState(false);
+
   const [photos, setPhotos] = React.useState<PhotoFile[]>([]);
   const [uploadError, setUploadError] = React.useState<string | null>(null);
+  const [formError, setFormError] = React.useState<string | null>(null);
+
+  const photosRef = React.useRef<PhotoFile[]>([]);
+  React.useEffect(() => {
+    photosRef.current = photos;
+  }, [photos]);
+
+  // cleanup previews on unmount (always revoke latest)
+  React.useEffect(() => {
+    return () => photosRef.current.forEach((p) => URL.revokeObjectURL(p.preview));
+  }, []);
 
   const [form, setForm] = React.useState({
     connectionId: "",
@@ -91,16 +102,11 @@ export function RequestServiceForm({ homeId, connections }: Props) {
     timeframe: "",
   });
 
-  // cleanup previews on unmount
-  React.useEffect(() => {
-    return () => photos.forEach((p) => URL.revokeObjectURL(p.preview));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const handleContractorChange = (connectionId: string) => {
+    setFormError(null);
     const connection = connections.find((c) => c.id === connectionId);
     if (connection?.contractor) {
       setForm((f) => ({
@@ -116,6 +122,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     setUploadError(null);
+    setFormError(null);
 
     if (photos.length + files.length > MAX_PHOTOS) {
       setUploadError(`You can only upload up to ${MAX_PHOTOS} photos`);
@@ -170,10 +177,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
           throw new Error(err.error || "Failed to get upload URL");
         }
 
-        const { url, publicUrl } = (await presignRes.json()) as {
-          url: string;
-          publicUrl: string;
-        };
+        const { url, publicUrl } = (await presignRes.json()) as { url: string; publicUrl: string };
 
         const uploadRes = await fetch(url, {
           method: "PUT",
@@ -194,10 +198,11 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+    setUploadError(null);
 
-    // NOTE: leaving your alerts for now; when you add toasts, swap to inline/toast.
     if (!form.connectionId || !form.contractorId || !form.title || !form.description) {
-      alert("Please fill in contractor, title, and description");
+      setFormError("Please select a contractor and fill in title + description.");
       return;
     }
 
@@ -254,10 +259,14 @@ export function RequestServiceForm({ homeId, connections }: Props) {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ photos: photoUrls }),
           });
-          if (!updateRes.ok) console.error("Failed to update service request with photos");
+
+          if (!updateRes.ok) {
+            console.error("Failed to update service request with photos");
+            setFormError("Service request created, but some photos failed to save.");
+          }
         } catch (photoError) {
           console.error("Error uploading photos:", photoError);
-          alert("Service request created but some photos failed to upload");
+          setFormError("Service request created, but some photos failed to upload.");
         }
       }
 
@@ -267,7 +276,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
       router.push(`/home/${homeId}/service-requests/${serviceRequest.id}`);
     } catch (error) {
       console.error("Error creating service request:", error);
-      alert(error instanceof Error ? error.message : "Failed to create service request");
+      setFormError(error instanceof Error ? error.message : "Failed to create service request");
     } finally {
       setSubmitting(false);
     }
@@ -312,7 +321,13 @@ export function RequestServiceForm({ homeId, connections }: Props) {
             <div className="flex items-start gap-3">
               {contractor.image ? (
                 <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/20">
-                  <Image src={contractor.image} alt={contractor.name || "Contractor"} fill className="object-cover" sizes="48px" />
+                  <Image
+                    src={contractor.image}
+                    alt={contractor.name || "Contractor"}
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                  />
                 </div>
               ) : (
                 <div className="h-12 w-12 flex-shrink-0 rounded-full border border-white/15 bg-black/20" />
@@ -330,7 +345,9 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                   <p className="mt-1 text-xs text-white/60">{profile.specialties.join(", ")}</p>
                 ) : null}
 
-                {profile?.rating ? <p className="mt-1 text-xs text-white/60">⭐ {profile.rating.toFixed(1)}</p> : null}
+                {profile?.rating ? (
+                  <p className="mt-1 text-xs text-white/60">⭐ {profile.rating.toFixed(1)}</p>
+                ) : null}
               </div>
             </div>
           </div>
@@ -389,15 +406,15 @@ export function RequestServiceForm({ homeId, connections }: Props) {
             className="sr-only"
           />
 
-          <button
+          <Button
             type="button"
+            variant="quiet"
             onClick={() => fileInputRef.current?.click()}
             disabled={photos.length >= MAX_PHOTOS}
-            className={formQuietButton}
           >
             <Upload className="h-4 w-4" />
             Upload photos
-          </button>
+          </Button>
         </div>
 
         {uploadError && (
@@ -410,8 +427,17 @@ export function RequestServiceForm({ homeId, connections }: Props) {
           <>
             <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
               {photos.map((photo, index) => (
-                <div key={index} className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/20">
-                  <Image src={photo.preview} alt={`Preview ${index + 1}`} width={96} height={96} className="h-24 w-24 object-cover" />
+                <div
+                  key={index}
+                  className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/20"
+                >
+                  <Image
+                    src={photo.preview}
+                    alt={`Preview ${index + 1}`}
+                    width={96}
+                    height={96}
+                    className="h-24 w-24 object-cover"
+                  />
                   <button
                     type="button"
                     onClick={() => removePhoto(index)}
@@ -454,10 +480,18 @@ export function RequestServiceForm({ homeId, connections }: Props) {
           <span className={formLabelCaps}>Urgency</span>
           <div className={`${formFieldShell} relative`}>
             <select value={form.urgency} onChange={(e) => set("urgency", e.target.value)} className={formSelectInner}>
-              <option value="LOW" className="bg-gray-900">Low - Can wait</option>
-              <option value="NORMAL" className="bg-gray-900">Normal</option>
-              <option value="HIGH" className="bg-gray-900">High - Soon</option>
-              <option value="EMERGENCY" className="bg-gray-900">Emergency</option>
+              <option value="LOW" className="bg-gray-900">
+                Low - Can wait
+              </option>
+              <option value="NORMAL" className="bg-gray-900">
+                Normal
+              </option>
+              <option value="HIGH" className="bg-gray-900">
+                High - Soon
+              </option>
+              <option value="EMERGENCY" className="bg-gray-900">
+                Emergency
+              </option>
             </select>
             <Chevron />
           </div>
@@ -513,12 +547,24 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
         <div className={`${formFieldShell} relative`}>
           <select value={form.timeframe} onChange={(e) => set("timeframe", e.target.value)} className={formSelectInner}>
-            <option value="" className="bg-gray-900">Select timeframe…</option>
-            <option value="TODAY" className="bg-gray-900">Today</option>
-            <option value="ASAP" className="bg-gray-900">ASAP (within 1-2 days)</option>
-            <option value="SOON" className="bg-gray-900">Soon (within 3-5 days)</option>
-            <option value="1-2_WEEKS" className="bg-gray-900">1-2 Weeks</option>
-            <option value="NO_RUSH" className="bg-gray-900">No Rush</option>
+            <option value="" className="bg-gray-900">
+              Select timeframe…
+            </option>
+            <option value="TODAY" className="bg-gray-900">
+              Today
+            </option>
+            <option value="ASAP" className="bg-gray-900">
+              ASAP (within 1-2 days)
+            </option>
+            <option value="SOON" className="bg-gray-900">
+              Soon (within 3-5 days)
+            </option>
+            <option value="1-2_WEEKS" className="bg-gray-900">
+              1-2 Weeks
+            </option>
+            <option value="NO_RUSH" className="bg-gray-900">
+              No Rush
+            </option>
           </select>
           <Chevron />
         </div>
@@ -526,11 +572,19 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         <p className={formHelperText}>Give the contractor an idea of your timeline.</p>
       </label>
 
+      {/* Inline form error (standard) */}
+      {formError && (
+        <div className="rounded-2xl border border-red-500/35 bg-red-500/10 p-3 text-sm text-red-100">
+          {formError}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-end gap-3 pt-4">
         <GhostButton type="button" onClick={() => router.back()} disabled={submitting || uploadingPhotos}>
           Cancel
         </GhostButton>
+
         <Button type="submit" disabled={submitting || uploadingPhotos}>
           {uploadingPhotos ? "Uploading photos..." : submitting ? "Sending Request..." : "Send Request"}
         </Button>

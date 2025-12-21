@@ -178,7 +178,6 @@ export default async function WorkPage({ params }: PageProps) {
         <CompletedServiceSubmissionsClient
           homeId={homeId}
           requestHref={requestHref}
-          connections={connections}
           pendingService={pendingService}
           serviceRequests={serviceRequests}
         />

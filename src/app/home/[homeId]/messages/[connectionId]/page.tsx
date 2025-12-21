@@ -16,9 +16,12 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { glass, heading, textMeta } from "@/lib/glass";
+import { ServiceSubmissionStatus } from "@prisma/client";
+
+import Breadcrumb from "@/components/ui/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { textMeta } from "@/lib/glass";
 import { MessageThread } from "@/app/messages/_components/MessageThread";
-import ChatBreadcrumb from "@/components/ui/ChatBreadcrumb";
 
 export default async function HomeownerChatPage({
   params,
@@ -26,16 +29,12 @@ export default async function HomeownerChatPage({
   params: Promise<{ homeId: string; connectionId: string }>;
 }) {
   const session = await getServerSession(authConfig);
-
-  if (!session?.user?.id) {
-    redirect("/login");
-  }
+  if (!session?.user?.id) redirect("/login");
 
   const { homeId, connectionId } = await params;
   const userId = session.user.id;
 
-  // Get connection details - verify homeowner owns this stats and connection
-  // Include ARCHIVED status so we can show read-only view
+  // Verify homeowner owns this home + connection (include ARCHIVED for read-only view)
   const connection = await prisma.connection.findFirst({
     where: {
       id: connectionId,
@@ -50,11 +49,7 @@ export default async function HomeownerChatPage({
           name: true,
           email: true,
           image: true,
-          proProfile: {
-            select: {
-              businessName: true,
-            },
-          },
+          proProfile: { select: { businessName: true } },
         },
       },
       home: {
@@ -67,46 +62,14 @@ export default async function HomeownerChatPage({
     },
   });
 
-  if (!connection || !connection.contractor) {
-    notFound();
-  }
+  if (!connection || !connection.contractor) notFound();
 
   const isArchived = connection.status === "ARCHIVED";
   const contractorId = connection.contractor.id;
 
-  // Get messages
-  const messages = await prisma.message.findMany({
-    where: { connectionId },
-    include: {
-      sender: {
-        select: {
-          id: true,
-          name: true,
-          image: true,
-        },
-      },
-      attachments: {
-        select: {
-          id: true,
-          filename: true,
-          mimeType: true,
-          url: true,
-        },
-      },
-      reads: {
-        where: { userId },
-      },
-    },
-    orderBy: { createdAt: "asc" },
-    take: 100,
-  });
-
-  // Mark messages as "own" if NOT from contractor (i.e., from any homeowner)
-  // This ensures transferred messages from previous owners still show on the homeowner side
-  const messagesWithOwnership = messages.map((msg) => ({
-    ...msg,
-    isOwn: msg.senderId !== contractorId,
-  }));
+  const addrLine = [connection.home.address, connection.home.city, connection.home.state]
+    .filter(Boolean)
+    .join(", ");
 
   const otherUser = {
     id: connection.contractor.id,
@@ -118,124 +81,122 @@ export default async function HomeownerChatPage({
     image: connection.contractor.image,
   };
 
-  const property = {
-    address: connection.home.address,
-    city: connection.home.city,
-    state: connection.home.state,
-  };
+  // Get messages
+  const messages = await prisma.message.findMany({
+    where: { connectionId },
+    include: {
+      sender: { select: { id: true, name: true, image: true } },
+      attachments: { select: { id: true, filename: true, mimeType: true, url: true } },
+      reads: { where: { userId } },
+    },
+    orderBy: { createdAt: "asc" },
+    take: 100,
+  });
 
-  const addrLine = [property.address, property.city, property.state]
-    .filter(Boolean)
-    .join(", ");
+  // Mark "own" messages as those NOT from contractor (homeowner side should include transferred history)
+  const messagesWithOwnership = messages.map((msg) => ({
+    ...msg,
+    isOwn: msg.senderId !== contractorId,
+  }));
+
+  const backHref = `/home/${homeId}/messages`;
+  const breadcrumbItems = [
+    { label: addrLine || "Home", href: `/home/${homeId}` },
+    { label: "Messages", href: backHref },
+    { label: otherUser.name },
+  ];
 
   return (
     <main className="relative min-h-screen text-white">
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <Breadcrumb items={breadcrumbItems} />
 
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        {/* Breadcrumb */}
-        <ChatBreadcrumb
-          homeId={homeId}
-          homeAddress={addrLine}
-          otherUserName={otherUser.name}
+        <PageHeader
+          backHref={backHref}
+          backLabel="Back to messages"
+          title={
+            <div className="flex min-w-0 items-center gap-3">
+              {otherUser.image ? (
+                <Image
+                  src={otherUser.image}
+                  alt={otherUser.name}
+                  width={40}
+                  height={40}
+                  className="h-10 w-10 flex-shrink-0 rounded-full border border-white/10 object-cover"
+                />
+              ) : (
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20">
+                  <span className="text-lg font-medium">{otherUser.name[0]?.toUpperCase() || "?"}</span>
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="truncate">{otherUser.name}</span>
+                  {isArchived ? (
+                    <span className="flex-shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/60">
+                      Archived
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          }
+          meta={<span className={textMeta}>{addrLine}</span>}
+          rightDesktop={
+            isArchived ? (
+              <Link href={`/home/${homeId}/contractors`} className="text-sm text-white/70 hover:text-white transition">
+                Manage contractors →
+              </Link>
+            ) : null
+          }
         />
 
         {/* Archived Banner */}
         {isArchived && (
-          <div className="flex items-center gap-3 rounded-xl border border-gray-500/30 bg-gray-500/10 px-4 py-3">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-5 h-5 text-gray-400 flex-shrink-0"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-              />
-            </svg>
-            <div className="flex-1">
-              <p className="text-sm text-gray-300">
-                This conversation is archived. You can view past messages but cannot send new ones.
-              </p>
-            </div>
-            <Link
-              href={`/home/${homeId}/contractors`}
-              className="text-sm text-gray-400 hover:text-white transition-colors flex-shrink-0"
-            >
-              Manage contractors →
-            </Link>
-          </div>
-        )}
-
-        {/* Header w/ back arrow + contractor info */}
-        <section className={glass}>
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/home/${homeId}/messages`}
-              className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-              aria-label="Back to messages"
-            >
+          <div className="flex items-start gap-3 rounded-2xl border border-white/12 bg-white/5 px-4 py-3">
+            <div className="mt-0.5 flex-shrink-0 text-white/55" aria-hidden>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 stroke="currentColor"
-                className="w-5 h-5"
+                className="h-5 w-5"
               >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
-                  d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
+                  d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
                 />
               </svg>
-            </Link>
-
-            {otherUser.image ? (
-              <Image
-                src={otherUser.image}
-                alt={otherUser.name}
-                width={40}
-                height={40}
-                className="rounded-full flex-shrink-0"
-              />
-            ) : (
-              <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                <span className="text-lg font-medium">
-                  {otherUser.name[0]?.toUpperCase() || "?"}
-                </span>
-              </div>
-            )}
+            </div>
 
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <h1 className={`text-lg font-semibold ${heading} truncate`}>
-                  {otherUser.name}
-                </h1>
-                {isArchived && (
-                  <span className="inline-block rounded-full bg-gray-500/20 px-2 py-0.5 text-xs text-gray-400 flex-shrink-0">
-                    Archived
-                  </span>
-                )}
-              </div>
-              {addrLine && (
-                <p className={`text-sm ${textMeta} truncate`}>{addrLine}</p>
-              )}
+              <p className="text-sm text-white/80">
+                This conversation is archived. You can view past messages but can’t send new ones.
+              </p>
+              <p className={`mt-1 text-xs ${textMeta}`}>
+                If you reconnect with this contractor, messaging will resume automatically.
+              </p>
             </div>
-          </div>
-        </section>
 
-        {/* Messages thread */}
+            <Link
+              href={`/home/${homeId}/contractors`}
+              className="flex-shrink-0 text-sm text-white/70 hover:text-white transition"
+            >
+              Manage →
+            </Link>
+          </div>
+        )}
+
+        {/* Message Thread Surface (single clean layer; no glass-on-glass) */}
         <section
-          className={`
-            rounded-2xl border border-white/15
-            bg-black/45 backdrop-blur-sm
-            flex min-h-[60vh] flex-col overflow-hidden
-            ${isArchived ? "opacity-90" : ""}
-          `}
+          className={[
+            "rounded-2xl border border-white/15 bg-black/55 shadow-2xl backdrop-blur-xl",
+            "flex min-h-[60vh] flex-col overflow-hidden",
+            isArchived ? "opacity-90" : "",
+          ].join(" ")}
         >
           <div className="flex-1 min-h-[300px] overflow-hidden">
             <MessageThread
