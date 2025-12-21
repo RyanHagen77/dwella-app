@@ -20,7 +20,7 @@ function BackButton({ href, label }: { href: string; label: string }) {
   return (
     <Link
       href={href}
-      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 transition-colors hover:bg-white/15"
+      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10"
       aria-label={label}
     >
       <svg
@@ -115,9 +115,7 @@ export default async function RequestServicePage({ params }: PageProps) {
                 </h1>
 
                 <p className={`mt-1 text-sm ${textMeta}`}>
-                  {hasConnections
-                    ? `${connections.length} connected ${connections.length === 1 ? "contractor" : "contractors"}`
-                    : "No connected contractors"}
+                  Request work from a contractor you’re connected with
                 </p>
               </div>
             </div>

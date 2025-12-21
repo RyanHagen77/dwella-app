@@ -7,6 +7,23 @@ import Link from "next/link";
 import Image from "next/image";
 import { textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
 
+import {
+  tabsRow,
+  tabPillBase,
+  tabPillActive,
+  tabPillIdle,
+  filterPillBase,
+  filterPillActive,
+  filterPillIdle,
+  cardSurface,
+  cardLink,
+  insetSurface,
+  sectionTitle,
+  sectionCount,
+} from "@/components/ui/listPrimitives";
+
+import { foggyApprove, foggyReject } from "@/components/ui/foggyButtons";
+
 type Connection = {
   id: string;
   contractor: {
@@ -104,27 +121,6 @@ type ServiceStatusFilter =
   | "DECLINED"
   | "CANCELLED";
 
-/* =========================
-   Styling primitives
-   - NO hover
-   - NO transitions
-   - darker surfaces (no washed white)
-   ========================= */
-
-const pillBase = "rounded-full border px-4 py-2 text-sm";
-const pillActive = "border-white/25 bg-black/35 text-white";
-const pillIdle = "border-white/15 bg-black/20 text-white/80";
-
-const filterPillBase = "rounded-full border px-3 py-1 text-xs sm:text-sm";
-const filterActive = "border-white/25 bg-black/35 text-white";
-const filterIdle = "border-white/15 bg-black/20 text-white/70";
-
-const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
-const insetSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
-
-/* link card: looks like a card, no hover effects */
-const cardLink = `${cardSurface} block`;
-
 function formatDate(value: string | null | undefined) {
   if (!value) return "";
   const d = new Date(value);
@@ -138,8 +134,8 @@ export default function CompletedServiceSubmissionsClient({
   serviceRequests,
 }: {
   homeId: string;
-  homeAddress: string; // unused intentionally (layout is server-owned)
-  connections: Connection[]; // unused intentionally
+  homeAddress: string;
+  connections: Connection[];
   pendingService: PendingService[];
   serviceRequests: ServiceRequest[];
 }) {
@@ -152,11 +148,11 @@ export default function CompletedServiceSubmissionsClient({
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex flex-wrap gap-2">
+      <div className={tabsRow}>
         <button
           type="button"
           onClick={() => setActiveTab("all")}
-          className={[pillBase, activeTab === "all" ? pillActive : pillIdle].join(" ")}
+          className={[tabPillBase, activeTab === "all" ? tabPillActive : tabPillIdle].join(" ")}
         >
           All{totalAll > 0 ? ` (${totalAll})` : ""}
         </button>
@@ -164,7 +160,7 @@ export default function CompletedServiceSubmissionsClient({
         <button
           type="button"
           onClick={() => setActiveTab("requests")}
-          className={[pillBase, activeTab === "requests" ? pillActive : pillIdle].join(" ")}
+          className={[tabPillBase, activeTab === "requests" ? tabPillActive : tabPillIdle].join(" ")}
         >
           Service Requests{totalRequests > 0 ? ` (${totalRequests})` : ""}
         </button>
@@ -172,7 +168,7 @@ export default function CompletedServiceSubmissionsClient({
         <button
           type="button"
           onClick={() => setActiveTab("submissions")}
-          className={[pillBase, activeTab === "submissions" ? pillActive : pillIdle].join(" ")}
+          className={[tabPillBase, activeTab === "submissions" ? tabPillActive : tabPillIdle].join(" ")}
         >
           Pending Submissions{totalPendingApprovals > 0 ? ` (${totalPendingApprovals})` : ""}
         </button>
@@ -180,9 +176,7 @@ export default function CompletedServiceSubmissionsClient({
 
       {/* Content */}
       <div className="space-y-6">
-        {activeTab === "all" && (
-          <AllTab serviceRequests={serviceRequests} pendingService={pendingService} homeId={homeId} />
-        )}
+        {activeTab === "all" && <AllTab serviceRequests={serviceRequests} pendingService={pendingService} homeId={homeId} />}
 
         {activeTab === "requests" && <ServiceRequestsTab serviceRequests={serviceRequests} homeId={homeId} />}
 
@@ -222,8 +216,8 @@ function AllTab({
     <div className="space-y-8">
       {serviceRequests.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold text-white/85">
-            Service Requests <span className="text-white/45">({serviceRequests.length})</span>
+          <h2 className={sectionTitle}>
+            Service Requests <span className={sectionCount}>({serviceRequests.length})</span>
           </h2>
           <ServiceRequestsTab serviceRequests={serviceRequests} homeId={homeId} />
         </div>
@@ -233,8 +227,8 @@ function AllTab({
 
       {pendingService.length > 0 && (
         <div>
-          <h2 className="mb-3 text-sm font-semibold text-white/85">
-            Pending Submissions <span className="text-white/45">({pendingService.length})</span>
+          <h2 className={sectionTitle}>
+            Pending Submissions <span className={sectionCount}>({pendingService.length})</span>
           </h2>
           <PendingServiceTab pendingService={pendingService} homeId={homeId} />
         </div>
@@ -281,8 +275,7 @@ function ServiceRequestsTab({
     );
   }
 
-  const filtered =
-    statusFilter === "ALL" ? serviceRequests : serviceRequests.filter((req) => req.status === statusFilter);
+  const filtered = statusFilter === "ALL" ? serviceRequests : serviceRequests.filter((req) => req.status === statusFilter);
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -324,7 +317,7 @@ function ServiceRequestsTab({
             key={opt.value}
             type="button"
             onClick={() => setStatusFilter(opt.value as ServiceStatusFilter)}
-            className={[filterPillBase, statusFilter === opt.value ? filterActive : filterIdle].join(" ")}
+            className={[filterPillBase, statusFilter === opt.value ? filterPillActive : filterPillIdle].join(" ")}
           >
             {opt.label}
           </button>
@@ -413,36 +406,39 @@ function PendingServiceTab({
   pendingService,
   homeId,
 }: {
-  pendingService: PendingService[]; // ✅ fix your typo: PendingService[], not pendingService[]
+  pendingService: PendingService[];
   homeId: string;
 }) {
   const router = useRouter();
+  const [actingId, setActingId] = useState<string | null>(null);
 
   async function handleApprove(serviceId: string) {
+    setActingId(serviceId);
     try {
-      const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${serviceId}/approve`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${serviceId}/approve`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to approve service");
       router.refresh();
     } catch (error) {
       console.error("Error approving service:", error);
       alert("Failed to approve service");
+    } finally {
+      setActingId(null);
     }
   }
 
   async function handleReject(serviceId: string) {
     if (!confirm("Are you sure you want to reject this service?")) return;
 
+    setActingId(serviceId);
     try {
-      const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${serviceId}/reject`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${serviceId}/reject`, { method: "POST" });
       if (!res.ok) throw new Error("Failed to reject service");
       router.refresh();
     } catch (error) {
       console.error("Error rejecting service:", error);
-      alert("Failed to approve service");
+      alert("Failed to reject service");
+    } finally {
+      setActingId(null);
     }
   }
 
@@ -461,13 +457,13 @@ function PendingServiceTab({
       {pendingService.map((service) => {
         const images = service.attachments.filter((a) => a.mimeType?.startsWith("image/"));
         const docs = service.attachments.filter((a) => a.mimeType && !a.mimeType.startsWith("image/"));
+        const acting = actingId === service.id;
 
         return (
           <div key={service.id} className={cardSurface}>
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
                 <h3 className="text-base font-semibold text-white sm:text-lg">{service.title}</h3>
-
                 <p className="mt-1 text-sm text-white/70">
                   By: {service.contractor.proProfile?.businessName || service.contractor.name || service.contractor.email}
                 </p>
@@ -555,41 +551,13 @@ function PendingServiceTab({
             ) : null}
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => handleApprove(service.id)}
-                className="
-                  rounded-full
-                  border border-emerald-400/30
-                  bg-emerald-400/15
-                  px-4 py-2
-                  text-sm font-medium text-emerald-200
-                  backdrop-blur
-                  transition-colors
-                  hover:bg-emerald-400/25
-                  hover:border-emerald-400/40
-                "
-              >
+              <button type="button" onClick={() => handleApprove(service.id)} className={foggyApprove} disabled={acting}>
                 ✓ Approve &amp; add to records
               </button>
 
-              <button
-              type="button"
-              onClick={() => handleReject(service.id)}
-              className="
-                rounded-full
-                border border-red-400/30
-                bg-red-400/15
-                px-4 py-2
-                text-sm font-medium text-red-200
-                backdrop-blur
-                transition-colors
-                hover:bg-red-400/25
-                hover:border-red-400/40
-              "
-            >
-              ✗ Reject
-            </button>
+              <button type="button" onClick={() => handleReject(service.id)} className={foggyReject} disabled={acting}>
+                ✗ Reject
+              </button>
             </div>
           </div>
         );

@@ -7,8 +7,15 @@
  * - text-base on mobile to prevent iOS Safari auto-zoom
  */
 
+/**
+ * Usage:
+ * <div className={modalFieldShell}>
+ *   <input className={modalInputInner} />
+ * </div>
+ */
+
 export const modalFieldShell =
-  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
+  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition-[border-color] overflow-hidden " +
   "focus-within:border-[#33C17D] focus-within:border-2";
 
 export const modalFieldInnerBase =

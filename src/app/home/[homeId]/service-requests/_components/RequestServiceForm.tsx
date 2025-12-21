@@ -6,6 +6,17 @@ import Image from "next/image";
 import { Button, GhostButton } from "@/components/ui/Button";
 import { Upload } from "lucide-react";
 
+import {
+  formFieldShell,
+  formInputInner,
+  formTextareaInner,
+  formSelectInner,
+  formLabelCaps,
+  formHelperText,
+  formSectionSurface,
+  formQuietButton,
+} from "@/components/ui/formFields";
+
 type Connection = {
   id: string;
   contractor: {
@@ -50,52 +61,6 @@ const CATEGORIES = [
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const MAX_PHOTOS = 10;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-
-/* =========================
-   Field system (no rings)
-   ========================= */
-
-const fieldShell =
-  "rounded-2xl border border-white/20 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
-  "focus-within:border-[#33C17D] focus-within:border-2";
-
-const controlReset =
-  "border-0 ring-0 outline-none focus:ring-0 focus:outline-none focus-visible:outline-none focus-visible:ring-0 " +
-  "[-webkit-tap-highlight-color:transparent] " +
-  "autofill:shadow-[0_0_0px_1000px_rgba(0,0,0,0.35)_inset] " +
-  "autofill:[-webkit-text-fill-color:#fff]";
-
-const fieldInner =
-  "w-full bg-transparent px-4 py-2.5 text-white placeholder:text-white/40 " +
-  "text-base sm:text-sm " +
-  controlReset;
-
-const textareaInner =
-  "w-full bg-transparent px-4 py-3 text-white placeholder:text-white/40 " +
-  "resize-none min-h-[140px] " +
-  "text-base sm:text-sm " +
-  controlReset;
-
-const selectInner =
-  "w-full bg-transparent px-4 py-2.5 text-white appearance-none pr-10 " +
-  "text-base sm:text-sm " +
-  controlReset;
-
-const labelCaps =
-  "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
-
-/* =========================
-   Clean surfaces (NO washed cards)
-   ========================= */
-
-const sectionSurface = "rounded-2xl border border-white/15 bg-black/25 p-4";
-
-const quietButton =
-  "inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-white/90 " +
-  "transition-colors hover:bg-white/15 " +
-  "disabled:cursor-not-allowed disabled:opacity-50";
-
-const helperText = "mt-2 text-sm text-white/60";
 
 function Chevron() {
   return (
@@ -230,6 +195,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // NOTE: leaving your alerts for now; when you add toasts, swap to inline/toast.
     if (!form.connectionId || !form.contractorId || !form.title || !form.description) {
       alert("Please fill in contractor, title, and description");
       return;
@@ -283,18 +249,15 @@ export function RequestServiceForm({ homeId, connections }: Props) {
       if (photos.length > 0) {
         try {
           const photoUrls = await uploadPhotos(serviceRequest.id);
-          const updateRes = await fetch(
-            `/api/home/${homeId}/service-requests/${serviceRequest.id}`,
-            {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ photos: photoUrls }),
-            }
-          );
-          if (!updateRes.ok) console.error("Failed to update job request with photos");
+          const updateRes = await fetch(`/api/home/${homeId}/service-requests/${serviceRequest.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ photos: photoUrls }),
+          });
+          if (!updateRes.ok) console.error("Failed to update service request with photos");
         } catch (photoError) {
           console.error("Error uploading photos:", photoError);
-          alert("Job request created but some photos failed to upload");
+          alert("Service request created but some photos failed to upload");
         }
       }
 
@@ -303,17 +266,14 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       router.push(`/home/${homeId}/service-requests/${serviceRequest.id}`);
     } catch (error) {
-      console.error("Error creating job request:", error);
-      alert(error instanceof Error ? error.message : "Failed to create job request");
+      console.error("Error creating service request:", error);
+      alert(error instanceof Error ? error.message : "Failed to create service request");
     } finally {
       setSubmitting(false);
     }
   };
 
-  const selectedConn = form.connectionId
-    ? connections.find((c) => c.id === form.connectionId)
-    : null;
-
+  const selectedConn = form.connectionId ? connections.find((c) => c.id === form.connectionId) : null;
   const contractor = selectedConn?.contractor ?? null;
   const profile = contractor?.proProfile ?? null;
 
@@ -322,15 +282,15 @@ export function RequestServiceForm({ homeId, connections }: Props) {
       {/* Contractor */}
       <div>
         <label className="block">
-          <span className={labelCaps}>
+          <span className={formLabelCaps}>
             Select contractor <span className="text-red-400">*</span>
           </span>
 
-          <div className={`${fieldShell} relative`}>
+          <div className={`${formFieldShell} relative`}>
             <select
               value={form.connectionId}
               onChange={(e) => handleContractorChange(e.target.value)}
-              className={selectInner}
+              className={formSelectInner}
               required
             >
               <option value="" className="bg-gray-900">
@@ -338,9 +298,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
               </option>
               {connections.map((conn) => (
                 <option key={conn.id} value={conn.id} className="bg-gray-900">
-                  {conn.contractor?.proProfile?.businessName ||
-                    conn.contractor?.name ||
-                    conn.contractor?.email}
+                  {conn.contractor?.proProfile?.businessName || conn.contractor?.name || conn.contractor?.email}
                   {conn.contractor?.proProfile?.verified ? " ✓" : ""}
                 </option>
               ))}
@@ -350,17 +308,11 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         </label>
 
         {contractor && (
-          <div className={`mt-3 ${sectionSurface}`}>
+          <div className={`mt-3 ${formSectionSurface}`}>
             <div className="flex items-start gap-3">
               {contractor.image ? (
                 <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full border border-white/15 bg-black/20">
-                  <Image
-                    src={contractor.image}
-                    alt={contractor.name || "Contractor"}
-                    fill
-                    className="object-cover"
-                    sizes="48px"
-                  />
+                  <Image src={contractor.image} alt={contractor.name || "Contractor"} fill className="object-cover" sizes="48px" />
                 </div>
               ) : (
                 <div className="h-12 w-12 flex-shrink-0 rounded-full border border-white/15 bg-black/20" />
@@ -378,9 +330,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                   <p className="mt-1 text-xs text-white/60">{profile.specialties.join(", ")}</p>
                 ) : null}
 
-                {profile?.rating ? (
-                  <p className="mt-1 text-xs text-white/60">⭐ {profile.rating.toFixed(1)}</p>
-                ) : null}
+                {profile?.rating ? <p className="mt-1 text-xs text-white/60">⭐ {profile.rating.toFixed(1)}</p> : null}
               </div>
             </div>
           </div>
@@ -389,16 +339,16 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       {/* Title */}
       <label className="block">
-        <span className={labelCaps}>
+        <span className={formLabelCaps}>
           What work do you need? <span className="text-red-400">*</span>
         </span>
-        <div className={fieldShell}>
+        <div className={formFieldShell}>
           <input
             type="text"
             value={form.title}
             onChange={(e) => set("title", e.target.value)}
             placeholder="e.g. Fix leaking faucet in master bathroom"
-            className={fieldInner}
+            className={formInputInner}
             maxLength={100}
             required
           />
@@ -407,16 +357,16 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       {/* Description */}
       <label className="block">
-        <span className={labelCaps}>
+        <span className={formLabelCaps}>
           Description <span className="text-red-400">*</span>
         </span>
-        <div className={fieldShell}>
+        <div className={formFieldShell}>
           <textarea
             value={form.description}
             onChange={(e) => set("description", e.target.value)}
             rows={6}
             placeholder="Describe the work you need done in detail..."
-            className={textareaInner}
+            className={formTextareaInner}
             required
           />
         </div>
@@ -424,7 +374,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       {/* Photos */}
       <div>
-        <div className={labelCaps}>Photos (optional)</div>
+        <div className={formLabelCaps}>Photos (optional)</div>
         <p className="mt-1 text-xs text-white/60">
           Max {MAX_PHOTOS} photos, 10MB each. JPG / PNG / WebP.
         </p>
@@ -443,7 +393,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={photos.length >= MAX_PHOTOS}
-            className={quietButton}
+            className={formQuietButton}
           >
             <Upload className="h-4 w-4" />
             Upload photos
@@ -460,17 +410,8 @@ export function RequestServiceForm({ homeId, connections }: Props) {
           <>
             <div className="mt-4 flex gap-3 overflow-x-auto pb-1">
               {photos.map((photo, index) => (
-                <div
-                  key={index}
-                  className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/20"
-                >
-                  <Image
-                    src={photo.preview}
-                    alt={`Preview ${index + 1}`}
-                    width={96}
-                    height={96}
-                    className="h-24 w-24 object-cover"
-                  />
+                <div key={index} className="relative flex-shrink-0 overflow-hidden rounded-xl border border-white/15 bg-black/20">
+                  <Image src={photo.preview} alt={`Preview ${index + 1}`} width={96} height={96} className="h-24 w-24 object-cover" />
                   <button
                     type="button"
                     onClick={() => removePhoto(index)}
@@ -493,9 +434,9 @@ export function RequestServiceForm({ homeId, connections }: Props) {
       {/* Category + Urgency */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="block">
-          <span className={labelCaps}>Category</span>
-          <div className={`${fieldShell} relative`}>
-            <select value={form.category} onChange={(e) => set("category", e.target.value)} className={selectInner}>
+          <span className={formLabelCaps}>Category</span>
+          <div className={`${formFieldShell} relative`}>
+            <select value={form.category} onChange={(e) => set("category", e.target.value)} className={formSelectInner}>
               <option value="" className="bg-gray-900">
                 Select category…
               </option>
@@ -510,21 +451,13 @@ export function RequestServiceForm({ homeId, connections }: Props) {
         </label>
 
         <label className="block">
-          <span className={labelCaps}>Urgency</span>
-          <div className={`${fieldShell} relative`}>
-            <select value={form.urgency} onChange={(e) => set("urgency", e.target.value)} className={selectInner}>
-              <option value="LOW" className="bg-gray-900">
-                Low - Can wait
-              </option>
-              <option value="NORMAL" className="bg-gray-900">
-                Normal
-              </option>
-              <option value="HIGH" className="bg-gray-900">
-                High - Soon
-              </option>
-              <option value="EMERGENCY" className="bg-gray-900">
-                Emergency
-              </option>
+          <span className={formLabelCaps}>Urgency</span>
+          <div className={`${formFieldShell} relative`}>
+            <select value={form.urgency} onChange={(e) => set("urgency", e.target.value)} className={formSelectInner}>
+              <option value="LOW" className="bg-gray-900">Low - Can wait</option>
+              <option value="NORMAL" className="bg-gray-900">Normal</option>
+              <option value="HIGH" className="bg-gray-900">High - Soon</option>
+              <option value="EMERGENCY" className="bg-gray-900">Emergency</option>
             </select>
             <Chevron />
           </div>
@@ -533,14 +466,14 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       {/* Budget */}
       <div>
-        <div className={labelCaps}>Budget range (optional)</div>
+        <div className={formLabelCaps}>Budget range (optional)</div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
             <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/45">
               Minimum ($)
             </span>
-            <div className={fieldShell}>
+            <div className={formFieldShell}>
               <input
                 type="number"
                 min={0}
@@ -549,7 +482,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                 value={form.budgetMin}
                 onChange={(e) => set("budgetMin", e.target.value)}
                 placeholder="Min"
-                className={fieldInner}
+                className={formInputInner}
               />
             </div>
           </label>
@@ -558,7 +491,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
             <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/45">
               Maximum ($)
             </span>
-            <div className={fieldShell}>
+            <div className={formFieldShell}>
               <input
                 type="number"
                 min={0}
@@ -567,7 +500,7 @@ export function RequestServiceForm({ homeId, connections }: Props) {
                 value={form.budgetMax}
                 onChange={(e) => set("budgetMax", e.target.value)}
                 placeholder="Max"
-                className={fieldInner}
+                className={formInputInner}
               />
             </div>
           </label>
@@ -576,33 +509,21 @@ export function RequestServiceForm({ homeId, connections }: Props) {
 
       {/* Timeframe */}
       <label className="block">
-        <span className={labelCaps}>When do you need this done?</span>
+        <span className={formLabelCaps}>When do you need this done?</span>
 
-        <div className={`${fieldShell} relative`}>
-          <select value={form.timeframe} onChange={(e) => set("timeframe", e.target.value)} className={selectInner}>
-            <option value="" className="bg-gray-900">
-              Select timeframe…
-            </option>
-            <option value="TODAY" className="bg-gray-900">
-              Today
-            </option>
-            <option value="ASAP" className="bg-gray-900">
-              ASAP (within 1-2 days)
-            </option>
-            <option value="SOON" className="bg-gray-900">
-              Soon (within 3-5 days)
-            </option>
-            <option value="1-2_WEEKS" className="bg-gray-900">
-              1-2 Weeks
-            </option>
-            <option value="NO_RUSH" className="bg-gray-900">
-              No Rush
-            </option>
+        <div className={`${formFieldShell} relative`}>
+          <select value={form.timeframe} onChange={(e) => set("timeframe", e.target.value)} className={formSelectInner}>
+            <option value="" className="bg-gray-900">Select timeframe…</option>
+            <option value="TODAY" className="bg-gray-900">Today</option>
+            <option value="ASAP" className="bg-gray-900">ASAP (within 1-2 days)</option>
+            <option value="SOON" className="bg-gray-900">Soon (within 3-5 days)</option>
+            <option value="1-2_WEEKS" className="bg-gray-900">1-2 Weeks</option>
+            <option value="NO_RUSH" className="bg-gray-900">No Rush</option>
           </select>
           <Chevron />
         </div>
 
-        <p className={helperText}>Give the contractor an idea of your timeline.</p>
+        <p className={formHelperText}>Give the contractor an idea of your timeline.</p>
       </label>
 
       {/* Actions */}

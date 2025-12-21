@@ -1,3 +1,4 @@
+// app/home/[homeId]/completed-service-submissions/page.tsx
 export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
@@ -24,19 +25,8 @@ function BackButton({ href, label }: { href: string; label: string }) {
       className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/20 bg-white/10 transition-colors hover:bg-white/15"
       aria-label={label}
     >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        strokeWidth={2}
-        stroke="currentColor"
-        className="h-5 w-5"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-        />
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-5 w-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
       </svg>
     </Link>
   );
@@ -53,12 +43,13 @@ export default async function WorkPage({ params }: PageProps) {
     where: { id: homeId },
     select: { id: true, address: true, city: true, state: true, zip: true },
   });
-
   if (!home) notFound();
 
-  const homeAddress = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${
-    home.zip ? ` ${home.zip}` : ""
-  }`;
+  const homeAddress =
+    `${home.address}` +
+    `${home.city ? `, ${home.city}` : ""}` +
+    `${home.state ? `, ${home.state}` : ""}` +
+    `${home.zip ? ` ${home.zip}` : ""}`;
 
   // Connected contractors
   const connectionsRaw = await prisma.connection.findMany({
@@ -83,9 +74,7 @@ export default async function WorkPage({ params }: PageProps) {
   const pendingServiceRaw = await prisma.serviceRecord.findMany({
     where: {
       homeId,
-      status: {
-        in: [ServiceSubmissionStatus.DOCUMENTED, ServiceSubmissionStatus.DOCUMENTED_UNVERIFIED],
-      },
+      status: { in: [ServiceSubmissionStatus.DOCUMENTED, ServiceSubmissionStatus.DOCUMENTED_UNVERIFIED] },
     },
     include: {
       contractor: {
@@ -112,9 +101,7 @@ export default async function WorkPage({ params }: PageProps) {
           name: true,
           email: true,
           image: true,
-          proProfile: {
-            select: { businessName: true, company: true, phone: true, verified: true, rating: true },
-          },
+          proProfile: { select: { businessName: true, company: true, phone: true, verified: true, rating: true } },
         },
       },
       quote: { select: { id: true, totalAmount: true, status: true, expiresAt: true } },
@@ -185,11 +172,7 @@ export default async function WorkPage({ params }: PageProps) {
     }));
 
   const backHref = `/home/${homeId}`;
-
-  const breadcrumbItems = [
-    { label: homeAddress, href: backHref },
-    { label: "Requests & Submissions" },
-  ];
+  const breadcrumbItems = [{ label: homeAddress, href: backHref }, { label: "Requests & Submissions" }];
 
   return (
     <main className="relative min-h-screen text-white">
@@ -202,7 +185,7 @@ export default async function WorkPage({ params }: PageProps) {
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <BackButton href={backHref} label="Back to home" />
               <div className="min-w-0 flex-1">
-                <h1 className={`text-2xl font-bold ${heading}`}>Requests & Submissions</h1>
+                <h1 className={`text-2xl font-bold ${heading}`}>Requests &amp; Submissions</h1>
                 <p className={`mt-1 text-sm ${textMeta}`}>
                   {serviceRequests.length} active {serviceRequests.length === 1 ? "request" : "requests"} •{" "}
                   {pendingService.length} awaiting approval
@@ -216,16 +199,14 @@ export default async function WorkPage({ params }: PageProps) {
           </div>
         </section>
 
-        {/* Client content only */}
-        <section className={glass}>
-          <CompletedServiceSubmissionsClient
-            homeId={homeId}
-            homeAddress={homeAddress}
-            connections={connections}
-            pendingService={pendingService}
-            serviceRequests={serviceRequests}
-          />
-        </section>
+        {/* ✅ Client content: NOT wrapped in glass (prevents washed stacking) */}
+        <CompletedServiceSubmissionsClient
+          homeId={homeId}
+          homeAddress={homeAddress}
+          connections={connections}
+          pendingService={pendingService}
+          serviceRequests={serviceRequests}
+        />
       </div>
     </main>
   );
