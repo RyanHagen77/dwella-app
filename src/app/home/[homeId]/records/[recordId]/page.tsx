@@ -116,62 +116,60 @@ export default async function RecordDetailPage({ params }: PageProps) {
           ]}
         />
 
-        {/* ✅ Header: ONLY mobile tweaks; meta forced to single line */}
+        {/* Header — KEEP your layout; fix meta truncation only */}
         <header className="flex items-start justify-between gap-3">
-  {/* Left */}
-  <div className="flex min-w-0 items-start gap-3">
-    <Link
-      href={backHref}
-      aria-label="Back to records"
-      className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/20 text-white/80"
-    >
-      ←
-    </Link>
-
-    <div className="min-w-0">
-      <h1 className={`truncate text-2xl font-bold ${heading}`}>
-        {record.title}
-      </h1>
-
-      {/* Meta */}
-      {(record.kind || record.date || record.vendor) ? (
-        <div className="mt-1 space-y-1 sm:space-y-0 sm:flex sm:items-center sm:gap-2 min-w-0">
-          {/* Type pill (own row on mobile) */}
-          {record.kind ? (
-            <span className="inline-flex w-fit items-center rounded-full border border-white/12 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80">
-              {record.kind}
-            </span>
-          ) : null}
-
-          {/* Date + vendor (below pill on mobile, inline on desktop) */}
-          {(record.date || record.vendor) ? (
-            <span
-              className={`block sm:inline min-w-0 truncate whitespace-nowrap text-sm ${textMeta}`}
+          {/* Left */}
+          <div className="flex min-w-0 items-start gap-3">
+            <Link
+              href={backHref}
+              aria-label="Back to records"
+              className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/20 text-white/80"
             >
-              {record.date ? <>📅 {shortDate}</> : null}
-              {record.date && record.vendor ? " • " : null}
-              {record.vendor ? <>🔧 {record.vendor}</> : null}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  </div>
+              ←
+            </Link>
 
-  {/* Right actions — unchanged */}
-  <div className="flex flex-shrink-0 items-start">
-    <RecordActions
-      recordId={recordId}
-      homeId={homeId}
-      record={serializedRecord}
-    />
-  </div>
-</header>
+            <div className="min-w-0">
+              <h1 className={`truncate text-2xl font-bold ${heading}`}>{record.title}</h1>
 
-        {/* ✅ Single body surface */}
+              {(record.kind || record.date || record.vendor) ? (
+                <div className="mt-1 space-y-1 sm:space-y-0 sm:flex sm:items-center sm:gap-2 min-w-0">
+                  {/* Type pill (own row on mobile) */}
+                  {record.kind ? (
+                    <span className="inline-flex w-fit items-center rounded-full border border-white/12 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80">
+                      {record.kind}
+                    </span>
+                  ) : null}
+
+                  {/* ✅ FIX: remove truncate/nowrap so it can wrap and show full vendor */}
+                  {(record.date || record.vendor) ? (
+                    <span
+                      className={[
+                        "block sm:inline min-w-0",
+                        "whitespace-normal break-words", // ✅ allow wrapping
+                        "text-sm",
+                        textMeta,
+                      ].join(" ")}
+                    >
+                      {record.date ? <>📅 {shortDate}</> : null}
+                      {record.date && record.vendor ? " • " : null}
+                      {record.vendor ? <>🔧 {record.vendor}</> : null}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Right actions — ensure they never disappear */}
+          <div className="flex flex-shrink-0 items-start">
+            <RecordActions recordId={recordId} homeId={homeId} record={serializedRecord} />
+          </div>
+        </header>
+
+        {/* Single body surface */}
         <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
           <div className="space-y-8">
-            {/* Details block */}
+            {/* Details */}
             <div className={cardSurface}>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 {record.date ? (
@@ -184,7 +182,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
                 {record.vendor ? (
                   <div>
                     <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Vendor</div>
-                    <div className="mt-1 font-medium text-white">{record.vendor}</div>
+                    <div className="mt-1 font-medium text-white break-words">{record.vendor}</div>
                   </div>
                 ) : null}
 
