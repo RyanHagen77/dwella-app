@@ -160,17 +160,15 @@ export default async function RecordDetailPage({ params }: PageProps) {
 
               {showKind ? (
                 <div className="mt-2">
-                  <span className="inline-flex w-fit items-center rounded-full border border-white/12 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80">
-                    {record.kind}
-                  </span>
-                </div>
-              ) : null}
-
-              {showMeta ? (
-                // ✅ Slightly more padding above meta, and keep it ONE LINE
-                <div className={showKind ? "mt-2" : "mt-2"}>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span className={`min-w-0 truncate whitespace-nowrap text-sm ${textMeta}`}>
+                  <div
+                    className={[
+                      "max-w-full",
+                      "overflow-x-auto",
+                      "whitespace-nowrap",
+                      "[-webkit-overflow-scrolling:touch]",
+                    ].join(" ")}
+                  >
+                    <span className={`text-sm ${textMeta}`}>
                       {record.date ? <>📅 {shortDate}</> : null}
                       {record.date && vendorLabel ? " • " : null}
                       {vendorLabel ? <>🔧 {vendorLabel}</> : null}
