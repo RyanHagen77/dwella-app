@@ -4,9 +4,8 @@ import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 
-import { glass, textMeta, heading } from "@/lib/glass";
+import { glass, textMeta } from "@/lib/glass";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { ContractorDetailTabs } from "./_components/ContractorDetailTabs";
 import { DisconnectContractor } from "./DisconnectContractor";
@@ -159,6 +158,7 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
   const verifiedServicesCount = verifiedRecords.length;
   const totalServicesCount = serviceRecords.length;
 
+  // Spend is derived from verified records costs
   const totalSpent = verifiedRecords.reduce((sum, r) => sum + (r.cost ? Number(r.cost) : 0), 0);
 
   const activeRequestsCount = serviceRequests.filter((r) =>
@@ -291,13 +291,6 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
 
   const messageHref = `/home/${homeId}/messages/${connectionData.id}`;
 
-  // how many “detail items” exist (used for the Details badge)
-  const detailsCount =
-    (contractorData.phone ? 1 : 0) +
-    (contractorData.website ? 1 : 0) +
-    (contractorData.bio ? 1 : 0) +
-    1; // stats block
-
   return (
     <main className="relative min-h-screen text-white">
       {/* Background */}
@@ -323,113 +316,100 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
           ]}
         />
 
-        {/* Header: quiet + collapsible details on mobile */}
+        {/* Header (clean) */}
         <section className={glass}>
           <ContractorHeaderDrawer
             title={contractorLabel}
             backHref={`/home/${homeId}/contractors`}
             backLabel="Back to contractors"
             messageHref={messageHref}
-            detailsCount={detailsCount}
-            meta={
-              <>
-                Connected {formatDate(connectionData.createdAt)} • {activeRequestsCount} active request
-                {activeRequestsCount === 1 ? "" : "s"} • {pendingSubmissionsCount} pending submission
-                {pendingSubmissionsCount === 1 ? "" : "s"}
-              </>
-            }
+            spendAmount={totalSpent}
+            verifiedJobs={verifiedServicesCount}
           >
-            {/* “Details” content (hidden on mobile until opened; always visible on desktop) */}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/12 bg-black/25 p-5">
-                <div className="flex items-start gap-4">
-                  {contractorData.image ? (
-                    <Image
-                      src={contractorData.image}
-                      alt={contractorLabel}
-                      width={56}
-                      height={56}
-                      className="h-14 w-14 flex-shrink-0 rounded-2xl border border-white/10 object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-orange-500/15 text-xl font-bold text-orange-300">
-                      {(contractorLabel[0] || "C").toUpperCase()}
-                    </div>
-                  )}
+            {/* Clean mini profile (no stats box) */}
+            <div className="rounded-2xl border border-white/12 bg-black/25 p-5">
+              <div className="flex items-start gap-4">
+                {contractorData.image ? (
+                  <Image
+                    src={contractorData.image}
+                    alt={contractorLabel}
+                    width={56}
+                    height={56}
+                    className="h-14 w-14 flex-shrink-0 rounded-2xl border border-white/10 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-xl font-bold text-white/85">
+                    {(contractorLabel[0] || "C").toUpperCase()}
+                  </div>
+                )}
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {contractorData.verified ? (
-                        <span className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-100">
-                          Verified
-                        </span>
-                      ) : null}
-
-                      {contractorData.rating ? (
-                        <span className="inline-flex items-center rounded-full border border-white/15 bg-black/20 px-2.5 py-1 text-xs font-medium text-white/80">
-                          ⭐ {contractorData.rating.toFixed(1)}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {contractorData.businessName && contractorData.name ? (
-                      <p className={`mt-2 text-sm ${textMeta}`}>
-                        {contractorData.name}
-                        {contractorData.company ? ` • ${contractorData.company}` : ""}
-                      </p>
-                    ) : contractorData.company ? (
-                      <p className={`mt-2 text-sm ${textMeta}`}>{contractorData.company}</p>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {contractorData.verified ? (
+                      <span className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-medium text-emerald-100">
+                        Verified
+                      </span>
                     ) : null}
 
-                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                      {contractorData.phone ? (
-                        <a href={`tel:${contractorData.phone}`} className="text-white/80 hover:text-white">
-                          {contractorData.phone}
-                        </a>
-                      ) : null}
+                    {contractorData.rating ? (
+                      <span className="inline-flex items-center rounded-full border border-white/15 bg-black/20 px-2.5 py-1 text-xs font-medium text-white/80">
+                        ⭐ {contractorData.rating.toFixed(1)}
+                      </span>
+                    ) : null}
+                  </div>
 
-                      <a
-                        href={`mailto:${contractorData.email}`}
-                        className="text-white/60 hover:text-white/90"
-                      >
-                        {contractorData.email}
+                  {contractorData.businessName && contractorData.name ? (
+                    <p className={`mt-2 text-sm ${textMeta}`}>
+                      {contractorData.name}
+                      {contractorData.company ? ` • ${contractorData.company}` : ""}
+                    </p>
+                  ) : contractorData.company ? (
+                    <p className={`mt-2 text-sm ${textMeta}`}>{contractorData.company}</p>
+                  ) : null}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+                    {contractorData.phone ? (
+                      <a href={`tel:${contractorData.phone}`} className="text-white/80 hover:text-white">
+                        {contractorData.phone}
                       </a>
+                    ) : null}
 
-                      {contractorData.website ? (
-                        <a
-                          href={contractorData.website}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-white/60 underline-offset-2 hover:text-white/90 hover:underline"
-                        >
-                          Website
-                        </a>
-                      ) : null}
-                    </div>
+                    <a href={`mailto:${contractorData.email}`} className="text-white/60 hover:text-white/90">
+                      {contractorData.email}
+                    </a>
+
+                    {contractorData.website ? (
+                      <a
+                        href={contractorData.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white/60 underline-offset-2 hover:text-white/90 hover:underline"
+                      >
+                        Website
+                      </a>
+                    ) : null}
                   </div>
+
+                  {/* Keep the “connected / requests / pending” info here if you still want it,
+                      but now it’s hidden behind Details, not under the title */}
+                  <p className={`mt-3 text-sm ${textMeta}`}>
+                    Connected {formatDate(connectionData.createdAt)} • {activeRequestsCount} active request
+                    {activeRequestsCount === 1 ? "" : "s"} • {pendingSubmissionsCount} pending submission
+                    {pendingSubmissionsCount === 1 ? "" : "s"}
+                  </p>
                 </div>
-
-                {contractorData.bio ? (
-                  <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-                    <p className="text-sm text-white/80 whitespace-pre-wrap">{contractorData.bio}</p>
-                  </div>
-                ) : null}
               </div>
 
-              <div className="rounded-2xl border border-white/12 bg-black/25 p-5">
-                <div className={`text-sm ${textMeta}`}>Stats</div>
-                <div className="mt-2 text-sm text-white/80">
-                  {verifiedServicesCount}/{totalServicesCount} verified
+              {contractorData.bio ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <p className="whitespace-pre-wrap text-sm text-white/80">{contractorData.bio}</p>
                 </div>
-                <div className="mt-1 text-sm text-white/80">
-                  {totalSpent > 0 ? `$${totalSpent.toLocaleString()} spent` : "$0 spent"}
-                </div>
-              </div>
+              ) : null}
             </div>
           </ContractorHeaderDrawer>
         </section>
 
-        {/* Tabs + content (unchanged) */}
+        {/* Tabs + content */}
         <ContractorDetailTabs
           homeId={homeId}
           pendingService={pendingService}

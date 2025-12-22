@@ -1,96 +1,85 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { ctaGhost, textMeta } from "@/lib/glass";
+import { GhostButton } from "@/components/ui/Button";
 
-function InfoIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/70">
-      <path
-        d="M12 17v-6M12 7h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
+function formatMoney(amount?: number | null) {
+  if (amount == null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function Caret({ open }: { open: boolean }) {
+  return <span className="text-white/55">{open ? "▴" : "▾"}</span>;
 }
 
 export function ContractorHeaderDrawer({
   title,
-  meta,
   backHref,
   backLabel,
   messageHref,
-  detailsCount,
+  spendAmount,
+  verifiedJobs,
   children,
 }: {
   title: string;
-  meta?: React.ReactNode;
   backHref: string;
   backLabel?: string;
   messageHref: string;
-  detailsCount: number;
+  spendAmount?: number | null;
+  verifiedJobs?: number | null;
   children: React.ReactNode;
 }) {
+  const router = useRouter();
   const [open, setOpen] = React.useState(false);
 
+  const spent = formatMoney(spendAmount);
+  const jobs = verifiedJobs ?? 0;
+
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title={title}
-        meta={meta}
-        backHref={backHref}
-        backLabel={backLabel}
-        rightDesktop={
-          <Link href={messageHref} className={ctaGhost}>
+    <div className="space-y-3">
+      {/* Clean standard header: title only */}
+      <PageHeader title={title} backHref={backHref} backLabel={backLabel} />
+
+      {/* Clean action row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <GhostButton type="button" onClick={() => router.push(messageHref)}>
             💬 Message
-          </Link>
-        }
-      />
+          </GhostButton>
 
-      {/* Mobile: Message + Details toggle (quiet, no orange) */}
-      <div className="flex gap-2 sm:hidden">
-        <Link href={messageHref} className={`${ctaGhost} flex-1`}>
-          💬 Message
-        </Link>
+          {/* Subtle toggle like Filters (no (All), no count) */}
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-black/15 px-3 py-2 text-sm text-white/80 transition-colors hover:border-white/20 hover:bg-black/20"
+          >
+            <span className="text-white/70">Details</span>
+            <Caret open={open} />
+          </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className={
-            "inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/20 px-4 py-2 text-sm text-white/85 " +
-            "transition-colors hover:bg-black/25 hover:border-white/25"
-          }
-          aria-expanded={open}
-        >
-          <InfoIcon />
-          <span>Details</span>
-
-          {detailsCount > 0 ? (
-            <span className="ml-1 inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-white/20 bg-white/10 px-1.5 text-xs font-semibold text-white/90">
-              {detailsCount}
-            </span>
-          ) : (
-            <span className={`ml-1 ${textMeta}`}>(All)</span>
-          )}
-
-          <span className="ml-1 text-white/55">{open ? "▴" : "▾"}</span>
-        </button>
+        {/* Plain green stats (no pill, no box) */}
+        <div className="text-sm font-medium text-[#33C17D]">
+          {spent} spent <span className="text-white/35">•</span> {jobs} verified jobs
+        </div>
       </div>
 
-      {/* Drawer: collapsed on mobile, always visible on desktop */}
+      {/* Collapsible content */}
       <div
         className={[
-          "overflow-hidden sm:overflow-visible",
+          "overflow-hidden",
           "transition-[max-height,opacity] duration-200 ease-out",
-          open ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0",
-          "sm:max-h-none sm:opacity-100",
+          open ? "max-h-[640px] opacity-100" : "max-h-0 opacity-0",
         ].join(" ")}
       >
-        <div className="pt-3 sm:pt-0">{children}</div>
+        <div className="pt-3">{children}</div>
       </div>
     </div>
   );
