@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { glass } from "@/lib/glass";
 import { Input, Select } from "@/components/ui";
+import { textMeta } from "@/lib/glass";
+
+/* match the darker request/submission surfaces */
+const filterSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
+const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
+const insetSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
 
 type RecordItem = {
   id: string;
@@ -16,8 +21,8 @@ type RecordItem = {
   attachments: Array<{
     id: string;
     filename: string;
-    url: string;
-    mimeType: string;
+    url: string | null;
+    mimeType: string | null;
     size: number;
     uploadedBy: string;
   }>;
@@ -31,6 +36,18 @@ type Props = {
   initialSort?: string;
   categoryCounts: Record<string, number>;
 };
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function shortName(name: string, max = 16) {
+  if (!name) return "";
+  return name.length > max ? name.slice(0, max - 3) + "..." : name;
+}
 
 export function RecordsPageClient({
   records,
@@ -47,75 +64,57 @@ export function RecordsPageClient({
   const [category, setCategory] = useState(initialCategory || "all");
   const [sort, setSort] = useState(initialSort || "newest");
 
-  function updateFilters(updates: {
-    search?: string;
-    category?: string;
-    sort?: string;
-  }) {
+  function updateFilters(updates: { search?: string; category?: string; sort?: string }) {
     const params = new URLSearchParams(searchParams?.toString());
 
     if (updates.search !== undefined) {
-      if (updates.search) {
-        params.set("search", updates.search);
-      } else {
-        params.delete("search");
-      }
+      if (updates.search) params.set("search", updates.search);
+      else params.delete("search");
     }
 
     if (updates.category !== undefined) {
-      if (updates.category && updates.category !== "all") {
-        params.set("category", updates.category);
-      } else {
-        params.delete("category");
-      }
+      if (updates.category && updates.category !== "all") params.set("category", updates.category);
+      else params.delete("category");
     }
 
     if (updates.sort !== undefined) {
-      if (updates.sort && updates.sort !== "newest") {
-        params.set("sort", updates.sort);
-      } else {
-        params.delete("sort");
-      }
+      if (updates.sort && updates.sort !== "newest") params.set("sort", updates.sort);
+      else params.delete("sort");
     }
 
-    const queryString = params.toString();
-    router.push(
-      `/home/${homeId}/records${queryString ? `?${queryString}` : ""}`
-    );
-  }
-
-  function handleSearchChange(value: string) {
-    setSearch(value);
-    updateFilters({ search: value });
-  }
-
-  function handleCategoryChange(value: string) {
-    setCategory(value);
-    updateFilters({ category: value });
-  }
-
-  function handleSortChange(value: string) {
-    setSort(value);
-    updateFilters({ sort: value });
+    const qs = params.toString();
+    router.push(`/home/${homeId}/records${qs ? `?${qs}` : ""}`);
   }
 
   return (
-    <>
-      <section className={glass}>
+    <div className="space-y-6">
+      {/* Filters */}
+      <section className={filterSurface}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <label className="mb-2 block text-sm text-white/70">Search</label>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/55">Search</label>
             <Input
               type="text"
-              placeholder="Search by title, vendor, or notes..."
+              placeholder="Search by title, vendor, or note"
               value={search}
-              onChange={(e) => handleSearchChange(e.target.value)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSearch(v);
+                updateFilters({ search: v });
+              }}
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-white/70">Category</label>
-            <Select value={category} onChange={(e) => handleCategoryChange(e.target.value)}>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/55">Category</label>
+            <Select
+              value={category}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCategory(v);
+                updateFilters({ category: v });
+              }}
+            >
               <option value="all">All ({records.length})</option>
               <option value="project">Project ({categoryCounts.project || 0})</option>
               <option value="maintenance">Maintenance ({categoryCounts.maintenance || 0})</option>
@@ -125,103 +124,116 @@ export function RecordsPageClient({
           </div>
 
           <div>
-            <label className="mb-2 block text-sm text-white/70">Sort By</label>
-            <Select value={sort} onChange={(e) => handleSortChange(e.target.value)}>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-white/55">Sort By</label>
+            <Select
+              value={sort}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSort(v);
+                updateFilters({ sort: v });
+              }}
+            >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
               <option value="cost-high">Highest Cost</option>
               <option value="cost-low">Lowest Cost</option>
-              <option value="title">Title (A-Z)</option>
+              <option value="title">Title (A–Z)</option>
             </Select>
           </div>
         </div>
       </section>
 
-      <section className={glass}>
-        {records.length === 0 ? (
-          <div className="py-16 text-center">
-            <p className="mb-4 text-white/70">
-              {search || category !== "all" ? "No records match your filters" : "No maintenance records yet"}
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {records.map((record) => (
-              <RecordCard key={record.id} record={record} homeId={homeId} />
-            ))}
-          </div>
-        )}
-      </section>
-    </>
+      {/* List */}
+      {records.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+          <p className="mb-2 text-white/80">
+            {search || category !== "all" ? "No records match your filters" : "No records yet"}
+          </p>
+          <p className={`text-sm ${textMeta}`}>Add your first record to start tracking home history.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {records.map((record) => (
+            <RecordCard key={record.id} record={record} homeId={homeId} />
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
 function RecordCard({ record, homeId }: { record: RecordItem; homeId: string }) {
   return (
-    <a
-      href={`/home/${homeId}/records/${record.id}`}
-      className="block rounded-lg border border-white/10 bg-white/5 p-4 transition-colors hover:bg-white/10"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <a href={`/home/${homeId}/records/${record.id}`} className={`${cardSurface} block`}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
+          {/* Title + kind pill */}
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <h3 className="flex-1 text-lg font-medium text-white">{record.title}</h3>
-            {record.kind && (
-              <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-blue-400/20 text-blue-300">
+            <h3 className="min-w-0 flex-1 truncate text-base font-semibold text-white sm:text-lg">{record.title}</h3>
+            {record.kind ? (
+              <span className="inline-flex items-center rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium text-white/80">
                 {record.kind}
               </span>
-            )}
+            ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/70">
-            {record.date && (
-              <span className="flex items-center gap-1">
-                <span className="text-base">📅</span>
-                {new Date(record.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-              </span>
-            )}
-            {record.vendor && (
-              <span className="flex items-center gap-1">
-                <span className="text-base">🔧</span>
-                {record.vendor}
-              </span>
-            )}
-            {record.cost != null && record.cost > 0 && (
-              <span className="flex items-center gap-1 font-medium text-green-300">
-                <span className="text-base">💵</span>
-                ${Number(record.cost).toLocaleString()}
-              </span>
-            )}
+          {/* Meta row (match service cards vibe) */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/60">
+            {record.date ? <span>📅 {formatDate(record.date)}</span> : null}
+            {record.vendor ? <span>🔧 {record.vendor}</span> : null}
+            {record.cost != null ? (
+              <span className="font-medium text-green-200">💵 ${Number(record.cost).toLocaleString()}</span>
+            ) : null}
           </div>
 
-          {record.note && <p className="mt-2 line-clamp-2 text-sm text-white/80">{record.note}</p>}
+          {/* Note as inset surface like submissions description */}
+          {record.note ? (
+            <div className="mt-4">
+              <div className={insetSurface}>
+                <p className="text-sm text-white/80 whitespace-pre-wrap">{record.note}</p>
+              </div>
+            </div>
+          ) : null}
 
-          {record.attachments && record.attachments.length > 0 && (
-            <div className="mt-2 flex items-center gap-2 text-xs text-white/60">
+          {/* Attachments preview row (compact) */}
+          {record.attachments?.length ? (
+            <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-white/60">
               <span>📎</span>
               <span>
                 {record.attachments.length} attachment{record.attachments.length > 1 ? "s" : ""}
               </span>
-              {record.attachments.slice(0, 3).map((att) => (
+
+              {record.attachments.slice(0, 2).map((att) => (
                 <button
                   key={att.id}
+                  type="button"
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     window.open(`/api/home/${homeId}/attachments/${att.id}`, "_blank");
                   }}
-                  className="underline hover:text-white/90"
+                  className="rounded-full border border-white/10 bg-black/20 px-2 py-1 text-xs text-white/75 hover:bg-black/25 hover:text-white"
+                  title={att.filename}
                 >
-                  {att.filename.length > 15 ? att.filename.slice(0, 12) + "..." : att.filename}
+                  {shortName(att.filename)}
                 </button>
               ))}
-              {record.attachments.length > 3 && <span>+{record.attachments.length - 3} more</span>}
+
+              {record.attachments.length > 2 ? <span>+{record.attachments.length - 2} more</span> : null}
             </div>
-          )}
+          ) : null}
         </div>
 
-        <div className="flex items-center text-white/50">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
+        {/* Right chevron */}
+        <div className="flex items-center text-white/35 sm:pt-1">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            className="h-5 w-5"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
           </svg>
         </div>
