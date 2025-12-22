@@ -61,6 +61,21 @@ export default async function RecordDetailPage({ params }: PageProps) {
           uploadedBy: true,
         },
       },
+
+      // ✅ This is the *only* safe path in your schema to a contractor/company name
+      approvedServiceRecord: {
+        select: {
+          id: true,
+          contractor: {
+            select: {
+              name: true,
+              email: true,
+              image: true,
+              proProfile: { select: { businessName: true } },
+            },
+          },
+        },
+      },
     },
   });
 
@@ -105,6 +120,18 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const shortDate = record.date ? formatShortDate(record.date) : "";
   const longDate = record.date ? formatLongDate(record.date) : "";
 
+  // ✅ Company/vendor label (businessName first, then name/email, then record.vendor)
+  const contractor = record.approvedServiceRecord?.contractor ?? null;
+  const vendorLabel =
+    contractor?.proProfile?.businessName ||
+    contractor?.name ||
+    contractor?.email ||
+    record.vendor ||
+    "";
+
+  const showKind = Boolean(record.kind);
+  const showMeta = Boolean(record.date || vendorLabel);
+
   return (
     <main className="relative min-h-screen text-white">
       <div className="mx-auto max-w-7xl space-y-6 p-6">
@@ -116,7 +143,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
           ]}
         />
 
-        {/* Header — KEEP your layout; fix meta truncation only */}
+        {/* Header: company name + single-line meta (no wrapping) */}
         <header className="flex items-start justify-between gap-3">
           {/* Left */}
           <div className="flex min-w-0 items-start gap-3">
@@ -131,36 +158,30 @@ export default async function RecordDetailPage({ params }: PageProps) {
             <div className="min-w-0">
               <h1 className={`truncate text-2xl font-bold ${heading}`}>{record.title}</h1>
 
-              {(record.kind || record.date || record.vendor) ? (
-                <div className="mt-1 space-y-1 sm:space-y-0 sm:flex sm:items-center sm:gap-2 min-w-0">
-                  {/* Type pill (own row on mobile) */}
-                  {record.kind ? (
-                    <span className="inline-flex w-fit items-center rounded-full border border-white/12 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80">
-                      {record.kind}
-                    </span>
-                  ) : null}
+              {showKind ? (
+                <div className="mt-2">
+                  <span className="inline-flex w-fit items-center rounded-full border border-white/12 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80">
+                    {record.kind}
+                  </span>
+                </div>
+              ) : null}
 
-                  {/* ✅ FIX: remove truncate/nowrap so it can wrap and show full vendor */}
-                  {(record.date || record.vendor) ? (
-                    <span
-                      className={[
-                        "block sm:inline min-w-0",
-                        "whitespace-normal break-words", // ✅ allow wrapping
-                        "text-sm",
-                        textMeta,
-                      ].join(" ")}
-                    >
+              {showMeta ? (
+                // ✅ Slightly more padding above meta, and keep it ONE LINE
+                <div className={showKind ? "mt-2" : "mt-2"}>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className={`min-w-0 truncate whitespace-nowrap text-sm ${textMeta}`}>
                       {record.date ? <>📅 {shortDate}</> : null}
-                      {record.date && record.vendor ? " • " : null}
-                      {record.vendor ? <>🔧 {record.vendor}</> : null}
+                      {record.date && vendorLabel ? " • " : null}
+                      {vendorLabel ? <>🔧 {vendorLabel}</> : null}
                     </span>
-                  ) : null}
+                  </div>
                 </div>
               ) : null}
             </div>
           </div>
 
-          {/* Right actions — ensure they never disappear */}
+          {/* Right actions */}
           <div className="flex flex-shrink-0 items-start">
             <RecordActions recordId={recordId} homeId={homeId} record={serializedRecord} />
           </div>
@@ -172,17 +193,15 @@ export default async function RecordDetailPage({ params }: PageProps) {
             {/* Details */}
             <div className={cardSurface}>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-                {record.date ? (
-                  <div>
-                    <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Date</div>
-                    <div className="mt-1 font-medium text-white">{longDate}</div>
-                  </div>
-                ) : null}
+                <div>
+                  <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Date</div>
+                  <div className="mt-1 font-medium text-white">{longDate}</div>
+                </div>
 
-                {record.vendor ? (
+                {vendorLabel ? (
                   <div>
                     <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Vendor</div>
-                    <div className="mt-1 font-medium text-white break-words">{record.vendor}</div>
+                    <div className="mt-1 font-medium text-white">{vendorLabel}</div>
                   </div>
                 ) : null}
 
