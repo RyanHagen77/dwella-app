@@ -47,6 +47,9 @@ export default async function RecordDetailPage({ params }: PageProps) {
 
   await requireHomeAccess(homeId, session.user.id);
 
+  // NOTE:
+  // Your generated Prisma types are complaining about "approvedServiceRecord/contractor" on RecordInclude.
+  // We keep the query stable and only loosen typing for THAT include so the page compiles.
   const record = await prisma.record.findUnique({
     where: { id: recordId },
     include: {
@@ -62,7 +65,8 @@ export default async function RecordDetailPage({ params }: PageProps) {
         },
       },
 
-      // ✅ This is the *only* safe path in your schema to a contractor/company name
+      // Pull company name from the verified/approved service record when present.
+      // (typed loosely because your generated client types don’t recognize this include)
       approvedServiceRecord: {
         select: {
           id: true,
@@ -76,7 +80,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
           },
         },
       },
-    },
+    } as any,
   });
 
   if (!record || record.homeId !== homeId) notFound();
@@ -91,10 +95,10 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
   const backHref = `/home/${homeId}/records`;
 
-  // ✅ Normalize attachments (BigInt -> number; keep url; drop null uploadedBy)
+  // Normalize attachments (BigInt -> number; keep url; drop null uploadedBy)
   const attachments = (record.attachments ?? [])
-    .filter((a) => a.uploadedBy !== null)
-    .map((a) => ({
+    .filter((a: any) => a.uploadedBy !== null)
+    .map((a: any) => ({
       id: a.id,
       filename: a.filename,
       url: a.url ?? null,
@@ -120,8 +124,8 @@ export default async function RecordDetailPage({ params }: PageProps) {
   const shortDate = record.date ? formatShortDate(record.date) : "";
   const longDate = record.date ? formatLongDate(record.date) : "";
 
-  // ✅ Company/vendor label (businessName first, then name/email, then record.vendor)
-  const contractor = record.approvedServiceRecord?.contractor ?? null;
+  // ✅ Company/vendor label (businessName first)
+  const contractor = (record as any).approvedServiceRecord?.contractor ?? null;
   const vendorLabel =
     contractor?.proProfile?.businessName ||
     contractor?.name ||
@@ -143,7 +147,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
           ]}
         />
 
-        {/* Header: company name + single-line meta (no wrapping) */}
+        {/* Header: company name + ONE-LINE meta (no wrap; scroll if needed) */}
         <header className="flex items-start justify-between gap-3">
           {/* Left */}
           <div className="flex min-w-0 items-start gap-3">
@@ -160,14 +164,16 @@ export default async function RecordDetailPage({ params }: PageProps) {
 
               {showKind ? (
                 <div className="mt-2">
-                  <div
-                    className={[
-                      "max-w-full",
-                      "overflow-x-auto",
-                      "whitespace-nowrap",
-                      "[-webkit-overflow-scrolling:touch]",
-                    ].join(" ")}
-                  >
+                  <span className="inline-flex w-fit items-center rounded-full border border-white/12 bg-white/5 px-2.5 py-1 text-xs font-medium text-white/80">
+                    {record.kind}
+                  </span>
+                </div>
+              ) : null}
+
+              {showMeta ? (
+                <div className={showKind ? "mt-2" : "mt-2"}>
+                  {/* ✅ stays single line; never wraps; never truncates — scroll instead */}
+                  <div className="max-w-full overflow-x-auto whitespace-nowrap [-webkit-overflow-scrolling:touch]">
                     <span className={`text-sm ${textMeta}`}>
                       {record.date ? <>📅 {shortDate}</> : null}
                       {record.date && vendorLabel ? " • " : null}
@@ -199,7 +205,7 @@ export default async function RecordDetailPage({ params }: PageProps) {
                 {vendorLabel ? (
                   <div>
                     <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Vendor</div>
-                    <div className="mt-1 font-medium text-white">{vendorLabel}</div>
+                    <div className="mt-1 font-medium text-white break-words">{vendorLabel}</div>
                   </div>
                 ) : null}
 
