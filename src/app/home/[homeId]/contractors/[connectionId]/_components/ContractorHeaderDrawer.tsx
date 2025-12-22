@@ -69,9 +69,14 @@ export function ContractorHeaderDrawer({
           </div>
         </div>
 
-        <GhostButton type="button" onClick={() => router.push(messageHref)} className="flex-shrink-0">
-          💬 Message
-        </GhostButton>
+<GhostButton
+  type="button"
+  onClick={() => router.push(messageHref)}
+  size="sm"
+  className="h-9 rounded-xl px-3 border-white/10 bg-transparent hover:bg-white/5 flex-shrink-0"
+>
+  💬 Message
+</GhostButton>
       </header>
 
       {/* Row 2: Green stats under title (left) + Details (right) */}
