@@ -13,7 +13,7 @@ import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { RecordsHeader } from "@/components/ui/RecordsHeader";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 import { RecordsPageClient } from "./RecordsPageClient";
 import { textMeta } from "@/lib/glass";
@@ -35,31 +35,18 @@ export default async function RecordsPage({
 
   const home = await prisma.home.findUnique({
     where: { id: homeId },
-    select: {
-      address: true,
-      city: true,
-      state: true,
-      zip: true,
-    },
+    select: { address: true, city: true, state: true, zip: true },
   });
 
   if (!home) notFound();
 
-  const addrLine = [home.address, home.city, home.state, home.zip]
-    .filter(Boolean)
-    .join(", ");
+  const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
   /* ---------------- Records Query ---------------- */
 
-  const where: {
-    homeId: string;
-    kind?: string;
-    OR?: any[];
-  } = { homeId };
+  const where: { homeId: string; kind?: string; OR?: any[] } = { homeId };
 
-  if (category && category !== "all") {
-    where.kind = category;
-  }
+  if (category && category !== "all") where.kind = category;
 
   if (search) {
     where.OR = [
@@ -90,7 +77,7 @@ export default async function RecordsPage({
         select: {
           id: true,
           filename: true,
-          url: true,
+          url: true, // ✅ include url to match client type
           mimeType: true,
           size: true,
           uploadedBy: true,
@@ -114,7 +101,7 @@ export default async function RecordsPage({
       .map((a) => ({
         id: a.id,
         filename: a.filename,
-        url: a.url ?? null, // ✅ REQUIRED
+        url: a.url ?? null, // ✅ REQUIRED BY CLIENT TYPE
         mimeType: a.mimeType ?? null,
         size: typeof a.size === "bigint" ? Number(a.size) : a.size,
         uploadedBy: a.uploadedBy as string,
@@ -137,39 +124,19 @@ export default async function RecordsPage({
   return (
     <main className="relative min-h-screen text-white">
       <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <Breadcrumb
-          items={[
-            { label: addrLine, href: `/home/${homeId}` },
-            { label: "Records" },
-          ]}
+        <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Records" }]} />
+
+        <RecordsHeader
+          title="Records"
+          meta={
+            <span className={textMeta}>
+              {records.length} {records.length === 1 ? "record" : "records"}
+            </span>
+          }
+          backHref={`/home/${homeId}`}
+          backLabel="Back to home"
+          right={<AddRecordButton homeId={homeId} label="+ Add Record" defaultType="record" />}
         />
-
-<PageHeader
-  title="Records"
-  meta={
-    <span className={textMeta}>
-      {records.length} {records.length === 1 ? "record" : "records"}
-    </span>
-  }
-  backHref={`/home/${homeId}`}
-  backLabel="Back to home"
-  rightDesktop={
-    <AddRecordButton
-      homeId={homeId}
-      label="+ Add Record"
-      defaultType="record"
-    />
-  }
-/>
-
-{/* ✅ Mobile action row (shows only on mobile) */}
-<div className="sm:hidden">
-  <AddRecordButton
-    homeId={homeId}
-    label="+ Add Record"
-    defaultType="record"
-  />
-</div>
 
         {/* Single body surface (NO glass-on-glass) */}
         <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
