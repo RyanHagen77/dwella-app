@@ -3,8 +3,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { GhostButton } from "@/components/ui/Button";
 import { heading } from "@/lib/glass";
+import {
+  Phone,
+  Mail,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 function formatMoney(amount?: number | null) {
   if (amount == null) return "—";
@@ -15,24 +21,12 @@ function formatMoney(amount?: number | null) {
   }).format(amount);
 }
 
-function SlidersIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="text-white/65">
-      <path
-        d="M4 6h16M7 12h10M10 18h4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 export function ContractorHeaderDrawer({
   title,
   backHref,
   backLabel,
   messageHref,
+  phone,
   spendAmount,
   verifiedJobs,
   children,
@@ -41,6 +35,7 @@ export function ContractorHeaderDrawer({
   backHref: string;
   backLabel?: string;
   messageHref: string;
+  phone?: string | null;
   spendAmount?: number | null;
   verifiedJobs?: number | null;
   children: React.ReactNode;
@@ -51,11 +46,12 @@ export function ContractorHeaderDrawer({
   const spent = formatMoney(spendAmount);
   const jobs = verifiedJobs ?? 0;
 
+  const hasPhone = Boolean(phone && phone.trim().length > 0);
+
   return (
     <div className="space-y-3">
-      {/* Row 1: Back + Title (left) and Message (right) — mobile-safe */}
       <header className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
+        <div className="flex min-w-0 items-start gap-3">
           <Link
             href={backHref}
             aria-label={backLabel ?? "Back"}
@@ -65,21 +61,44 @@ export function ContractorHeaderDrawer({
           </Link>
 
           <div className="min-w-0">
-            <h1 className={`text-2xl font-bold ${heading} truncate`}>{title}</h1>
+            <h1 className={`truncate text-2xl font-bold ${heading}`}>{title}</h1>
           </div>
         </div>
 
-<GhostButton
-  type="button"
-  onClick={() => router.push(messageHref)}
-  size="sm"
-  className="h-9 rounded-xl px-3 border-white/10 bg-transparent hover:bg-white/5 flex-shrink-0"
->
-  💬 Message
-</GhostButton>
+        <div className="flex flex-shrink-0 items-center gap-1">
+          {/* Call (enabled if phone exists, otherwise disabled) */}
+          {hasPhone ? (
+            <a
+              href={`tel:${phone}`}
+              aria-label="Call contractor"
+              title="Call"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 hover:bg-white/5 hover:text-white"
+            >
+              <Phone className="h-[18px] w-[18px]" />
+            </a>
+          ) : (
+            <span
+              aria-label="No phone number on file"
+              title="No phone number"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/30"
+            >
+              <Phone className="h-[18px] w-[18px]" />
+            </span>
+          )}
+
+          {/* Message */}
+          <button
+            type="button"
+            onClick={() => router.push(messageHref)}
+            aria-label="Message contractor"
+            title="Message"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 hover:bg-white/5 hover:text-white"
+          >
+            <Mail className="h-[18px] w-[18px]" />
+          </button>
+        </div>
       </header>
 
-      {/* Row 2: Green stats under title (left) + Details (right) */}
       <div className="flex items-center justify-between gap-3">
         <div className="text-sm font-medium text-[#33C17D]">
           {spent} spent <span className="mx-2 text-white/35">•</span> {jobs} verified jobs
@@ -89,15 +108,18 @@ export function ContractorHeaderDrawer({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white flex-shrink-0"
+          className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"
         >
-          <SlidersIcon />
+          <SlidersHorizontal className="h-4 w-4" />
           <span>Details</span>
-          <span className="text-white/55">{open ? "▴" : "▾"}</span>
+          {open ? (
+            <ChevronUp className="h-4 w-4 text-white/55" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-white/55" />
+          )}
         </button>
       </div>
 
-      {/* Collapsible details */}
       <div
         className={[
           "overflow-hidden",
