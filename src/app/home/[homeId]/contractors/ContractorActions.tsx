@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ctaPrimary } from "@/lib/glass";
+import { Button } from "@/components/ui/Button";
 import { InviteProModal } from "@/app/home/[homeId]/invitations/_components/InviteProModal";
 
 type ContractorActionsProps = {
@@ -14,13 +14,9 @@ export function ContractorActions({ homeId, homeAddress }: ContractorActionsProp
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setInviteModalOpen(true)}
-        className={`${ctaPrimary} text-sm`}
-      >
+      <Button type="button" onClick={() => setInviteModalOpen(true)}>
         + Invite a Pro
-      </button>
+      </Button>
 
       <InviteProModal
         open={inviteModalOpen}

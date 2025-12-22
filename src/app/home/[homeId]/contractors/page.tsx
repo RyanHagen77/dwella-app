@@ -1,14 +1,17 @@
+// app/home/[homeId]/contractors/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 
-import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import { ContractorActions } from "./ContractorActions";
 import Breadcrumb from "@/components/ui/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { textMeta } from "@/lib/glass";
+import { ContractorActions } from "./ContractorActions";
 import { ContractorsListClient } from "./ContractorsListClient";
+
+export const dynamic = "force-dynamic";
 
 export default async function ContractorsPage({
   params,
@@ -19,23 +22,21 @@ export default async function ContractorsPage({
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
-
   await requireHomeAccess(homeId, session.user.id);
 
   const home = await prisma.home.findUnique({
     where: { id: homeId },
-    select: {
-      id: true,
-      address: true,
-      city: true,
-      state: true,
-      zip: true,
-    },
+    select: { id: true, address: true, city: true, state: true, zip: true },
   });
-
   if (!home) notFound();
 
-  // Fetch active connections
+  const addrLine =
+    `${home.address}` +
+    `${home.city ? `, ${home.city}` : ""}` +
+    `${home.state ? `, ${home.state}` : ""}` +
+    `${home.zip ? ` ${home.zip}` : ""}`;
+
+  // Active connections
   const activeConnectionsRaw = await prisma.connection.findMany({
     where: { homeId, status: "ACTIVE", contractorId: { not: null } },
     orderBy: { updatedAt: "desc" },
@@ -51,17 +52,13 @@ export default async function ContractorsPage({
           name: true,
           email: true,
           image: true,
-          proProfile: {
-            select: {
-              businessName: true,
-            },
-          },
+          proProfile: { select: { businessName: true } },
         },
       },
     },
   });
 
-  // Fetch archived connections
+  // Archived connections
   const archivedConnectionsRaw = await prisma.connection.findMany({
     where: { homeId, status: "ARCHIVED", contractorId: { not: null } },
     orderBy: { archivedAt: "desc" },
@@ -77,45 +74,39 @@ export default async function ContractorsPage({
           name: true,
           email: true,
           image: true,
-          proProfile: {
-            select: {
-              businessName: true,
-            },
-          },
+          proProfile: { select: { businessName: true } },
         },
       },
     },
   });
 
-  // Fetch verified work records for stats
+  // Verified work for stats
   const serviceRecords = await prisma.serviceRecord.findMany({
     where: { homeId, isVerified: true },
-    select: {
-      id: true,
-      contractorId: true,
-      cost: true,
-    },
+    select: { contractorId: true, cost: true },
   });
 
-  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
-
-  // Count verified work per contractor and sum costs
   const verifiedServiceByContractor = new Map<string, number>();
   const spentByContractor = new Map<string, number>();
 
   for (const record of serviceRecords) {
-    if (record.contractorId) {
-      const count = verifiedServiceByContractor.get(record.contractorId) || 0;
-      verifiedServiceByContractor.set(record.contractorId, count + 1);
+    if (!record.contractorId) continue;
 
-      const cost = record.cost ? Number(record.cost) : 0;
-      const currentSpent = spentByContractor.get(record.contractorId) || 0;
-      spentByContractor.set(record.contractorId, currentSpent + cost);
-    }
+    verifiedServiceByContractor.set(
+      record.contractorId,
+      (verifiedServiceByContractor.get(record.contractorId) || 0) + 1
+    );
+
+    const cost = record.cost ? Number(record.cost) : 0;
+    spentByContractor.set(
+      record.contractorId,
+      (spentByContractor.get(record.contractorId) || 0) + cost
+    );
   }
 
-  // Transform connections for client component
-  const mapConnection = (conn: (typeof activeConnectionsRaw)[number]) => ({
+  type ConnRow = (typeof activeConnectionsRaw)[number];
+
+  const mapConnection = (conn: ConnRow) => ({
     id: conn.id,
     createdAt: conn.createdAt.toISOString(),
     archivedAt: conn.archivedAt?.toISOString() || null,
@@ -137,60 +128,38 @@ export default async function ContractorsPage({
   const activeConnections = activeConnectionsRaw.map(mapConnection);
   const archivedConnections = archivedConnectionsRaw.map(mapConnection);
 
-  // Calculate stats (based on active connections only)
   const totalContractors = activeConnectionsRaw.length;
   const totalVerifiedServices = serviceRecords.length;
-  const totalSpentAmount = Array.from(spentByContractor.values()).reduce(
-    (sum, amount) => sum + amount,
-    0
-  );
-  const activeContractors = activeConnectionsRaw.filter((conn) => conn.lastServiceDate).length;
+  const totalSpentAmount = Array.from(spentByContractor.values()).reduce((sum, n) => sum + n, 0);
+  const activeContractors = activeConnectionsRaw.length;
+
+  const breadcrumbItems = [
+    { label: addrLine || "Home", href: `/home/${homeId}` },
+    { label: "Contractors" },
+  ];
+
+  const hasAny = activeConnections.length > 0 || archivedConnections.length > 0;
 
   return (
     <main className="relative min-h-screen text-white">
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        {/* Breadcrumb */}
-        <Breadcrumb href={`/home/${homeId}`} label={addrLine} current="Contractors" />
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <Breadcrumb items={breadcrumbItems} />
 
-        {/* Header */}
-        <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Link
-                href={`/home/${homeId}`}
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                aria-label="Back to home"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"
-                  />
-                </svg>
-              </Link>
-              <div className="flex-1 min-w-0">
-                <h1 className={`text-2xl font-bold ${heading}`}>Your Trusted Pros</h1>
-                <p className={`text-sm ${textMeta} mt-1`}>
-                  {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"}
-                </p>
-              </div>
-            </div>
-            <div className="flex-shrink-0">
-              <ContractorActions homeId={homeId} homeAddress={addrLine} />
-            </div>
-          </div>
-        </section>
+        <PageHeader
+          backHref={`/home/${homeId}`}
+          backLabel="Back to home"
+          title="Your Trusted Pros"
+          meta={
+            <span className={textMeta}>
+              {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"} •{" "}
+              {totalVerifiedServices} verified {totalVerifiedServices === 1 ? "job" : "jobs"}
+            </span>
+          }
+          rightDesktop={<ContractorActions homeId={homeId} homeAddress={addrLine} />}
+        />
 
-        {/* Stats Cards */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Stats (compact; avoids giant tiles) */}
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <StatCard label="Total Contractors" value={totalContractors} />
           <StatCard label="Verified Jobs" value={totalVerifiedServices} />
           <StatCard
@@ -201,19 +170,18 @@ export default async function ContractorsPage({
           <StatCard label="Active Pros" value={activeContractors} />
         </section>
 
-        {/* Contractors List */}
-        {activeConnections.length === 0 && archivedConnections.length === 0 ? (
-          <section className={glass}>
-            <div className="py-12 text-center">
-              <div className="text-5xl mb-4">👷</div>
-              <h2 className="text-xl font-semibold text-white mb-2">
-                No connected contractors yet
-              </h2>
-              <p className="text-white/60 mb-6 max-w-md mx-auto">
-                Connect with pros who&apos;ve worked on your home to build your trusted network and
-                get verified records.
+        {!hasAny ? (
+          <section className="rounded-2xl border border-white/15 bg-black/55 p-8 shadow-2xl backdrop-blur-xl">
+            <div className="py-6 text-center">
+              <div className="mb-4 text-5xl">👷</div>
+              <h2 className="text-xl font-semibold text-white">No connected contractors yet</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-white/70">
+                Connect with pros who&apos;ve worked on your home to build your trusted network and get verified records.
               </p>
-              <ContractorActions homeId={homeId} homeAddress={addrLine} />
+
+              <div className="mt-6 flex justify-center">
+                <ContractorActions homeId={homeId} homeAddress={addrLine} />
+              </div>
             </div>
           </section>
         ) : (
@@ -240,16 +208,17 @@ function StatCard({
   highlight?: "green" | "yellow";
 }) {
   return (
-    <div className={glassTight}>
-      <div className="text-sm text-white/70">{label}</div>
+    <div className="rounded-2xl border border-white/12 bg-black/25 px-4 py-3">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</div>
       <div
-        className={`mt-1 text-xl font-semibold ${
+        className={[
+          "mt-1 text-lg font-semibold leading-tight",
           highlight === "green"
-            ? "text-green-400"
+            ? "text-emerald-300"
             : highlight === "yellow"
-            ? "text-yellow-400"
-            : "text-white"
-        }`}
+            ? "text-yellow-300"
+            : "text-white",
+        ].join(" ")}
       >
         {value}
       </div>

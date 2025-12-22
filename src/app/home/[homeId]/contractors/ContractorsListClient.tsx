@@ -3,7 +3,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { glass } from "@/lib/glass";
 
 type ContractorConnection = {
   id: string;
@@ -28,38 +27,41 @@ type Props = {
   archivedConnections: ContractorConnection[];
 };
 
+const sectionSurface = "rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl";
+const cardLink =
+  "block rounded-2xl border border-white/12 bg-black/25 p-5 transition-colors " +
+  "hover:border-white/20 hover:bg-black/30";
+
 export function ContractorsListClient({
   homeId,
   activeConnections,
   archivedConnections,
 }: Props) {
+  const active = activeConnections ?? [];
+  const archived = archivedConnections ?? [];
+
   return (
     <div className="space-y-6">
-      {activeConnections.length > 0 && (
-        <section className={glass}>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-white/70">
-            Active Contractors ({activeConnections.length})
-          </h2>
+      {active.length > 0 ? (
+        <section className={sectionSurface}>
+          <div className="mb-4 text-xs font-semibold uppercase tracking-wide text-white/55">
+            Active ({active.length})
+          </div>
           <div className="space-y-3">
-            {activeConnections.map((conn) => (
-              <ContractorCard
-                key={conn.id}
-                homeId={homeId}
-                connection={conn}
-                statusLabel="Active"
-              />
+            {active.map((conn) => (
+              <ContractorCard key={conn.id} homeId={homeId} connection={conn} statusLabel="Active" />
             ))}
           </div>
         </section>
-      )}
+      ) : null}
 
-      {archivedConnections.length > 0 && (
-        <section className={glass}>
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-white/70">
-            Archived ({archivedConnections.length})
-          </h2>
+      {archived.length > 0 ? (
+        <section className={sectionSurface}>
+          <div className="mb-4 text-xs font-semibold uppercase tracking-wide text-white/55">
+            Archived ({archived.length})
+          </div>
           <div className="space-y-3">
-            {archivedConnections.map((conn) => (
+            {archived.map((conn) => (
               <ContractorCard
                 key={conn.id}
                 homeId={homeId}
@@ -70,7 +72,7 @@ export function ContractorsListClient({
             ))}
           </div>
         </section>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -83,14 +85,13 @@ function ContractorCard({
 }: {
   homeId: string;
   connection: ContractorConnection;
-  statusLabel: string;
+  statusLabel: "Active" | "Archived";
   dimmed?: boolean;
 }) {
   const contractor = connection.contractor;
   const href = `/home/${homeId}/contractors/${connection.id}`;
 
-  const name =
-    contractor?.businessName || contractor?.name || contractor?.email || "Contractor";
+  const name = contractor?.businessName || contractor?.name || contractor?.email || "Contractor";
 
   const lastServiceDate = connection.lastServiceDate
     ? new Date(connection.lastServiceDate).toLocaleDateString("en-US", {
@@ -100,21 +101,15 @@ function ContractorCard({
       })
     : null;
 
-  const createdAtLabel = new Date(connection.createdAt).toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric", year: "numeric" }
-  );
+  const createdAtLabel = new Date(connection.createdAt).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 
   return (
-    <Link
-      href={href}
-      className={`block rounded-lg border p-4 transition-colors ${
-        dimmed
-          ? "border-white/10 bg-white/5 hover:bg-white/10 opacity-80"
-          : "border-white/10 bg-white/5 hover:bg-white/10"
-      }`}
-    >
-      <div className="flex items-start gap-3">
+    <Link href={href} className={[cardLink, dimmed ? "opacity-85" : ""].join(" ")}>
+      <div className="flex items-start gap-4">
         {/* Avatar */}
         {contractor?.image ? (
           <Image
@@ -122,42 +117,39 @@ function ContractorCard({
             alt={name}
             width={48}
             height={48}
-            className="h-12 w-12 flex-shrink-0 rounded-full object-cover"
+            className="h-12 w-12 flex-shrink-0 rounded-full border border-white/10 object-cover"
           />
         ) : (
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-orange-500/20 text-lg font-semibold text-orange-300">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 text-lg font-semibold text-white/80">
             {name[0]?.toUpperCase() || "C"}
           </div>
         )}
 
         <div className="min-w-0 flex-1">
-          {/* Top row: name + status + arrow */}
+          {/* Top row */}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <div className="mb-1 flex flex-wrap items-center gap-2">
-                <h3 className="truncate text-base font-semibold text-white">
-                  {name}
-                </h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-base font-semibold text-white">{name}</h3>
+
                 <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs ${
+                  className={[
+                    "inline-flex flex-shrink-0 items-center rounded-full border px-2 py-0.5 text-xs",
                     statusLabel === "Active"
-                      ? "bg-emerald-500/20 text-emerald-300"
-                      : "bg-white/10 text-white/60"
-                  }`}
+                      ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
+                      : "border-white/10 bg-white/5 text-white/60",
+                  ].join(" ")}
                 >
                   {statusLabel}
                 </span>
               </div>
 
-              {contractor?.email && (
-                <p className="truncate text-xs text-white/60">
-                  {contractor.email}
-                </p>
-              )}
+              {contractor?.email ? (
+                <p className="mt-1 truncate text-xs text-white/60">{contractor.email}</p>
+              ) : null}
             </div>
 
-            <div className="flex items-center text-white/40">
-              {/* Right arrow to indicate clickability */}
+            <div className="flex items-center text-white/40" aria-hidden>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -166,34 +158,17 @@ function ContractorCard({
                 stroke="currentColor"
                 className="h-5 w-5"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </div>
           </div>
 
           {/* Meta row */}
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-white/60">
-            <span>
-              Connected {createdAtLabel}
-            </span>
-
-            {lastServiceDate && (
-              <span>Last work: {lastServiceDate}</span>
-            )}
-
-            <span>
-              Verified jobs: {connection.verifiedServiceCount}
-            </span>
-
-            {connection.totalSpent > 0 && (
-              <span>
-                Spent: ${connection.totalSpent.toLocaleString()}
-              </span>
-            )}
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/60">
+            <span>Connected {createdAtLabel}</span>
+            {lastServiceDate ? <span>Last work: {lastServiceDate}</span> : null}
+            <span>Verified jobs: {connection.verifiedServiceCount}</span>
+            {connection.totalSpent > 0 ? <span>Spent: ${connection.totalSpent.toLocaleString()}</span> : null}
           </div>
         </div>
       </div>

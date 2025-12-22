@@ -1,20 +1,11 @@
 // app/home/[homeId]/contractors/[connectionId]/_components/ContractorDetailTabs.tsx
-import Link from "next/link";
-import { glass, textMeta } from "@/lib/glass";
+"use client";
 
-type ServiceRecord = {
-  id: string;
-  serviceType: string;
-  description: string | null;
-  serviceDate: string;
-  cost: number | null;
-  isVerified: boolean;
-  status: string;
-  createdAt: string;
-  attachmentCount: number;
-  hasImages: boolean;
-  finalRecordId: string | null;
-};
+import * as React from "react";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { textMeta, ctaGhost } from "@/lib/glass";
 
 type ServiceRequest = {
   id: string;
@@ -27,34 +18,41 @@ type ServiceRequest = {
   budgetMax: number | null;
   desiredDate: string | null;
   createdAt: string;
-  quote: {
-    id: string;
-    totalAmount: number;
-    status: string;
-  } | null;
-  serviceRecord: {
-    id: string;
-    status: string;
-    serviceDate: string;
-  } | null;
+  quote: { id: string; totalAmount: number; status: string } | null;
+  serviceRecord: { id: string; status: string; serviceDate: string } | null;
 };
 
 type PendingSubmission = {
   id: string;
+  title?: string | null; // optional (if you have it)
   serviceType: string;
   description: string | null;
   serviceDate: string;
   createdAt: string;
   attachmentCount: number;
   hasImages: boolean;
+  cost?: number | null; // optional (if you have it)
+  /** Optional: lets you hide approve/reject if a row isn’t a serviceSubmission id */
+  kind?: "SUBMISSION" | "RECORD";
 };
 
-type Tab = "work-history" | "requests" | "pending";
+type Tab = "requests" | "pending";
+
+/* Match Completed Service page surfaces */
+const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
+const insetSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleDateString();
+}
 
 export function ContractorDetailTabs({
   homeId,
   connectionId,
-  serviceRecords,
+  serviceRecords, // ignored now (work history removed)
   serviceRequests,
   pendingSubmissions,
   activeRequestsCount,
@@ -63,260 +61,113 @@ export function ContractorDetailTabs({
 }: {
   homeId: string;
   connectionId: string;
-  serviceRecords: ServiceRecord[];
+  serviceRecords: any[]; // kept for prop-compat (work history removed)
   serviceRequests: ServiceRequest[];
   pendingSubmissions: PendingSubmission[];
   activeRequestsCount: number;
   pendingApprovalsCount?: number;
-  activeTab: Tab;
+  activeTab: "work-history" | "requests" | "pending"; // kept for prop-compat
 }) {
-  const pendingCount = pendingApprovalsCount ?? pendingSubmissions.length;
-  const baseHref = `/home/${homeId}/contractors/${connectionId}`;
+  const router = useRouter();
 
-  return (
-    <>
-      {/* Tabs */}
-      <section className={glass}>
-        <div className="flex flex-wrap gap-2">
-          <Link
-            href={`${baseHref}?tab=work-history`}
-            className={`rounded-full border px-4 py-2 text-sm transition ${
-              activeTab === "work-history"
-                ? "border-white/40 bg-white/15 text-white"
-                : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-            }`}
-          >
-            Work History
-            {serviceRecords.length > 0 && ` (${serviceRecords.length})`}
-          </Link>
+  const safeRequests = serviceRequests ?? [];
+  const safePending = pendingSubmissions ?? [];
 
-          <Link
-            href={`${baseHref}?tab=requests`}
-            className={`rounded-full border px-4 py-2 text-sm transition ${
-              activeTab === "requests"
-                ? "border-white/40 bg-white/15 text-white"
-                : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-            }`}
-          >
-            Service Requests
-            {activeRequestsCount > 0 && ` (${activeRequestsCount})`}
-          </Link>
+  const totalRequests = activeRequestsCount ?? safeRequests.length;
+  const totalPending = pendingApprovalsCount ?? safePending.length;
 
-          <Link
-            href={`${baseHref}?tab=pending`}
-            className={`rounded-full border px-4 py-2 text-sm transition ${
-              activeTab === "pending"
-                ? "border-white/40 bg-white/15 text-white"
-                : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-            }`}
-          >
-            Pending Approvals
-            {pendingCount > 0 && ` (${pendingCount})`}
-          </Link>
-        </div>
-      </section>
+  // ✅ Use the same “slider” control style as the Completed Service page
+  const initial: Tab = activeTab === "pending" ? "pending" : "requests";
+  const [tab, setTab] = useState<Tab>(initial);
 
-      {/* Content */}
-      <section className={glass}>
-        {activeTab === "work-history" && (
-          <ServiceHistoryTab serviceRecords={serviceRecords} homeId={homeId} />
-        )}
-        {activeTab === "requests" && (
-          <ServiceRequestsTab serviceRequests={serviceRequests} homeId={homeId} />
-        )}
-        {activeTab === "pending" && (
-          <PendingApprovalsTab
-            pendingSubmissions={pendingSubmissions}
-            homeId={homeId}
-          />
-        )}
-      </section>
-    </>
-  );
-}
-
-/* ---------- Work History Tab ---------- */
-
-function ServiceHistoryTab({
-  serviceRecords,
-  homeId,
-}: {
-  serviceRecords: ServiceRecord[];
-  homeId: string;
-}) {
-  if (serviceRecords.length === 0) {
-    return (
-      <div className="py-10 text-center text-white/80">
-        <div className="mb-4 text-5xl">📋</div>
-        <p className="text-lg">No work records yet.</p>
-        <p className={`mt-2 text-sm ${textMeta}`}>
-          Work completed by this contractor will appear here.
-        </p>
-      </div>
-    );
+  async function approvePending(id: string) {
+    const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${id}/approve`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error("Failed to approve");
+    router.refresh();
   }
 
-  const getStatusBadge = (status: string, isVerified: boolean) => {
-    if (isVerified) {
-      return (
-        <span className="inline-block rounded-full border border-green-500/30 bg-green-500/20 px-3 py-1 text-xs font-medium text-green-300">
-          ✓ Verified
-        </span>
-      );
-    }
+  async function rejectPending(id: string) {
+    const ok = confirm("Are you sure you want to reject this submission?");
+    if (!ok) return;
 
-    if (
-      ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED"].includes(
-        status
-      )
-    ) {
-      return (
-        <span className="inline-block rounded-full border border-orange-500/30 bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-300">
-          Pending Approval
-        </span>
-      );
-    }
-
-    const styles: Record<string, string> = {
-      APPROVED: "bg-green-500/20 text-green-300 border-green-500/30",
-      REJECTED: "bg-red-500/20 text-red-300 border-red-500/30",
-      DISPUTED: "bg-red-500/20 text-red-300 border-red-500/30",
-      EXPIRED: "bg-gray-500/20 text-gray-300 border-gray-500/30",
-    };
-
-    return (
-      <span
-        className={`inline-block rounded-full border px-3 py-1 text-xs font-medium ${
-          styles[status] || "bg-gray-500/20 text-gray-300 border-gray-500/30"
-        }`}
-      >
-        {status.replace(/_/g, " ")}
-      </span>
-    );
-  };
-
-  const isPendingApproval = (status: string, isVerified: boolean) =>
-    !isVerified &&
-    ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED"].includes(
-      status
-    );
+    const res = await fetch(`/api/home/${homeId}/completed-service-submissions/${id}/reject`, {
+      method: "POST",
+    });
+    if (!res.ok) throw new Error("Failed to reject");
+    router.refresh();
+  }
 
   return (
-    <div className="space-y-4">
-      {serviceRecords.map((record) => {
-        const needsApproval = isPendingApproval(
-          record.status,
-          record.isVerified
-        );
+    <div className="space-y-6">
+      {/* Tabs (Completed Service slider style) */}
+      <div className="inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm">
+        <button
+          type="button"
+          onClick={() => setTab("requests")}
+          className={[
+            "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
+            tab === "requests"
+              ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+              : "text-white/80 hover:text-white hover:bg-white/5",
+          ].join(" ")}
+        >
+          Service Requests{totalRequests > 0 ? ` (${totalRequests})` : ""}
+        </button>
 
-        const href =
-          record.isVerified && record.finalRecordId
-            ? `/home/${homeId}/records/${record.finalRecordId}`
-            : `/home/${homeId}/completed-service-submissions`;
+        <button
+          type="button"
+          onClick={() => setTab("pending")}
+          className={[
+            "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
+            tab === "pending"
+              ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+              : "text-white/80 hover:text-white hover:bg-white/5",
+          ].join(" ")}
+        >
+          Pending Submissions{totalPending > 0 ? ` (${totalPending})` : ""}
+        </button>
+      </div>
 
-        return (
-          <Link
-            key={record.id}
-            href={href}
-            className={`block rounded-xl p-6 transition-colors ${
-              needsApproval
-                ? "border border-orange-500/30 bg-orange-500/5 hover:bg-orange-500/10"
-                : "border border-white/10 bg-white/5 hover:bg-white/10"
-            }`}
-          >
-            <div className="mb-3 flex items-start justify-between gap-4">
-              <div className="flex-1">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <h3 className="text-lg font-semibold text-white">
-                    {record.serviceType}
-                  </h3>
-                  {getStatusBadge(record.status, record.isVerified)}
-                </div>
-                {record.description && (
-                  <p className="line-clamp-2 text-sm text-white/70">
-                    {record.description}
-                  </p>
-                )}
-              </div>
-              {record.cost !== null && (
-                <div className="flex-shrink-0 text-right">
-                  <p className="text-lg font-semibold text-green-400">
-                    ${record.cost.toLocaleString()}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 text-sm text-white/60">
-              <span>
-                {new Date(record.serviceDate).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-              {record.attachmentCount > 0 && (
-                <span className="flex items-center gap-1">
-                  {record.hasImages ? "📷" : "📎"} {record.attachmentCount}{" "}
-                  {record.attachmentCount === 1 ? "file" : "files"}
-                </span>
-              )}
-            </div>
-
-            {needsApproval && (
-              <div className="mt-4 border-t border-white/10 pt-4">
-                <p className="text-sm text-orange-300">
-                  👉 Click to review and approve this work
-                </p>
-              </div>
-            )}
-          </Link>
-        );
-      })}
+      {/* Content */}
+      {tab === "requests" ? (
+        <ServiceRequestsTab homeId={homeId} serviceRequests={safeRequests} />
+      ) : (
+        <PendingApprovalsTab
+          homeId={homeId}
+          connectionId={connectionId}
+          pendingSubmissions={safePending}
+          onApprove={approvePending}
+          onReject={rejectPending}
+        />
+      )}
     </div>
   );
 }
 
-/* ---------- Job Requests Tab ---------- */
+/* ---------- Service Requests Tab ---------- */
 
 function ServiceRequestsTab({
-  serviceRequests: serviceRequests,
   homeId,
+  serviceRequests,
 }: {
-  serviceRequests: ServiceRequest[];
   homeId: string;
+  serviceRequests: ServiceRequest[];
 }) {
-  if (serviceRequests.length === 0) {
-    return (
-      <div className="py-10 text-center text-white/80">
-        <div className="mb-4 text-5xl">📝</div>
-        <p className="text-lg">No service requests yet.</p>
-        <p className={`mt-2 text-sm ${textMeta}`}>
-          Your service requests to this contractor will appear here.
-        </p>
-      </div>
-    );
-  }
-
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      PENDING: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-      QUOTED: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-      ACCEPTED: "bg-green-500/20 text-green-300 border-green-500/30",
-      IN_PROGRESS:
-        "bg-purple-500/20 text-purple-300 border-purple-500/30",
-      COMPLETED:
-        "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-      DECLINED: "bg-red-500/20 text-red-300 border-red-500/30",
-      CANCELLED: "bg-gray-500/20 text-gray-300 border-gray-500/30",
+      PENDING: "bg-orange-500/15 text-orange-200 border-orange-500/20",
+      QUOTED: "bg-blue-500/15 text-blue-200 border-blue-500/20",
+      ACCEPTED: "bg-emerald-500/15 text-emerald-200 border-emerald-500/20",
+      IN_PROGRESS: "bg-purple-500/15 text-purple-200 border-purple-500/20",
+      COMPLETED: "bg-emerald-500/15 text-emerald-200 border-emerald-500/20",
+      DECLINED: "bg-red-500/15 text-red-200 border-red-500/20",
+      CANCELLED: "bg-white/10 text-white/70 border-white/12",
     };
 
     return (
-      <span
-        className={`inline-block rounded-full border px-3 py-1 text-xs font-medium ${
-          styles[status] || styles.PENDING
-        }`}
-      >
+      <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium ${styles[status] ?? styles.PENDING}`}>
         {status.replace(/_/g, " ")}
       </span>
     );
@@ -324,199 +175,215 @@ function ServiceRequestsTab({
 
   const getUrgencyBadge = (urgency: string) => {
     const styles: Record<string, string> = {
-      EMERGENCY: "bg-red-500/20 text-red-300",
-      HIGH: "bg-orange-500/20 text-orange-300",
-      NORMAL: "bg-blue-500/20 text-blue-300",
-      LOW: "bg-gray-500/20 text-gray-300",
+      EMERGENCY: "bg-red-600/20 text-red-100 border border-red-600/25",
+      HIGH: "bg-orange-500/15 text-orange-100 border border-orange-500/20",
+      NORMAL: "bg-blue-500/15 text-blue-100 border border-blue-500/20",
+      LOW: "bg-white/10 text-white/70 border border-white/12",
     };
 
     return (
-      <span
-        className={`inline-block rounded px-2 py-0.5 text-xs ${
-          styles[urgency] || styles.NORMAL
-        }`}
-      >
+      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs ${styles[urgency] ?? styles.NORMAL}`}>
         {urgency}
       </span>
     );
   };
 
-  return (
-    <div className="space-y-4">
-      {serviceRequests.map((service) => (
-        <Link
-          key={service.id}
-          href={`/home/${homeId}/service-requests/${service.id}`}
-          className="block rounded-xl border border-white/10 bg-white/5 p-6 transition-colors hover:bg-white/10"
-        >
-          <div className="mb-4">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <h3 className="text-lg font-semibold text-white">
-                {service.title}
-              </h3>
-              {getStatusBadge(service.status)}
-              {getUrgencyBadge(service.urgency)}
-            </div>
-
-            <p className="line-clamp-2 text-sm text-white/70">
-              {service.description}
-            </p>
-
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/60">
-              {service.category && <span>{service.category}</span>}
-              {service.desiredDate && (
-                <span>
-                  Desired:{" "}
-                  {new Date(service.desiredDate).toLocaleDateString(
-                    "en-US",
-                    {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    }
-                  )}
-                </span>
-              )}
-              <span>
-                Created:{" "}
-                {new Date(service.createdAt).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-
-            {(service.budgetMin || service.budgetMax) && (
-              <div className="mt-2 text-sm text-white/60">
-                Budget: ${service.budgetMin?.toLocaleString() || "0"} - $
-                {service.budgetMax?.toLocaleString() || "0"}
-              </div>
-            )}
-
-            {service.quote && (
-              <div className="mt-3 rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-blue-300">
-                      Quote Received
-                    </p>
-                    <p className="text-lg font-bold text-white">
-                      ${service.quote.totalAmount.toLocaleString()}
-                    </p>
-                  </div>
-                  <span className="text-xs text-blue-300/80">
-                    {service.quote.status}
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {service.serviceRecord && (
-              <div className="mt-3 rounded-lg border border-green-500/30 bg-green-500/10 p-3">
-                <p className="text-sm font-medium text-green-300">
-                  Work Scheduled
-                </p>
-                <p className="text-sm text-white/80">
-                  {new Date(service.serviceRecord.serviceDate).toLocaleDateString(
-                    "en-US",
-                    {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    }
-                  )}{" "}
-                  • {service.serviceRecord.status.replace(/_/g, " ")}
-                </p>
-              </div>
-            )}
-          </div>
-        </Link>
-      ))}
-    </div>
-  );
-}
-
-/* ---------- Pending Approvals Tab ---------- */
-
-function PendingApprovalsTab({
-  pendingSubmissions,
-  homeId,
-}: {
-  pendingSubmissions: PendingSubmission[];
-  homeId: string;
-}) {
-  if (pendingSubmissions.length === 0) {
+  if (!serviceRequests?.length) {
     return (
-      <div className="py-10 text-center text-white/80">
-        <div className="mb-4 text-5xl">✅</div>
-        <p className="text-lg">No pending approvals.</p>
-        <p className={`mt-2 text-sm ${textMeta}`}>
-          Work submissions from this contractor awaiting your approval will
-          appear here.
-        </p>
+      <div className="py-10 text-center">
+        <div className="mb-4 text-5xl">📝</div>
+        <p className="text-lg text-white">No service requests yet.</p>
+        <p className={`mt-2 text-sm ${textMeta}`}>Your service requests to this contractor will appear here.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {pendingSubmissions.map((submission) => (
-        <Link
-          key={submission.id}
-          href={`/home/${homeId}/completed-service-submissions`}
-          className="block rounded-xl border border-orange-500/30 bg-orange-500/5 p-6 transition-colors hover:bg-orange-500/10"
-        >
-          <div className="mb-3 flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="mb-2 flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-white">
-                  {submission.serviceType}
-                </h3>
-                <span className="inline-block rounded-full border border-orange-500/30 bg-orange-500/20 px-3 py-1 text-xs font-medium text-orange-300">
-                  Awaiting Approval
-                </span>
+      {serviceRequests.map((service) => (
+        <Link key={service.id} href={`/home/${homeId}/service-requests/${service.id}`} className={`${cardSurface} block`}>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <h3 className="text-base font-semibold text-white sm:text-lg">{service.title}</h3>
+            {getStatusBadge(service.status)}
+            {getUrgencyBadge(service.urgency)}
+          </div>
+
+          <p className="line-clamp-2 text-sm text-white/70">{service.description}</p>
+
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/60">
+            {service.category ? <span>{service.category}</span> : null}
+            {service.desiredDate ? <span>Desired: {formatDate(service.desiredDate)}</span> : null}
+            <span>Created: {formatDate(service.createdAt)}</span>
+          </div>
+
+          {service.budgetMin || service.budgetMax ? (
+            <div className="mt-2 text-sm text-white/60">
+              Budget: ${service.budgetMin?.toLocaleString() || "0"} – ${service.budgetMax?.toLocaleString() || "0"}
+            </div>
+          ) : null}
+
+          {service.quote ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-xs font-medium text-white/70">Quote received</div>
+                  <div className="mt-1 text-lg font-semibold text-white">${Number(service.quote.totalAmount).toLocaleString()}</div>
+                </div>
+                <div className="text-xs text-white/60">{service.quote.status}</div>
               </div>
-              {submission.description && (
-                <p className="line-clamp-2 text-sm text-white/70">
-                  {submission.description}
-                </p>
+            </div>
+          ) : null}
+
+          {service.serviceRecord ? (
+            <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+              <div className="text-xs font-medium text-white/70">Work scheduled</div>
+              <div className="mt-1 text-sm text-white/80">
+                {formatDate(service.serviceRecord.serviceDate)} • {service.serviceRecord.status.replace(/_/g, " ")}
+              </div>
+            </div>
+          ) : null}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- Pending Approvals Tab (approve/reject like Completed page) ---------- */
+
+function PendingApprovalsTab({
+  homeId,
+  pendingSubmissions,
+  onApprove,
+  onReject,
+}: {
+  homeId: string;
+  connectionId: string;
+  pendingSubmissions: PendingSubmission[];
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
+}) {
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const rows = useMemo(() => pendingSubmissions ?? [], [pendingSubmissions]);
+
+  if (!rows.length) {
+    return (
+      <div className="py-10 text-center">
+        <div className="mb-4 text-5xl">✅</div>
+        <p className="text-lg text-white">No pending submissions.</p>
+        <p className={`mt-2 text-sm ${textMeta}`}>Work submissions awaiting your approval will appear here.</p>
+      </div>
+    );
+  }
+
+  async function handleApprove(id: string) {
+    setBusyId(id);
+    try {
+      await onApprove(id);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to approve submission");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleReject(id: string) {
+    setBusyId(id);
+    try {
+      await onReject(id);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to reject submission");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {rows.map((s) => {
+        const title = s.title || s.serviceType;
+        const href = `/home/${homeId}/completed-service-submissions/${s.id}`;
+
+        const canAct = (s.kind ?? "SUBMISSION") === "SUBMISSION";
+
+        return (
+          <div key={s.id} className={cardSurface}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-semibold text-white sm:text-lg">{title}</h3>
+                  <span className="inline-flex items-center rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
+                    Pending Approval
+                  </span>
+                </div>
+
+                {s.description ? <p className="text-sm text-white/70 line-clamp-2">{s.description}</p> : null}
+
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/60">
+                  {s.serviceDate ? <span>Work date: {formatDate(s.serviceDate)}</span> : null}
+                  {typeof s.cost === "number" ? (
+                    <span className="font-medium text-emerald-200">• Cost: ${Number(s.cost).toLocaleString()}</span>
+                  ) : null}
+                  {s.attachmentCount > 0 ? (
+                    <span className="flex items-center gap-1">
+                      {s.hasImages ? "📷" : "📎"} {s.attachmentCount} {s.attachmentCount === 1 ? "file" : "files"}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-4">
+                  <div className={insetSurface}>
+                    <Link href={href} className="text-sm text-white/80 hover:text-white transition">
+                      👉 Open to review details
+                    </Link>
+                    <div className={`mt-1 text-xs ${textMeta}`}>Submitted: {formatDate(s.createdAt)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {typeof s.cost === "number" ? (
+                <div className="shrink-0 text-right">
+                  <div className="text-xs font-medium uppercase tracking-wide text-white/55">Cost</div>
+                  <div className="mt-1 text-lg font-semibold text-emerald-200">
+                    ${Number(s.cost).toLocaleString()}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Actions (match Completed page green/red) */}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {canAct ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => handleApprove(s.id)}
+                    disabled={busyId === s.id}
+                    className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-400/15 hover:border-emerald-300/35 disabled:opacity-60"
+                  >
+                    ✓ Approve &amp; add to records
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleReject(s.id)}
+                    disabled={busyId === s.id}
+                    className="rounded-full border border-red-400/25 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-100 transition-colors hover:bg-red-400/15 hover:border-red-300/35 disabled:opacity-60"
+                  >
+                    ✗ Reject
+                  </button>
+                </>
+              ) : (
+                <Link href={href} className={`${ctaGhost} inline-flex items-center justify-center`}>
+                  Review
+                </Link>
               )}
             </div>
           </div>
-
-          <div className="flex flex-wrap items-center gap-4 text-sm text-white/60">
-            <span>
-              Work Date:{" "}
-              {new Date(submission.serviceDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-            {submission.attachmentCount > 0 && (
-              <span className="flex items-center gap-1">
-                {submission.hasImages ? "📷" : "📎"}{" "}
-                {submission.attachmentCount}{" "}
-                {submission.attachmentCount === 1 ? "file" : "files"}
-              </span>
-            )}
-            <span>
-              Submitted:{" "}
-              {new Date(submission.createdAt).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          </div>
-
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <p className="text-sm text-orange-300">
-              👉 Click to review and approve this work
-            </p>
-          </div>
-        </Link>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { glass, ctaGhost, ctaPrimary, heading } from "@/lib/glass";
+import * as React from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
+
+import Breadcrumb from "@/components/ui/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Button, GhostButton } from "@/components/ui/Button";
+import { textMeta } from "@/lib/glass";
+
 import { ShareAccessModal } from "@/app/home/_components/ShareAccessModal";
 import { TransfersSection } from "@/components/transfer/TransfersSection";
+
+import {
+  formFieldShell,
+  formInputInner,
+  formLabelCaps,
+  formHelperText,
+  formSectionSurface,
+} from "@/components/ui/formFields";
 
 type ProfileForm = {
   name: string;
@@ -23,17 +36,18 @@ type MessageState =
 export default function AccountPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<MessageState>(null);
-  const [shareOpen, setShareOpen] = useState(false);
 
-  const [form, setForm] = useState<ProfileForm>({
+  const [saving, setSaving] = React.useState(false);
+  const [message, setMessage] = React.useState<MessageState>(null);
+  const [shareOpen, setShareOpen] = React.useState(false);
+
+  const [form, setForm] = React.useState<ProfileForm>({
     name: "",
     email: "",
   });
 
   // Load user data into the form
-  useEffect(() => {
+  React.useEffect(() => {
     if (session?.user) {
       setForm({
         name: session.user.name || "",
@@ -46,12 +60,9 @@ export default function AccountPage() {
     if (!session?.user) return;
 
     // No-op if nothing changed
-    if (
-      form.name === (session.user.name || "") &&
-      form.email === (session.user.email || "")
-    ) {
-      setMessage({ type: "success", text: "No changes to save" });
-      setTimeout(() => setMessage(null), 2500);
+    if (form.name === (session.user.name || "") && form.email === (session.user.email || "")) {
+      setMessage({ type: "success", text: "No changes to save." });
+      window.setTimeout(() => setMessage(null), 2500);
       return;
     }
 
@@ -67,10 +78,10 @@ export default function AccountPage() {
 
       if (!res.ok) throw new Error("Failed to update profile");
 
-      setMessage({ type: "success", text: "Profile updated successfully" });
-      setTimeout(() => setMessage(null), 3000);
-    } catch (error) {
-      setMessage({ type: "error", text: "Failed to update profile" });
+      setMessage({ type: "success", text: "Profile updated successfully." });
+      window.setTimeout(() => setMessage(null), 3000);
+    } catch {
+      setMessage({ type: "error", text: "Failed to update profile." });
     } finally {
       setSaving(false);
     }
@@ -99,215 +110,181 @@ export default function AccountPage() {
     return (
       <main className="relative min-h-screen text-white flex items-center justify-center">
         <Bg />
-        <p className="text-white/70 text-sm">
-          You need to be signed in to view this page.
-        </p>
+        <p className="text-white/70 text-sm">You need to be signed in to view this page.</p>
       </main>
     );
   }
+
+  const breadcrumbItems = [{ label: "Home", href: "/home" }, { label: "Account Settings" }];
 
   return (
     <main className="relative min-h-screen text-white">
       <Bg />
 
-      <div className="mx-auto max-w-3xl p-6 space-y-6">
-        {/* Header (matches messages style) */}
-        <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <button
-                onClick={() => router.back()}
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                aria-label="Back"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
-                  />
-                </svg>
-              </button>
-              <div className="flex-1 min-w-0">
-                <h1 className={`text-2xl font-bold ${heading}`}>
-                  Account Settings
-                </h1>
-                <p className="text-sm text-white/65 mt-1">
-                  Manage your Dwella profile, security, and access.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
+      <div className="mx-auto max-w-4xl space-y-6 p-6">
+        <Breadcrumb items={breadcrumbItems} />
 
-        {/* Success/Error Message */}
+        <PageHeader
+          backHref="/home"
+          backLabel="Back to home"
+          title="Account Settings"
+          meta={<span className={textMeta}>Manage your Dwella profile, security, and access.</span>}
+        />
+
+        {/* Success/Error Message (standard inline block) */}
         {message && (
           <div
             aria-live="polite"
-            className={`p-4 rounded-lg ${
+            className={[
+              "rounded-2xl border p-3 text-sm",
               message.type === "success"
-                ? "bg-green-500/20 border border-green-500/30 text-green-200"
-                : "bg-red-500/20 border border-red-500/30 text-red-200"
-            }`}
+                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
+                : "border-red-500/35 bg-red-500/10 text-red-100",
+            ].join(" ")}
           >
-            {message.type === "success" ? "✓ " : "✗ "}
+            <span className="font-semibold">{message.type === "success" ? "✓ " : "✗ "}</span>
             {message.text}
           </div>
         )}
 
-        {/* Profile Card */}
-        <section className={glass}>
-          <h2 className={`mb-4 text-lg font-medium ${heading}`}>
-            Profile Information
-          </h2>
-          <div className="space-y-4">
+        {/* Profile (single body surface, no glass-on-glass) */}
+        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center justify-between gap-3">
+            <h2 className="text-lg font-semibold text-white">Profile</h2>
+            <p className={`text-xs ${textMeta}`}>{session.user.email}</p>
+          </div>
+
+          <div className="mt-6 space-y-4">
             <label className="block">
-              <span className="text-white/70 text-sm font-medium mb-2 block">
-                Name
-              </span>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, name: e.target.value }))
-                }
-                className="w-full rounded-lg bg-black/30 text-white placeholder:text-white/50 border border-white/20 p-3 focus:border-white/40 focus:outline-none transition-colors"
-                placeholder="Enter your name"
-              />
+              <span className={formLabelCaps}>Name</span>
+              <div className={formFieldShell}>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className={formInputInner}
+                  placeholder="Enter your name"
+                />
+              </div>
             </label>
 
             <label className="block">
-              <span className="text-white/70 text-sm font-medium mb-2 block">
-                Email
-              </span>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, email: e.target.value }))
-                }
-                className="w-full rounded-lg bg-black/30 text-white placeholder:text-white/50 border border-white/20 p-3 focus:border-white/40 focus:outline-none transition-colors"
-                placeholder="your.email@example.com"
-              />
+              <span className={formLabelCaps}>Email</span>
+              <div className={formFieldShell}>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                  className={formInputInner}
+                  placeholder="your.email@example.com"
+                />
+              </div>
+              <p className={formHelperText}>This email is used for login and notifications.</p>
             </label>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className={ctaPrimary}
-            >
-              {saving ? "Saving..." : "Save Changes"}
-            </button>
-            <button onClick={handleCancel} className={ctaGhost}>
+          <div className="mt-6 flex justify-end gap-3">
+            <GhostButton type="button" onClick={handleCancel} disabled={saving}>
               Cancel
-            </button>
+            </GhostButton>
+            <Button type="button" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </Button>
           </div>
         </section>
 
         {/* Security */}
-        <section className={glass}>
-          <h2 className={`mb-4 text-lg font-medium ${heading}`}>Security</h2>
-          <div className="space-y-3">
-            <button
-              onClick={() => router.push("/account/change-password")}
-              className={`${ctaGhost} w-full sm:w-auto`}
-            >
-              Change Password
-            </button>
-            <div className="pt-3 border-t border-white/10">
-              <p className="text-sm text-white/60 mb-3">
-                Sign out of your account on this device
-              </p>
-              <button
-                onClick={() => signOut({ callbackUrl: "/login?role=homeowner" })}
-                className={`${ctaGhost} w-full sm:w-auto`}
-              >
-                Sign Out
-              </button>
+        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+          <h2 className="text-lg font-semibold text-white">Security</h2>
+
+          <div className="mt-4 space-y-3">
+            <div className={formSectionSurface}>
+              <p className="text-sm text-white/80">Change your password for this account.</p>
+              <div className="mt-3">
+                <GhostButton type="button" onClick={() => router.push("/account/change-password")}>
+                  Change password
+                </GhostButton>
+              </div>
+            </div>
+
+            <div className={formSectionSurface}>
+              <p className="text-sm text-white/80">Sign out of your account on this device.</p>
+              <div className="mt-3">
+                <GhostButton
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/login?role=homeowner" })}
+                >
+                  Sign out
+                </GhostButton>
+              </div>
             </div>
           </div>
         </section>
 
         {/* Subscription */}
-        <section className={glass}>
-          <h2 className={`mb-4 text-lg font-medium ${heading}`}>
-            Subscription
-          </h2>
-          <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+          <h2 className="text-lg font-semibold text-white">Subscription</h2>
+
+          <div className={`mt-4 ${formSectionSurface}`}>
             <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-white font-medium">Dwella Basic</p>
-                <p className="text-white/60 text-sm mt-1">
-                  Manage unlimited homes and maintenance records
-                </p>
+              <div className="min-w-0">
+                <p className="font-medium text-white">Dwella Basic</p>
+                <p className={`mt-1 text-sm ${textMeta}`}>Manage unlimited homes and maintenance records.</p>
               </div>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-500/20 text-green-300 border border-green-500/30">
+
+              <span className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100">
                 Active
               </span>
             </div>
-          </div>
-          <div className="mt-4">
-            <button
-              onClick={() => router.push("/billing")}
-              className={ctaGhost}
-            >
-              Manage Billing
-            </button>
+
+            <div className="mt-4">
+              <GhostButton type="button" onClick={() => router.push("/billing")}>
+                Manage billing
+              </GhostButton>
+            </div>
           </div>
         </section>
 
         {/* Shared Access */}
-        <section className={glass}>
-          <h2 className={`mb-4 text-lg font-medium ${heading}`}>
-            Shared Access
-          </h2>
-          <p className="text-white/70 text-sm mb-4">
-            Manage who has access to your homes and what they can do.
-          </p>
-          <button
-            onClick={() => setShareOpen(true)}
-            className={ctaGhost}
-          >
-            Manage Access
-          </button>
+        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+          <h2 className="text-lg font-semibold text-white">Shared access</h2>
+          <p className={`mt-2 text-sm ${textMeta}`}>Manage who has access to your homes and what they can do.</p>
+
+          <div className="mt-4">
+            <GhostButton type="button" onClick={() => setShareOpen(true)}>
+              Manage access
+            </GhostButton>
+          </div>
         </section>
 
-        {/* Home Transfers */}
+        {/* Home Transfers (leave as-is; ensure it matches its own standard internally) */}
         <TransfersSection />
 
-        {/* Danger Zone */}
-        <section className={`${glass} border-red-500/30`}>
-          <h2 className="mb-4 text-lg font-medium text-red-400">
-            Danger Zone
-          </h2>
-          <p className="text-white/70 text-sm mb-4">
-            Permanently delete your account and all associated data. This action
-            cannot be undone.
+        {/* Danger Zone (no alerts; inline state + confirm ok) */}
+        <section className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 backdrop-blur-xl">
+          <h2 className="text-lg font-semibold text-red-200">Danger zone</h2>
+          <p className={`mt-2 text-sm ${textMeta}`}>
+            Permanently delete your account and all associated data. This action cannot be undone.
           </p>
-          <button
-            onClick={() => {
-              if (
-                confirm(
-                  "Are you sure you want to delete your profile? This cannot be undone."
-                )
-              ) {
-                // TODO: Implement profile deletion
-                alert("Account deletion not yet implemented");
-              }
-            }}
-            className="px-4 py-2 rounded-lg border border-red-500/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors text-sm"
-          >
-            Delete Account
-          </button>
+
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => {
+                const ok = confirm("Are you sure you want to delete your profile? This cannot be undone.");
+                if (!ok) return;
+
+                setMessage({
+                  type: "error",
+                  text: "Account deletion is not implemented yet.",
+                });
+                window.setTimeout(() => setMessage(null), 3500);
+              }}
+              className="rounded-full border border-red-400/25 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-100 transition-colors hover:bg-red-400/15 hover:border-red-300/35"
+            >
+              Delete account
+            </button>
+          </div>
         </section>
 
         <div className="h-12" />
@@ -316,9 +293,9 @@ export default function AccountPage() {
       {/* Shared Access Modal */}
       <ShareAccessModal
         open={shareOpen}
-        onClose={() => setShareOpen(false)}
+        onCloseAction={() => setShareOpen(false)}
       />
-    </main>
+      </main>
   );
 }
 

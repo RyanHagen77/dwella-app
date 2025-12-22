@@ -16,7 +16,6 @@ import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { ServiceSubmissionStatus } from "@prisma/client";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -111,46 +110,51 @@ export default async function HomeownerChatPage({
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={breadcrumbItems} />
 
+        {/* Header (standard): title is string only */}
         <PageHeader
           backHref={backHref}
           backLabel="Back to messages"
-          title={
-            <div className="flex min-w-0 items-center gap-3">
-              {otherUser.image ? (
-                <Image
-                  src={otherUser.image}
-                  alt={otherUser.name}
-                  width={40}
-                  height={40}
-                  className="h-10 w-10 flex-shrink-0 rounded-full border border-white/10 object-cover"
-                />
-              ) : (
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20">
-                  <span className="text-lg font-medium">{otherUser.name[0]?.toUpperCase() || "?"}</span>
-                </div>
-              )}
-
-              <div className="min-w-0">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="truncate">{otherUser.name}</span>
-                  {isArchived ? (
-                    <span className="flex-shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/60">
-                      Archived
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          }
+          title={otherUser.name}
           meta={<span className={textMeta}>{addrLine}</span>}
           rightDesktop={
             isArchived ? (
-              <Link href={`/home/${homeId}/contractors`} className="text-sm text-white/70 hover:text-white transition">
+              <Link
+                href={`/home/${homeId}/contractors`}
+                className="text-sm text-white/70 hover:text-white transition"
+              >
                 Manage contractors →
               </Link>
             ) : null
           }
         />
+
+        {/* Context row (rich UI lives OUTSIDE PageHeader) */}
+        <div className="flex items-center gap-3">
+          {otherUser.image ? (
+            <Image
+              src={otherUser.image}
+              alt={otherUser.name}
+              width={40}
+              height={40}
+              className="h-10 w-10 flex-shrink-0 rounded-full border border-white/10 object-cover"
+            />
+          ) : (
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20">
+              <span className="text-lg font-medium">{otherUser.name[0]?.toUpperCase() || "?"}</span>
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="truncate text-sm font-medium text-white">{otherUser.name}</span>
+              {isArchived ? (
+                <span className="flex-shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/60">
+                  Archived
+                </span>
+              ) : null}
+            </div>
+          </div>
+        </div>
 
         {/* Archived Banner */}
         {isArchived && (
