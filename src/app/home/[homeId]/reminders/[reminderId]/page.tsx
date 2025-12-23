@@ -17,6 +17,7 @@ import Link from "next/link";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { heading, textMeta } from "@/lib/glass";
 import { ReminderActions } from "./ReminderActions";
+import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
 const insetSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
 const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
@@ -25,7 +26,11 @@ function formatLongDate(value: Date | string | null | undefined) {
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function startOfDay(d: Date) {
@@ -59,9 +64,9 @@ export default async function ReminderDetailPage({
         select: {
           id: true,
           filename: true,
-          url: true, // ✅ needed for ReminderData typing (string | null)
+          url: true,
           mimeType: true,
-          size: true, // BigInt in DB
+          size: true,
         },
       },
     },
@@ -76,7 +81,9 @@ export default async function ReminderDetailPage({
 
   if (!home) notFound();
 
-  const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
+  const addrLine = [home.address, home.city, home.state, home.zip]
+    .filter(Boolean)
+    .join(", ");
   const backHref = `/home/${homeId}/reminders`;
 
   // Status (date-based; not time-of-day sensitive)
@@ -85,7 +92,9 @@ export default async function ReminderDetailPage({
   const isCompleted = Boolean(reminder.archivedAt);
   const isOverdue = !isCompleted && dueDay < today;
 
-  const daysUntilDue = Math.ceil((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const daysUntilDue = Math.ceil(
+    (dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
   const isDueSoon = !isCompleted && !isOverdue && daysUntilDue <= 7;
 
   // Normalize attachments (BigInt -> number; keep url nullable)
@@ -94,15 +103,23 @@ export default async function ReminderDetailPage({
     filename: a.filename,
     url: a.url ?? null,
     mimeType: a.mimeType ?? null,
-    size: a.size == null ? null : typeof a.size === "bigint" ? Number(a.size) : Number(a.size),
+    size:
+      a.size == null
+        ? null
+        : typeof a.size === "bigint"
+        ? Number(a.size)
+        : Number(a.size),
   }));
 
-  const imageAttachments = attachments.filter((a) => a.mimeType?.startsWith("image/"));
-  const docAttachments = attachments.filter((a) => !a.mimeType?.startsWith("image/"));
+  const imageAttachments = attachments.filter((a) =>
+    a.mimeType?.startsWith("image/")
+  );
+  const docAttachments = attachments.filter(
+    (a) => !a.mimeType?.startsWith("image/")
+  );
 
   const longDue = formatLongDate(reminder.dueAt);
 
-  // What we pass into ReminderActions/EditReminderModal (matches your updated ReminderData)
   const reminderForActions = {
     id: reminder.id,
     title: reminder.title,
@@ -136,7 +153,9 @@ export default async function ReminderDetailPage({
 
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className={`truncate text-2xl font-bold ${heading}`}>{reminder.title}</h1>
+                <h1 className={`truncate text-2xl font-bold ${heading}`}>
+                  {reminder.title}
+                </h1>
 
                 {isCompleted ? (
                   <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
@@ -163,7 +182,9 @@ export default async function ReminderDetailPage({
                         {" "}
                         •{" "}
                         {isOverdue
-                          ? `${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? "" : "s"} overdue`
+                          ? `${Math.abs(daysUntilDue)} day${
+                              Math.abs(daysUntilDue) === 1 ? "" : "s"
+                            } overdue`
                           : daysUntilDue === 0
                           ? "Due today"
                           : daysUntilDue === 1
@@ -171,7 +192,11 @@ export default async function ReminderDetailPage({
                           : `${daysUntilDue} days away`}
                       </>
                     ) : null}
-                    {attachments.length ? ` • 📎 ${attachments.length} attachment${attachments.length === 1 ? "" : "s"}` : ""}
+                    {attachments.length
+                      ? ` • 📎 ${attachments.length} attachment${
+                          attachments.length === 1 ? "" : "s"
+                        }`
+                      : ""}
                   </span>
                 </div>
               </div>
@@ -179,40 +204,86 @@ export default async function ReminderDetailPage({
           </div>
 
           {/* Right actions */}
-          <div className="flex flex-shrink-0 items-start">
-            <ReminderActions reminderId={reminderId} homeId={homeId} reminder={reminderForActions} />
+          <div className="flex flex-shrink-0 items-start gap-2">
+            {/* ✅ Add Reminder (desktop) */}
+            <div className="hidden sm:block">
+              <AddRecordButton
+                homeId={homeId}
+                label="+ Add Reminder"
+                defaultType="reminder"
+              />
+            </div>
+
+            <ReminderActions
+              reminderId={reminderId}
+              homeId={homeId}
+              reminder={reminderForActions}
+            />
           </div>
         </header>
 
         {/* Single body surface (matches Records) */}
         <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+          {/* ✅ Add Reminder (mobile) */}
+          <div className="mb-6 sm:hidden">
+            <AddRecordButton
+              homeId={homeId}
+              label="+ Add Reminder"
+              defaultType="reminder"
+            />
+          </div>
+
           <div className="space-y-8">
             {/* Details */}
             <div className={cardSurface}>
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
                 <div>
-                  <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Due date</div>
+                  <div
+                    className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}
+                  >
+                    Due date
+                  </div>
                   <div className="mt-1 font-medium text-white">{longDue}</div>
                 </div>
 
                 <div>
-                  <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Status</div>
+                  <div
+                    className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}
+                  >
+                    Status
+                  </div>
                   <div className="mt-1 font-medium text-white">
-                    {isCompleted ? "Completed" : isOverdue ? "Overdue" : isDueSoon ? "Due soon" : "Upcoming"}
+                    {isCompleted
+                      ? "Completed"
+                      : isOverdue
+                      ? "Overdue"
+                      : isDueSoon
+                      ? "Due soon"
+                      : "Upcoming"}
                   </div>
                 </div>
 
                 {!isCompleted ? (
                   <div>
-                    <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Countdown</div>
+                    <div
+                      className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}
+                    >
+                      Countdown
+                    </div>
                     <div
                       className={[
                         "mt-1 font-medium",
-                        isOverdue ? "text-red-300" : isDueSoon ? "text-yellow-300" : "text-white",
+                        isOverdue
+                          ? "text-red-300"
+                          : isDueSoon
+                          ? "text-yellow-300"
+                          : "text-white",
                       ].join(" ")}
                     >
                       {isOverdue
-                        ? `${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? "" : "s"} overdue`
+                        ? `${Math.abs(daysUntilDue)} day${
+                            Math.abs(daysUntilDue) === 1 ? "" : "s"
+                          } overdue`
                         : daysUntilDue === 0
                         ? "Due today"
                         : daysUntilDue === 1
@@ -226,9 +297,15 @@ export default async function ReminderDetailPage({
               {/* Notes */}
               {reminder.note ? (
                 <div className="mt-6">
-                  <div className={`mb-2 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Notes</div>
+                  <div
+                    className={`mb-2 text-xs font-semibold uppercase tracking-wide ${textMeta}`}
+                  >
+                    Notes
+                  </div>
                   <div className={insetSurface}>
-                    <p className="whitespace-pre-wrap text-sm text-white/85">{reminder.note}</p>
+                    <p className="whitespace-pre-wrap text-sm text-white/85">
+                      {reminder.note}
+                    </p>
                   </div>
                 </div>
               ) : null}
@@ -237,12 +314,16 @@ export default async function ReminderDetailPage({
             {/* Attachments */}
             {attachments.length > 0 ? (
               <div className={cardSurface}>
-                <h2 className={`mb-4 text-lg font-semibold ${heading}`}>Attachments ({attachments.length})</h2>
+                <h2 className={`mb-4 text-lg font-semibold ${heading}`}>
+                  Attachments ({attachments.length})
+                </h2>
 
                 {/* Photos */}
                 {imageAttachments.length > 0 ? (
                   <div className="mb-8">
-                    <div className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>
+                    <div
+                      className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}
+                    >
                       Photos ({imageAttachments.length})
                     </div>
 
@@ -274,14 +355,19 @@ export default async function ReminderDetailPage({
                 {/* Documents */}
                 {docAttachments.length > 0 ? (
                   <div>
-                    <div className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>
+                    <div
+                      className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}
+                    >
                       Documents ({docAttachments.length})
                     </div>
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {docAttachments.map((a) => {
                         const href = `/api/home/${homeId}/attachments/${a.id}`;
-                        const sizeKb = a.size != null ? (Number(a.size) / 1024).toFixed(1) : null;
+                        const sizeKb =
+                          a.size != null
+                            ? (Number(a.size) / 1024).toFixed(1)
+                            : null;
 
                         return (
                           <a
@@ -292,11 +378,15 @@ export default async function ReminderDetailPage({
                             className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 transition-colors hover:bg-black/25"
                           >
                             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20">
-                              <span className="text-lg">{a.mimeType?.includes("pdf") ? "📄" : "📎"}</span>
+                              <span className="text-lg">
+                                {a.mimeType?.includes("pdf") ? "📄" : "📎"}
+                              </span>
                             </div>
 
                             <div className="min-w-0 flex-1">
-                              <div className="truncate text-sm font-medium text-white">{a.filename}</div>
+                              <div className="truncate text-sm font-medium text-white">
+                                {a.filename}
+                              </div>
                               <div className="text-xs text-white/60">
                                 {a.mimeType ?? "Document"}
                                 {sizeKb ? ` • ${sizeKb} KB` : ""}
