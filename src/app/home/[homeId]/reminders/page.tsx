@@ -133,63 +133,54 @@ export default async function RemindersPage({
     <main className="relative min-h-screen text-white">
       {/* Background */}
       <div className="fixed inset-0 -z-50">
-        <Image src="/myhomedox_home3.webp" alt="" fill sizes="100vw" className="object-cover object-center" priority />
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
         <div className="absolute inset-0 bg-black/45" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      {/* ✅ FULL-WIDTH PAGE FRAME */}
-      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-10">
-        <div className="w-full">
-          <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
-        </div>
+      {/* FULL WIDTH FRAME */}
+      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
 
-        <div className="w-full">
-          <PageHeader
-            backHref={`/home/${homeId}`}
-            backLabel="Back to home"
-            title="Reminders"
-            // meta is rendered inside <p> in PageHeader, so keep it inline (no divs)
-            meta={
-              <span className={textMeta}>
-                {totalVisible} {totalVisible === 1 ? "reminder" : "reminders"}
-              </span>
-            }
-            rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />}
-          />
-        </div>
+        <PageHeader
+          backHref={`/home/${homeId}`}
+          backLabel="Back to home"
+          title="Reminders"
+          meta={
+            <span className={textMeta}>
+              {totalVisible} {totalVisible === 1 ? "reminder" : "reminders"}
+            </span>
+          }
+          rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />}
+        />
 
-        {/* ✅ tiles should fill the row */}
-        <section className="w-full grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+        {/* Stats tiles (full width, no extra wrapper) */}
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <StatTile label="Upcoming" value={upcomingCount} />
           <StatTile label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
-          <StatTile
-            label="Next 7 Days"
-            value={next7DaysCount}
-            highlight={next7DaysCount > 0 ? "yellow" : undefined}
-          />
+          <StatTile label="Next 7 Days" value={next7DaysCount} highlight={next7DaysCount > 0 ? "yellow" : undefined} />
           <StatTile label="Completed" value={completedCount} />
         </section>
 
-        {/* ✅ body surface should be full width */}
-        <section className="w-full rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
-          {/* Mobile-only CTA so it never disappears */}
-          <div className="mb-6 sm:hidden">
-            <AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />
-          </div>
-
-          <RemindersPageClient
-            reminders={remindersWithStatus}
-            homeId={homeId}
-            initialSearch={search}
-            initialSort={sort}
-            initialStatus={status}
-            overdueCount={overdueCount}
-            upcomingCount={upcomingCount}
-            completedCount={completedCount}
-            activeCount={activeCount}
-          />
-        </section>
+        {/* ✅ No big “window” wrapper here */}
+        <RemindersPageClient
+          reminders={remindersWithStatus}
+          homeId={homeId}
+          initialSearch={search}
+          initialSort={sort}
+          initialStatus={status}
+          overdueCount={overdueCount}
+          upcomingCount={upcomingCount}
+          completedCount={completedCount}
+          activeCount={activeCount}
+        />
 
         <div className="h-12" />
       </div>
@@ -207,7 +198,7 @@ function StatTile({
   highlight?: "red" | "yellow";
 }) {
   return (
-    <div className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
+    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</div>
       <div
         className={[
