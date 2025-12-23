@@ -1,6 +1,5 @@
 /**
  * HOME REMINDERS PAGE
- *
  * Location: src/app/home/[homeId]/reminders/page.tsx
  */
 
@@ -20,6 +19,31 @@ import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
 import { RemindersPageClient } from "./RemindersPageClient";
 import type { ReminderItem } from "./RemindersPageClient";
+
+type OrderBy = { dueAt: "asc" | "desc" } | { title: "asc" };
+
+function computeStatus(args: { dueAt: Date; archivedAt: Date | null; today: Date }) {
+  const { dueAt, archivedAt, today } = args;
+
+  const due = new Date(dueAt);
+  due.setHours(0, 0, 0, 0);
+
+  const isCompleted = Boolean(archivedAt);
+  const daysUntil = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  const isOverdue = !isCompleted && due < today;
+  const isDueSoon = !isCompleted && !isOverdue && daysUntil <= 7;
+
+  const status: ReminderItem["status"] = isCompleted
+    ? "completed"
+    : isOverdue
+    ? "overdue"
+    : isDueSoon
+    ? "due-soon"
+    : "upcoming";
+
+  return { isCompleted, isOverdue, isDueSoon, daysUntil, status, due };
+}
 
 export default async function RemindersPage({
   params,
@@ -43,7 +67,7 @@ export default async function RemindersPage({
 
   const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
-  // ✅ counts should NOT depend on the current status filter
+  // Global counts (never depend on current filter)
   const [activeCount, completedCount] = await Promise.all([
     prisma.reminder.count({ where: { homeId, archivedAt: null, deletedAt: null } }),
     prisma.reminder.count({ where: { homeId, archivedAt: { not: null }, deletedAt: null } }),
@@ -51,18 +75,21 @@ export default async function RemindersPage({
 
   const where: {
     homeId: string;
-    deletedAt?: null;
+    deletedAt: null;
     archivedAt?: null | { not: null };
     title?: { contains: string; mode: "insensitive" };
   } = { homeId, deletedAt: null };
 
+  // Keep your prior semantics:
+  // - status=completed => archivedAt not null
+  // - status=active or missing => archivedAt null
+  // - status=all => no archivedAt filter (shows both)
   if (status === "completed") where.archivedAt = { not: null };
   else if (status === "active" || !status) where.archivedAt = null;
   // status === "all" => no archivedAt filter
 
-  if (search) where.title = { contains: search, mode: "insensitive" };
+  if (search?.trim()) where.title = { contains: search.trim(), mode: "insensitive" };
 
-  type OrderBy = { dueAt: "asc" | "desc" } | { title: "asc" };
   let orderBy: OrderBy = { dueAt: "asc" };
   if (sort === "latest") orderBy = { dueAt: "desc" };
   if (sort === "title") orderBy = { title: "asc" };
@@ -80,38 +107,23 @@ export default async function RemindersPage({
     },
   });
 
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   const remindersWithStatus: ReminderItem[] = reminders.map((r) => {
-    const dueDate = new Date(r.dueAt);
-    dueDate.setHours(0, 0, 0, 0);
-
-    const daysUntil = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-    const isCompleted = Boolean(r.archivedAt);
-    const isOverdue = !isCompleted && dueDate < now;
-    const isDueSoon = !isCompleted && !isOverdue && daysUntil <= 7;
-
-    const reminderStatus: ReminderItem["status"] = isCompleted
-      ? "completed"
-      : isOverdue
-      ? "overdue"
-      : isDueSoon
-      ? "due-soon"
-      : "upcoming";
+    const s = computeStatus({ dueAt: r.dueAt, archivedAt: r.archivedAt, today });
 
     return {
       id: r.id,
       title: r.title,
       dueAt: r.dueAt.toISOString(),
       note: r.note,
-      isCompleted,
-      isOverdue,
-      isDueSoon,
-      daysUntil,
-      formattedDate: dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      status: reminderStatus,
+      formattedDate: s.due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      status: s.status,
+      isCompleted: s.isCompleted,
+      isOverdue: s.isOverdue,
+      isDueSoon: s.isDueSoon,
+      daysUntil: s.daysUntil,
       attachments: r.attachments.map((att) => ({
         id: att.id,
         filename: att.filename,
@@ -122,30 +134,20 @@ export default async function RemindersPage({
     };
   });
 
+  // Visible counts for the tiles (based on returned list)
   const visibleActive = remindersWithStatus.filter((r) => !r.isCompleted);
   const overdueCount = visibleActive.filter((r) => r.isOverdue).length;
-  const upcomingCount = visibleActive.filter((r) => !r.isOverdue).length;
   const next7DaysCount = visibleActive.filter((r) => !r.isOverdue && r.daysUntil <= 7).length;
-
-  const totalVisible = remindersWithStatus.length;
+  const upcomingCount = visibleActive.filter((r) => !r.isOverdue && r.daysUntil > 7).length;
 
   return (
     <main className="relative min-h-screen text-white">
-      {/* Background */}
       <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
+        <Image src="/myhomedox_home3.webp" alt="" fill sizes="100vw" className="object-cover object-center" priority />
         <div className="absolute inset-0 bg-black/45" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      {/* FULL WIDTH FRAME */}
       <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
 
@@ -155,59 +157,28 @@ export default async function RemindersPage({
           title="Reminders"
           meta={
             <span className={textMeta}>
-              {totalVisible} {totalVisible === 1 ? "reminder" : "reminders"}
+              {activeCount} active • {completedCount} completed
             </span>
           }
           rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />}
         />
 
-        {/* Stats tiles (full width, no extra wrapper) */}
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <StatTile label="Upcoming" value={upcomingCount} />
-          <StatTile label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
-          <StatTile label="Next 7 Days" value={next7DaysCount} highlight={next7DaysCount > 0 ? "yellow" : undefined} />
-          <StatTile label="Completed" value={completedCount} />
-        </section>
-
-        {/* ✅ No big “window” wrapper here */}
+        {/* ✅ Tiles are now toggled on mobile (like PropertyStats) */}
         <RemindersPageClient
           reminders={remindersWithStatus}
           homeId={homeId}
           initialSearch={search}
           initialSort={sort}
           initialStatus={status}
-          overdueCount={overdueCount}
-          upcomingCount={upcomingCount}
-          completedCount={completedCount}
           activeCount={activeCount}
+          completedCount={completedCount}
+          overdueCount={overdueCount}
+          upcomingCount={upcomingCount + next7DaysCount}
+          next7DaysCount={next7DaysCount}
         />
 
         <div className="h-12" />
       </div>
     </main>
-  );
-}
-
-function StatTile({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string | number;
-  highlight?: "red" | "yellow";
-}) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</div>
-      <div
-        className={[
-          "mt-1 text-lg font-semibold leading-tight",
-          highlight === "red" ? "text-red-300" : highlight === "yellow" ? "text-yellow-300" : "text-white",
-        ].join(" ")}
-      >
-        {value}
-      </div>
-    </div>
   );
 }
