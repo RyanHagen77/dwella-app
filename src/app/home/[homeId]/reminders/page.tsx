@@ -45,15 +45,16 @@ export default async function RemindersPage({
 
   // ✅ counts should NOT depend on the current status filter
   const [activeCount, completedCount] = await Promise.all([
-    prisma.reminder.count({ where: { homeId, archivedAt: null } }),
-    prisma.reminder.count({ where: { homeId, archivedAt: { not: null } } }),
+    prisma.reminder.count({ where: { homeId, archivedAt: null, deletedAt: null } }),
+    prisma.reminder.count({ where: { homeId, archivedAt: { not: null }, deletedAt: null } }),
   ]);
 
   const where: {
     homeId: string;
+    deletedAt?: null;
     archivedAt?: null | { not: null };
     title?: { contains: string; mode: "insensitive" };
-  } = { homeId };
+  } = { homeId, deletedAt: null };
 
   if (status === "completed") where.archivedAt = { not: null };
   else if (status === "active" || !status) where.archivedAt = null;
@@ -130,36 +131,49 @@ export default async function RemindersPage({
 
   return (
     <main className="relative min-h-screen text-white">
+      {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image src="/myhomedox_home3.webp" alt="" fill sizes="100vw" className="object-cover object-center" priority />
         <div className="absolute inset-0 bg-black/45" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
+      {/* ✅ FULL-WIDTH PAGE FRAME */}
+      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-10">
+        <div className="w-full">
+          <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
+        </div>
 
-        <PageHeader
-          backHref={`/home/${homeId}`}
-          backLabel="Back to home"
-          title="Reminders"
-          meta={
-            <span>
-              {totalVisible} {totalVisible === 1 ? "reminder" : "reminders"}
-            </span>
-          }
-          rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />}
-        />
+        <div className="w-full">
+          <PageHeader
+            backHref={`/home/${homeId}`}
+            backLabel="Back to home"
+            title="Reminders"
+            // meta is rendered inside <p> in PageHeader, so keep it inline (no divs)
+            meta={
+              <span className={textMeta}>
+                {totalVisible} {totalVisible === 1 ? "reminder" : "reminders"}
+              </span>
+            }
+            rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />}
+          />
+        </div>
 
-        {/* ✅ swap + drop Total */}
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <StatCard label="Upcoming" value={upcomingCount} />
-          <StatCard label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
-          <StatCard label="Next 7 Days" value={next7DaysCount} highlight={next7DaysCount > 0 ? "yellow" : undefined} />
-          <StatCard label="Completed" value={completedCount} />
+        {/* ✅ tiles should fill the row */}
+        <section className="w-full grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+          <StatTile label="Upcoming" value={upcomingCount} />
+          <StatTile label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
+          <StatTile
+            label="Next 7 Days"
+            value={next7DaysCount}
+            highlight={next7DaysCount > 0 ? "yellow" : undefined}
+          />
+          <StatTile label="Completed" value={completedCount} />
         </section>
 
-        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+        {/* ✅ body surface should be full width */}
+        <section className="w-full rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+          {/* Mobile-only CTA so it never disappears */}
           <div className="mb-6 sm:hidden">
             <AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />
           </div>
@@ -172,8 +186,8 @@ export default async function RemindersPage({
             initialStatus={status}
             overdueCount={overdueCount}
             upcomingCount={upcomingCount}
-            completedCount={completedCount} // ✅ now global
-            activeCount={activeCount} // ✅ now global
+            completedCount={completedCount}
+            activeCount={activeCount}
           />
         </section>
 
@@ -183,7 +197,7 @@ export default async function RemindersPage({
   );
 }
 
-function StatCard({
+function StatTile({
   label,
   value,
   highlight,
@@ -193,7 +207,7 @@ function StatCard({
   highlight?: "red" | "yellow";
 }) {
   return (
-    <div className="rounded-2xl border border-white/12 bg-black/25 px-4 py-3">
+    <div className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 backdrop-blur">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</div>
       <div
         className={[
