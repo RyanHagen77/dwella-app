@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ctaGhost } from "@/lib/glass";
+
 import { EditReminderModal, type ReminderData } from "../_components/EditReminderModal";
 
 type Props = {
@@ -13,21 +13,17 @@ type Props = {
 
 export function ReminderActions({ reminderId, homeId, reminder }: Props) {
   const router = useRouter();
+
   const [deleting, setDeleting] = useState(false);
-  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [completing, setCompleting] = useState(false);
 
   async function handleDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/home/${homeId}/reminders/${reminderId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete reminder");
-      }
+      const res = await fetch(`/api/home/${homeId}/reminders/${reminderId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete reminder");
 
       router.push(`/home/${homeId}/reminders`);
       router.refresh();
@@ -35,25 +31,22 @@ export function ReminderActions({ reminderId, homeId, reminder }: Props) {
       console.error("Delete failed:", error);
       alert("Failed to delete reminder. Please try again.");
       setDeleting(false);
-      setShowConfirmDelete(false);
+      setConfirming(false);
     }
   }
 
   async function handleComplete() {
     if (completing) return;
     setCompleting(true);
+
     try {
-      const res = await fetch(
-        `/api/home/${homeId}/reminders/${reminderId}/complete`,
-        { method: "PATCH" }
-      );
+      const res = await fetch(`/api/home/${homeId}/reminders/${reminderId}/complete`, { method: "PATCH" });
 
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         throw new Error(data?.error || "Failed to mark complete");
       }
 
-      // Back to list — completed reminder will be treated as archived
       router.push(`/home/${homeId}/reminders`);
       router.refresh();
     } catch (error) {
@@ -66,56 +59,51 @@ export function ReminderActions({ reminderId, homeId, reminder }: Props) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        {/* Mark complete */}
         <button
           type="button"
-          onClick={handleComplete}
+          onClick={(e) => {
+            e.preventDefault();
+            void handleComplete();
+          }}
           disabled={completing || deleting}
-          className="rounded-lg border border-emerald-400/40 bg-emerald-500/15 px-3 py-2 text-sm font-medium text-emerald-200 hover:bg-emerald-500/25 disabled:opacity-60"
+          className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-400/15 disabled:opacity-60"
         >
           {completing ? "Marking…" : "Mark complete"}
         </button>
 
-        {/* Edit */}
         <button
           type="button"
-          className={ctaGhost}
-          onClick={() => setEditOpen(true)}
-          disabled={completing || deleting}
+          onClick={(e) => {
+            e.preventDefault();
+            setEditOpen(true);
+          }}
+          disabled={deleting || completing}
+          className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-white/10 disabled:opacity-60"
         >
           Edit
         </button>
 
-        {/* Delete with confirm step */}
-        {showConfirmDelete ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowConfirmDelete(false)}
-              className="px-3 py-2 text-sm rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-              disabled={deleting}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="px-3 py-2 text-sm rounded-lg border border-red-400/30 bg-red-500/20 text-red-300 hover:bg-red-500/30 transition-colors disabled:opacity-50"
-            >
-              {deleting ? "Deleting..." : "Confirm Delete"}
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowConfirmDelete(true)}
-            disabled={completing}
-            className="px-3 py-2 text-sm rounded-lg border border-red-400/30 bg-red-500/10 text-red-300 hover:bg-red-500/20 transition-colors"
-          >
-            Delete
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+
+            if (confirming) void handleDelete();
+            else {
+              setConfirming(true);
+              setTimeout(() => setConfirming(false), 3000);
+            }
+          }}
+          disabled={deleting || completing}
+          className={[
+            "rounded-full border px-4 py-2 text-sm transition-colors disabled:opacity-50",
+            confirming
+              ? "border-red-400/35 bg-red-400/15 text-red-100 hover:bg-red-400/20"
+              : "border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15",
+          ].join(" ")}
+        >
+          {deleting ? "Deleting…" : confirming ? "Confirm delete?" : "Delete"}
+        </button>
       </div>
 
       <EditReminderModal

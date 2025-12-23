@@ -14,7 +14,6 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
-import Image from "next/image";
 import Link from "next/link";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
@@ -110,7 +109,6 @@ export default async function HomeownerChatPage({
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={breadcrumbItems} />
 
-        {/* Header (standard): title is string only */}
         <PageHeader
           backHref={backHref}
           backLabel="Back to messages"
@@ -120,41 +118,13 @@ export default async function HomeownerChatPage({
             isArchived ? (
               <Link
                 href={`/home/${homeId}/contractors`}
-                className="text-sm text-white/70 hover:text-white transition"
+                className="text-sm text-white/70 transition hover:text-white"
               >
                 Manage contractors →
               </Link>
             ) : null
           }
         />
-
-        {/* Context row (rich UI lives OUTSIDE PageHeader) */}
-        <div className="flex items-center gap-3">
-          {otherUser.image ? (
-            <Image
-              src={otherUser.image}
-              alt={otherUser.name}
-              width={40}
-              height={40}
-              className="h-10 w-10 flex-shrink-0 rounded-full border border-white/10 object-cover"
-            />
-          ) : (
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20">
-              <span className="text-lg font-medium">{otherUser.name[0]?.toUpperCase() || "?"}</span>
-            </div>
-          )}
-
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="truncate text-sm font-medium text-white">{otherUser.name}</span>
-              {isArchived ? (
-                <span className="flex-shrink-0 rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-white/60">
-                  Archived
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </div>
 
         {/* Archived Banner */}
         {isArchived && (
@@ -187,22 +157,21 @@ export default async function HomeownerChatPage({
 
             <Link
               href={`/home/${homeId}/contractors`}
-              className="flex-shrink-0 text-sm text-white/70 hover:text-white transition"
+              className="flex-shrink-0 text-sm text-white/70 transition hover:text-white"
             >
               Manage →
             </Link>
           </div>
         )}
 
-        {/* Message Thread Surface (single clean layer; no glass-on-glass) */}
+        {/* Message Thread Surface */}
         <section
           className={[
-            "rounded-2xl border border-white/15 bg-black/55 shadow-2xl backdrop-blur-xl",
-            "flex min-h-[60vh] flex-col overflow-hidden",
+            "flex min-h-[60vh] flex-col overflow-hidden rounded-2xl border border-white/15 bg-black/55 shadow-2xl backdrop-blur-xl",
             isArchived ? "opacity-90" : "",
           ].join(" ")}
         >
-          <div className="flex-1 min-h-[300px] overflow-hidden">
+          <div className="min-h-[300px] flex-1 overflow-hidden">
             <MessageThread
               connectionId={connectionId}
               initialMessages={messagesWithOwnership}
