@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -50,10 +50,6 @@ type Props = {
   activeCount: number;
 };
 
-// ✅ less “boxed”, more “full width”
-const cardSurface =
-  "rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur transition hover:bg-black/30 hover:border-white/15";
-
 export function RemindersPageClient({
   reminders,
   homeId,
@@ -72,7 +68,8 @@ export function RemindersPageClient({
   const [status, setStatus] = useState(initialStatus || "all");
   const [sort, setSort] = useState(initialSort || "soonest");
 
-  const hasActiveFilters = Boolean(search.trim()) || status !== "all" || sort !== "soonest";
+  const hasActiveFilters =
+    Boolean(search.trim()) || status !== "all" || sort !== "soonest";
 
   function updateFilters(updates: { search?: string; status?: string; sort?: string }) {
     const params = new URLSearchParams(searchParams?.toString());
@@ -104,18 +101,18 @@ export function RemindersPageClient({
     router.push(`/home/${homeId}/reminders`);
   }
 
-  // Client-side status view (keeps UI snappy)
+  // Client-side status view
   const filteredReminders = reminders.filter((r) => {
     if (status === "overdue") return !r.isCompleted && r.status === "overdue";
-    if (status === "upcoming") return !r.isCompleted && (r.status === "due-soon" || r.status === "upcoming");
+    if (status === "upcoming")
+      return !r.isCompleted && (r.status === "due-soon" || r.status === "upcoming");
     if (status === "completed") return r.isCompleted;
-    // "all" = active only
-    return !r.isCompleted;
+    return !r.isCompleted; // "all" = active only
   });
 
   return (
     <div className="w-full space-y-5">
-      {/* ✅ Filters: full-width row, no extra bordered “card” */}
+      {/* Filters (inline) */}
       <div className="w-full">
         <div className="grid w-full grid-cols-1 gap-4 md:grid-cols-3">
           <div>
@@ -176,7 +173,6 @@ export function RemindersPageClient({
           </div>
         </div>
 
-        {/* ✅ tiny utility row instead of another box */}
         {hasActiveFilters ? (
           <div className="mt-3 flex items-center justify-between gap-3">
             <span className={`text-xs ${textMeta}`}>Filters applied</span>
@@ -204,7 +200,7 @@ export function RemindersPageClient({
       ) : (
         <div className="w-full space-y-3">
           {filteredReminders.map((reminder) => (
-            <ReminderCard key={reminder.id} reminder={reminder} homeId={homeId} />
+            <ReminderDrawerCard key={reminder.id} reminder={reminder} homeId={homeId} />
           ))}
         </div>
       )}
@@ -212,17 +208,28 @@ export function RemindersPageClient({
   );
 }
 
-function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: string }) {
+function ReminderDrawerCard({ reminder, homeId }: { reminder: ReminderItem; homeId: string }) {
   const router = useRouter();
   const { push: toast } = useToast();
 
+  const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const confirmTimerRef = useRef<number | null>(null);
+
   const [completing, setCompleting] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
 
   const dueDate = new Date(reminder.dueAt);
   const now = new Date();
+
   const isCompleted = reminder.isCompleted;
   const isOverdue = reminder.status === "overdue";
   const isDueSoon = reminder.status === "due-soon";
@@ -262,7 +269,6 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
     }
   }
 
-  // subtle left accent, not another “badge slab”
   const leftAccent = isCompleted
     ? "before:bg-emerald-400/60"
     : isOverdue
@@ -271,146 +277,171 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
     ? "before:bg-yellow-400/70"
     : "before:bg-white/12";
 
+  const badge = !isCompleted && isOverdue
+    ? { label: "Overdue", cls: "border-red-400/25 bg-red-400/10 text-red-200" }
+    : !isCompleted && isDueSoon
+    ? { label: "Due soon", cls: "border-yellow-400/25 bg-yellow-400/10 text-yellow-200" }
+    : isCompleted
+    ? { label: "Completed", cls: "border-emerald-400/25 bg-emerald-400/10 text-emerald-200" }
+    : null;
+
   return (
     <>
-      <Link
-        href={`/home/${homeId}/reminders/${reminder.id}`}
+      <div
         className={[
-          "group relative block overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur transition",
+          "group relative overflow-hidden rounded-2xl border border-white/10 bg-black/25 backdrop-blur transition",
           "hover:bg-black/30 hover:border-white/15",
           "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
           leftAccent,
         ].join(" ")}
       >
-        <div className="flex flex-col gap-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h3 className="truncate text-[15px] font-semibold text-white sm:text-lg">{reminder.title}</h3>
+        {/* Summary row (drawer trigger) */}
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-start justify-between gap-3 px-5 py-4 text-left"
+          aria-expanded={open}
+        >
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/home/${homeId}/reminders/${reminder.id}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="min-w-0 truncate text-[15px] font-semibold text-white sm:text-lg hover:text-white/90"
+                  >
+                    {reminder.title}
+                  </Link>
 
-              <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/60">
-                <span className={isOverdue && !isCompleted ? "text-red-300" : ""}>
-                  📅{" "}
-                  {dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </span>
+                  {badge ? (
+                    <span
+                      className={[
+                        "shrink-0 inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
+                        badge.cls,
+                      ].join(" ")}
+                    >
+                      {badge.label}
+                    </span>
+                  ) : null}
+                </div>
 
-                {!isCompleted ? (
-                  <span className={isDueSoon ? "text-yellow-300" : isOverdue ? "text-red-300" : "text-white/60"}>
-                    {isOverdue
-                      ? Math.abs(daysUntilDue) === 1
-                        ? "1 day overdue"
-                        : `${Math.abs(daysUntilDue)} days overdue`
-                      : daysUntilDue === 0
-                      ? "Due today"
-                      : daysUntilDue === 1
-                      ? "Due tomorrow"
-                      : `${daysUntilDue} days away`}
+                <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-white/60">
+                  <span className={isOverdue && !isCompleted ? "text-red-300" : ""}>
+                    📅 {dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                   </span>
-                ) : (
-                  <span className="text-emerald-300">Completed</span>
-                )}
+
+                  {!isCompleted ? (
+                    <span className={isDueSoon ? "text-yellow-300" : isOverdue ? "text-red-300" : "text-white/60"}>
+                      {isOverdue
+                        ? Math.abs(daysUntilDue) === 1
+                          ? "1 day overdue"
+                          : `${Math.abs(daysUntilDue)} days overdue`
+                        : daysUntilDue === 0
+                        ? "Due today"
+                        : daysUntilDue === 1
+                        ? "Due tomorrow"
+                        : `${daysUntilDue} days away`}
+                    </span>
+                  ) : (
+                    <span className="text-emerald-300">Completed</span>
+                  )}
+                </div>
+
+                {reminder.note ? (
+                  <p className={`mt-2 line-clamp-1 text-sm ${textMeta}`}>
+                    {reminder.note}
+                  </p>
+                ) : null}
               </div>
+            </div>
+          </div>
 
-              {reminder.note ? <p className={`mt-2 line-clamp-2 text-sm ${textMeta}`}>{reminder.note}</p> : null}
+          <div className="mt-0.5 flex shrink-0 items-center gap-2 text-white/60">
+            <span className="text-xs">{open ? "Hide" : "Details"}</span>
+            <Caret open={open} />
+          </div>
+        </button>
 
+        {/* Drawer content */}
+        <div
+          className={[
+            "grid transition-[grid-template-rows,opacity] duration-200",
+            open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
+          ].join(" ")}
+        >
+          <div className="overflow-hidden">
+            <div className="px-5 pb-5 pt-1">
               {reminder.attachments?.length ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/60">
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/60">
                   <span>📎</span>
                   <span>
                     {reminder.attachments.length} attachment{reminder.attachments.length > 1 ? "s" : ""}
                   </span>
 
-                  {reminder.attachments.slice(0, 3).map((att) => (
+                  {reminder.attachments.slice(0, 4).map((att) => (
                     <button
                       key={att.id}
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(`/api/home/${homeId}/attachments/${att.id}`, "_blank");
-                      }}
+                      onClick={() => window.open(`/api/home/${homeId}/attachments/${att.id}`, "_blank")}
                       className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-white/75 hover:bg-white/10 hover:text-white"
                       title={att.filename}
                     >
                       {att.filename.length > 18 ? att.filename.slice(0, 15) + "…" : att.filename}
                     </button>
                   ))}
-                  {reminder.attachments.length > 3 ? <span>+{reminder.attachments.length - 3} more</span> : null}
+                  {reminder.attachments.length > 4 ? <span>+{reminder.attachments.length - 4} more</span> : null}
                 </div>
               ) : null}
+
+              {/* Actions */}
+              <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+                {!isCompleted ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleComplete()}
+                    disabled={completing || deleting}
+                    className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
+                  >
+                    {completing ? "Marking…" : "Mark complete"}
+                  </button>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => setEditOpen(true)}
+                  disabled={deleting}
+                  className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/90 transition hover:bg-white/10 disabled:opacity-60"
+                >
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!showConfirm) {
+                      setShowConfirm(true);
+                      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+                      confirmTimerRef.current = window.setTimeout(() => setShowConfirm(false), 2500);
+                      return;
+                    }
+                    void handleDelete();
+                  }}
+                  disabled={deleting}
+                  className={[
+                    "rounded-full border px-4 py-2 text-sm transition disabled:opacity-50",
+                    showConfirm
+                      ? "border-red-400/35 bg-red-400/15 text-red-100 hover:bg-red-400/20"
+                      : "border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15",
+                  ].join(" ")}
+                >
+                  {deleting ? "Deleting…" : showConfirm ? "Confirm?" : "Delete"}
+                </button>
+              </div>
             </div>
-
-            {/* small badge only */}
-            <div className="shrink-0">
-              {!isCompleted && isOverdue ? (
-                <span className="inline-flex items-center rounded-full border border-red-400/25 bg-red-400/10 px-3 py-1 text-xs font-semibold text-red-200">
-                  Overdue
-                </span>
-              ) : !isCompleted && isDueSoon ? (
-                <span className="inline-flex items-center rounded-full border border-yellow-400/25 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-200">
-                  Due soon
-                </span>
-              ) : isCompleted ? (
-                <span className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-200">
-                  Completed
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Actions (no extra box; just inline) */}
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-            {!isCompleted ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  void handleComplete();
-                }}
-                disabled={completing || deleting}
-                className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
-              >
-                {completing ? "Marking…" : "Mark complete"}
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setEditOpen(true);
-              }}
-              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/90 transition hover:bg-white/10"
-            >
-              Edit
-            </button>
-
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                if (showConfirm) void handleDelete();
-                else {
-                  setShowConfirm(true);
-                  window.setTimeout(() => setShowConfirm(false), 2500);
-                }
-              }}
-              disabled={deleting}
-              className={[
-                "rounded-full border px-4 py-2 text-sm transition disabled:opacity-50",
-                showConfirm
-                  ? "border-red-400/35 bg-red-400/15 text-red-100 hover:bg-red-400/20"
-                  : "border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15",
-              ].join(" ")}
-            >
-              {deleting ? "Deleting…" : showConfirm ? "Confirm?" : "Delete"}
-            </button>
           </div>
         </div>
-      </Link>
+      </div>
 
       <EditReminderModal
         open={editOpen}
@@ -422,12 +453,33 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
   );
 }
 
+function Caret({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={[
+        "h-4 w-4 transition-transform duration-200",
+        open ? "rotate-180" : "rotate-0",
+      ].join(" ")}
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+        clipRule="evenodd"
+      />
+    </svg>
+  );
+}
+
 function Chevron() {
   return (
     <svg
       className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55"
       viewBox="0 0 20 20"
       fill="currentColor"
+      aria-hidden="true"
     >
       <path
         fillRule="evenodd"
