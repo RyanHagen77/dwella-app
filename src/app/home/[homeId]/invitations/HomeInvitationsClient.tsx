@@ -1,15 +1,13 @@
-// app/stats/[homeId]/invitations/_components/HomeInvitationsClient.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
+
 import AddressVerification from "@/components/AddressVerification";
-import { glass, glassTight, heading, textMeta, ctaPrimary } from "@/lib/glass";
+import { glassTight, textMeta, ctaPrimary } from "@/lib/glass";
 import { InviteProModal } from "./_components/InviteProModal";
 import { useToast } from "@/components/ui/Toast";
-import Breadcrumb from "@/components/ui/Breadcrumb";
 
 /* ---------- Types ---------- */
 
@@ -71,6 +69,7 @@ function fmtDate(d: string | Date) {
   }
 }
 
+// Company-first label (matches your contractor pattern)
 function inviterLabel(inv: ReceivedInvitation) {
   return (
     inv.inviter?.proProfile?.businessName ||
@@ -94,7 +93,7 @@ function StatusBadge({ status }: { status: string }) {
     }[status] || "bg-white/10 text-white/60 border-white/20";
 
   return (
-    <span className={`shrink-0 rounded-lg border px-2.5 py-1 text-xs font-semibold tracking-wide ${styles}`}>
+    <span className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold tracking-wide ${styles}`}>
       {status}
     </span>
   );
@@ -118,109 +117,81 @@ function ReceivedTab({
 
   if (invitations.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+      <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
         <div className="mb-3 text-5xl">📨</div>
         <p className="mb-1 text-white/90">No invitations received yet</p>
-        <p className={`text-sm ${textMeta}`}>
-          When a contractor invites you to connect, you&apos;ll see it here.
-        </p>
+        <p className={`text-sm ${textMeta}`}>When a contractor invites you to connect, you&apos;ll see it here.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {pending.length > 0 && (
+      {pending.length > 0 ? (
         <div>
-          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
-            Pending ({pending.length})
-          </h2>
+          <h2 className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Pending ({pending.length})</h2>
 
           <div className="space-y-3">
             {pending.map((inv) => (
-              <div
-                key={inv.id}
-                className={`${glassTight} flex flex-col gap-4 p-4 sm:p-5`}
-              >
-                {/* Top row */}
+              <div key={inv.id} className={`${glassTight} flex flex-col gap-4 p-4 sm:p-5`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-3">
-                    {/* Avatar */}
                     {inv.inviter?.image ? (
                       <Image
                         src={inv.inviter.image}
                         alt={inv.inviter.name || inv.inviter.email}
                         width={48}
                         height={48}
-                        className="rounded-full"
+                        className="h-12 w-12 rounded-full border border-white/10 object-cover"
                       />
                     ) : (
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white/10">
-                        <span className="text-lg font-medium">
-                          {inviterLabel(inv)[0]?.toUpperCase() || "?"}
-                        </span>
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20">
+                        <span className="text-lg font-medium">{inviterLabel(inv)[0]?.toUpperCase() || "?"}</span>
                       </div>
                     )}
 
-                    {/* Names + meta */}
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-white">
-                        {inviterLabel(inv)}
-                      </p>
+                      <p className="truncate font-medium text-white">{inviterLabel(inv)}</p>
 
-                      {inv.inviter?.proProfile && (
+                      {inv.inviter?.proProfile ? (
                         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-white/60">
-                          {!!inv.inviter.proProfile.rating && (
-                            <span>⭐ {inv.inviter.proProfile.rating}</span>
-                          )}
-                          {inv.inviter.proProfile.verified && (
-                            <span className="text-emerald-300">✓ Verified</span>
-                          )}
-                          {inv.inviter.proProfile.phone && (
-                            <span>{inv.inviter.proProfile.phone}</span>
-                          )}
+                          {inv.inviter.proProfile.rating ? <span>⭐ {inv.inviter.proProfile.rating}</span> : null}
+                          {inv.inviter.proProfile.verified ? <span className="text-emerald-300">✓ Verified</span> : null}
+                          {inv.inviter.proProfile.phone ? <span>{inv.inviter.proProfile.phone}</span> : null}
                         </div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <StatusBadge status={inv.status} />
-                    <p className={`text-[11px] ${textMeta}`}>
-                      Sent {fmtDate(inv.createdAt)}
-                    </p>
-                    <p className={`text-[11px] ${textMeta}`}>
-                      Expires {fmtDate(inv.expiresAt)}
-                    </p>
+                    <div className={`text-[11px] ${textMeta}`}>Sent {fmtDate(inv.createdAt)}</div>
+                    <div className={`text-[11px] ${textMeta}`}>Expires {fmtDate(inv.expiresAt)}</div>
                   </div>
                 </div>
 
-                {/* Message */}
-                {inv.message && (
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="mb-1 text-[11px] font-semibold text-white/80">
-                      Message
-                    </p>
-                    <p className="text-sm leading-relaxed text-white/80">
-                      {inv.message}
-                    </p>
+                {inv.message ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-white/55">Message</div>
+                    <p className="text-sm leading-relaxed text-white/80">{inv.message}</p>
                   </div>
-                )}
+                ) : null}
 
-                {/* Actions */}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button
+                    type="button"
                     onClick={() => onAccept(inv.id)}
                     disabled={processing === inv.id}
-                    className="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-green-500 to-emerald-500 px-4 py-2 text-sm font-semibold text-white transition-all hover:from-green-600 hover:to-emerald-600 disabled:opacity-50"
+                    className="inline-flex items-center justify-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100 transition-colors hover:bg-emerald-400/15 hover:border-emerald-300/35 disabled:opacity-50"
                   >
                     {processing === inv.id ? "Processing..." : "✓ Accept"}
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => onDecline(inv.id)}
                     disabled={processing === inv.id}
-                    className="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10 disabled:opacity-50"
+                    className="inline-flex items-center justify-center rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-white/10 disabled:opacity-50"
                   >
                     ✗ Decline
                   </button>
@@ -229,20 +200,15 @@ function ReceivedTab({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {history.length > 0 && (
+      {history.length > 0 ? (
         <div>
-          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
-            History ({history.length})
-          </h2>
+          <h2 className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>History ({history.length})</h2>
 
           <div className="space-y-2">
             {history.map((inv) => (
-              <div
-                key={inv.id}
-                className={`${glassTight} flex items-center justify-between gap-3 p-4`}
-              >
+              <div key={inv.id} className={`${glassTight} flex items-center justify-between gap-3 p-4`}>
                 <div className="flex min-w-0 items-center gap-3">
                   {inv.inviter?.image ? (
                     <Image
@@ -250,22 +216,17 @@ function ReceivedTab({
                       alt={inv.inviter.name || inv.inviter.email}
                       width={36}
                       height={36}
-                      className="rounded-full"
+                      className="h-9 w-9 rounded-full border border-white/10 object-cover"
                     />
                   ) : (
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/10">
-                      <span className="text-sm font-medium">
-                        {inviterLabel(inv)[0]?.toUpperCase() || "?"}
-                      </span>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20">
+                      <span className="text-sm font-medium">{inviterLabel(inv)[0]?.toUpperCase() || "?"}</span>
                     </div>
                   )}
+
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-white">
-                      {inviterLabel(inv)}
-                    </p>
-                    <p className={`text-xs ${textMeta}`}>
-                      {fmtDate(inv.createdAt)}
-                    </p>
+                    <p className="truncate font-medium text-white">{inviterLabel(inv)}</p>
+                    <p className={`text-xs ${textMeta}`}>{fmtDate(inv.createdAt)}</p>
                   </div>
                 </div>
 
@@ -274,7 +235,7 @@ function ReceivedTab({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -295,110 +256,85 @@ function SentTab({
 
   if (invitations.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+      <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
         <p className="mb-1 text-white/90">No invitations sent yet</p>
-        <p className={`text-sm ${textMeta}`}>
-          Invite trusted pros to connect to this home from the home dashboard.
-        </p>
+        <p className={`text-sm ${textMeta}`}>Invite trusted pros to connect to this home from the home dashboard.</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {pending.length > 0 && (
+      {pending.length > 0 ? (
         <div>
-          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
-            Pending ({pending.length})
-          </h2>
+          <h2 className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Pending ({pending.length})</h2>
 
           <div className="space-y-3">
             {pending.map((inv) => (
-              <div
-                key={inv.id}
-                className={`${glassTight} flex flex-col gap-3 p-4 sm:p-5`}
-              >
+              <div key={inv.id} className={`${glassTight} flex flex-col gap-3 p-4 sm:p-5`}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-white">
-                      {inv.invitedEmail}
-                    </p>
+                    <p className="truncate font-medium text-white">{inv.invitedEmail}</p>
 
-                    {inv.home && (
+                    {inv.home ? (
                       <p className={`mt-1 truncate text-xs ${textMeta}`}>
                         📍 {inv.home.address}
-                        {inv.home.city && `, ${inv.home.city}`}
-                        {inv.home.state && `, ${inv.home.state}`}
-                        {inv.home.zip && ` ${inv.home.zip}`}
+                        {inv.home.city ? `, ${inv.home.city}` : ""}
+                        {inv.home.state ? `, ${inv.home.state}` : ""}
+                        {inv.home.zip ? ` ${inv.home.zip}` : ""}
                       </p>
-                    )}
+                    ) : null}
                   </div>
 
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <StatusBadge status={inv.status} />
-                    <p className={`text-[11px] ${textMeta}`}>
-                      Sent {fmtDate(inv.createdAt)}
-                    </p>
-                    <p className={`text-[11px] ${textMeta}`}>
-                      Expires {fmtDate(inv.expiresAt)}
-                    </p>
+                    <p className={`text-[11px] ${textMeta}`}>Sent {fmtDate(inv.createdAt)}</p>
+                    <p className={`text-[11px] ${textMeta}`}>Expires {fmtDate(inv.expiresAt)}</p>
                   </div>
                 </div>
 
-                {inv.message && (
-                  <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                    <p className="mb-1 text-[11px] font-semibold text-white/80">
-                      Message
-                    </p>
-                    <p className="text-sm leading-relaxed text-white/80">
-                      {inv.message}
-                    </p>
+                {inv.message ? (
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-white/55">Message</div>
+                    <p className="text-sm leading-relaxed text-white/80">{inv.message}</p>
                   </div>
-                )}
+                ) : null}
 
                 <div className="pt-1">
                   <button
+                    type="button"
                     onClick={() => onCancel(inv.id)}
                     disabled={processing === inv.id}
-                    className="inline-flex w-full items-center justify-center rounded-lg border border-red-500/30 bg-red-500/20 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-500/30 disabled:opacity-50 sm:w-auto"
+                    className="inline-flex w-full items-center justify-center rounded-full border border-red-400/25 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-100 transition-colors hover:bg-red-400/15 hover:border-red-300/35 disabled:opacity-50 sm:w-auto"
                   >
-                    {processing === inv.id ? "Cancelling..." : "Cancel Invitation"}
+                    {processing === inv.id ? "Cancelling..." : "Cancel invitation"}
                   </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
-      )}
+      ) : null}
 
-      {history.length > 0 && (
+      {history.length > 0 ? (
         <div>
-          <h2 className={`mb-3 text-sm font-semibold uppercase tracking-wide ${textMeta}`}>
-            History ({history.length})
-          </h2>
+          <h2 className={`mb-3 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>History ({history.length})</h2>
 
           <div className="space-y-2">
             {history.map((inv) => (
-              <div
-                key={inv.id}
-                className={`${glassTight} flex items-center justify-between gap-3 p-4`}
-              >
+              <div key={inv.id} className={`${glassTight} flex items-center justify-between gap-3 p-4`}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-white">
-                    {inv.invitedEmail}
-                  </p>
+                  <p className="truncate font-medium text-white">{inv.invitedEmail}</p>
 
-                  {inv.home && (
+                  {inv.home ? (
                     <p className={`mt-1 truncate text-xs ${textMeta}`}>
                       {inv.home.address}
-                      {inv.home.city && `, ${inv.home.city}`}
-                      {inv.home.state && `, ${inv.home.state}`}
+                      {inv.home.city ? `, ${inv.home.city}` : ""}
+                      {inv.home.state ? `, ${inv.home.state}` : ""}
                     </p>
-                  )}
+                  ) : null}
 
-                  <p className={`mt-1 text-[11px] ${textMeta}`}>
-                    {fmtDate(inv.createdAt)}
-                  </p>
+                  <p className={`mt-1 text-[11px] ${textMeta}`}>{fmtDate(inv.createdAt)}</p>
                 </div>
 
                 <StatusBadge status={inv.status} />
@@ -406,7 +342,7 @@ function SentTab({
             ))}
           </div>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
@@ -429,18 +365,17 @@ export default function HomeInvitationsClient({
 
   const [activeTab, setActiveTab] = useState<Tab>("received");
   const [processing, setProcessing] = useState<string | null>(null);
+
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedInvitation, setSelectedInvitation] = useState<string | null>(null);
+
   const [inviteOpen, setInviteOpen] = useState(false);
 
   const received = receivedInvitations ?? [];
   const sent = sentInvitations ?? [];
 
-  const pendingReceived = received.filter((inv) => inv.status === "PENDING");
-  const pendingCount = pendingReceived.length;
-  const pendingSentCount = sent.filter((i) => i.status === "PENDING").length;
-  const totalInvitations = received.length + sent.length;
-  const totalPending = pendingCount + pendingSentCount;
+  const pendingReceived = received.filter((inv) => inv.status === "PENDING").length;
+  const pendingSent = sent.filter((inv) => inv.status === "PENDING").length;
 
   function handleAcceptClick(invitationId: string) {
     setSelectedInvitation(invitationId);
@@ -455,24 +390,20 @@ export default function HomeInvitationsClient({
     zip: string;
   }) {
     if (!selectedInvitation) return;
+
     setProcessing(selectedInvitation);
 
     try {
-      const response = await fetch(
-        `/api/invitations/${selectedInvitation}/accept`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            address: verifiedAddress.unit
-              ? `${verifiedAddress.street} ${verifiedAddress.unit}`
-              : verifiedAddress.street,
-            city: verifiedAddress.city,
-            state: verifiedAddress.state,
-            zip: verifiedAddress.zip,
-          }),
-        }
-      );
+      const response = await fetch(`/api/invitations/${selectedInvitation}/accept`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: verifiedAddress.unit ? `${verifiedAddress.street} ${verifiedAddress.unit}` : verifiedAddress.street,
+          city: verifiedAddress.city,
+          state: verifiedAddress.state,
+          zip: verifiedAddress.zip,
+        }),
+      });
 
       if (!response.ok) {
         const error = await response.json().catch(() => null);
@@ -497,10 +428,7 @@ export default function HomeInvitationsClient({
     setProcessing(invitationId);
 
     try {
-      const response = await fetch(
-        `/api/invitations/${invitationId}/decline`,
-        { method: "POST" }
-      );
+      const response = await fetch(`/api/invitations/${invitationId}/decline`, { method: "POST" });
       if (!response.ok) throw new Error("Failed to decline invitation");
 
       toast("Invitation declined.");
@@ -518,10 +446,7 @@ export default function HomeInvitationsClient({
     setProcessing(invitationId);
 
     try {
-      const response = await fetch(
-        `/api/invitations/${invitationId}/cancel`,
-        { method: "POST" }
-      );
+      const response = await fetch(`/api/invitations/${invitationId}/cancel`, { method: "POST" });
 
       if (!response.ok) {
         const error = await response.json().catch(() => null);
@@ -540,147 +465,76 @@ export default function HomeInvitationsClient({
 
   return (
     <>
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
-        {/* Breadcrumb */}
-        <Breadcrumb
-          href={`/home/${homeId}`}
-          label={homeAddress}
-          current="Invitations"
-        />
+      {/* Top row: tabs + invite (always visible, mobile-safe) */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab("received")}
+            className={[
+              "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
+              activeTab === "received"
+                ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+                : "text-white/80 hover:text-white hover:bg-white/5",
+            ].join(" ")}
+          >
+            Received{pendingReceived > 0 ? ` (${pendingReceived})` : ""}
+          </button>
 
-        {/* Header – matches other list pages */}
-        <section className={glass}>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Link
-                href={`/home/${homeId}`}
-                className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 transition-colors"
-                aria-label="Back to home"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="w-5 h-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
-                  />
-                </svg>
-              </Link>
+          <button
+            type="button"
+            onClick={() => setActiveTab("sent")}
+            className={[
+              "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium",
+              activeTab === "sent"
+                ? "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]"
+                : "text-white/80 hover:text-white hover:bg-white/5",
+            ].join(" ")}
+          >
+            Sent{pendingSent > 0 ? ` (${pendingSent})` : ""}
+          </button>
+        </div>
 
-              <div className="flex-1 min-w-0">
-                <h1 className={`text-2xl font-bold ${heading}`}>
-                  Contractor Invitations
-                </h1>
-                <p className={`mt-1 text-sm ${textMeta}`}>
-                  Manage pros invited to this home.
-                </p>
-                <p className={`mt-1 text-xs ${textMeta}`}>
-                  {totalInvitations}{" "}
-                  {totalInvitations === 1 ? "invitation" : "invitations"} •{" "}
-                  {totalPending} pending
-                </p>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="flex-shrink-0">
-              <button
-                type="button"
-                className={`${ctaPrimary} rounded-full px-5 py-2 text-sm font-semibold`}
-                onClick={() => setInviteOpen(true)}
-              >
-                + Invite a Pro
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* Tabs */}
-        <section className={glass}>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveTab("received")}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === "received"
-                  ? "border-white/40 bg-white/15 text-white"
-                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-              }`}
-            >
-              Received {pendingCount > 0 && `(${pendingCount})`}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("sent")}
-              className={`rounded-full border px-4 py-2 text-sm transition ${
-                activeTab === "sent"
-                  ? "border-white/40 bg-white/15 text-white"
-                  : "border-white/20 bg-white/5 text-white/80 hover:bg-white/10"
-              }`}
-            >
-              Sent {pendingSentCount > 0 && `(${pendingSentCount})`}
-            </button>
-          </div>
-        </section>
-
-        {/* Content */}
-        <section className={glass}>
-          {activeTab === "received" ? (
-            <ReceivedTab
-              invitations={received}
-              processing={processing}
-              onAccept={handleAcceptClick}
-              onDecline={handleDecline}
-            />
-          ) : (
-            <SentTab
-              invitations={sent}
-              processing={processing}
-              onCancel={handleCancel}
-            />
-          )}
-        </section>
-
-        {/* Address Verification Modal */}
-        {showAddressModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-800 p-6 shadow-2xl backdrop-blur-xl">
-              <h3 className="mb-2 text-xl font-bold text-white">
-                Verify Property Address
-              </h3>
-              <p className={`mb-4 text-sm ${textMeta}`}>
-                Confirm the property address before connecting this pro to your home.
-              </p>
-
-              <AddressVerification onVerified={handleAddressVerified} />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddressModal(false);
-                  setSelectedInvitation(null);
-                }}
-                className="mt-4 w-full rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-sm text-white hover:bg-white/10"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Invite Pro Modal */}
-        <InviteProModal
-          open={inviteOpen}
-          onClose={() => setInviteOpen(false)}
-          homeId={homeId}
-          homeAddress={homeAddress}
-        />
+        <button type="button" className={ctaPrimary} onClick={() => setInviteOpen(true)}>
+          + Invite a Pro
+        </button>
       </div>
+
+      {/* Content */}
+      <div className="mt-6">
+        {activeTab === "received" ? (
+          <ReceivedTab invitations={received} processing={processing} onAccept={handleAcceptClick} onDecline={handleDecline} />
+        ) : (
+          <SentTab invitations={sent} processing={processing} onCancel={handleCancel} />
+        )}
+      </div>
+
+      {/* Address verification modal (kept) */}
+      {showAddressModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-800 p-6 shadow-2xl backdrop-blur-xl">
+            <h3 className="mb-2 text-xl font-bold text-white">Verify Property Address</h3>
+            <p className={`mb-4 text-sm ${textMeta}`}>
+              Confirm the property address before connecting this pro to your home.
+            </p>
+
+            <AddressVerification onVerified={handleAddressVerified} />
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddressModal(false);
+                setSelectedInvitation(null);
+              }}
+              className="mt-4 w-full rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-white/10"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      <InviteProModal open={inviteOpen} onClose={() => setInviteOpen(false)} homeId={homeId} homeAddress={homeAddress} />
     </>
   );
 }

@@ -1,16 +1,24 @@
+/**
+ * HOME REMINDERS PAGE
+ *
+ * Location: src/app/home/[homeId]/reminders/page.tsx
+ */
+
+export const dynamic = "force-dynamic";
+
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 
-import { glass, glassTight, textMeta, heading } from "@/lib/glass";
-import { RemindersPageClient } from "./RemindersPageClient";
-import AddRecordButton from "@/app/home/_components/AddRecordButton";
 import Breadcrumb from "@/components/ui/Breadcrumb";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { textMeta } from "@/lib/glass";
+import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
+import { RemindersPageClient } from "./RemindersPageClient";
 import type { ReminderItem } from "./RemindersPageClient";
 
 export default async function RemindersPage({
@@ -25,25 +33,15 @@ export default async function RemindersPage({
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
-
   await requireHomeAccess(homeId, session.user.id);
 
   const home = await prisma.home.findUnique({
     where: { id: homeId },
-    select: {
-      id: true,
-      address: true,
-      city: true,
-      state: true,
-      zip: true,
-    },
+    select: { id: true, address: true, city: true, state: true, zip: true },
   });
-
   if (!home) notFound();
 
-  const addrLine = `${home.address}${
-    home.city ? `, ${home.city}` : ""
-  }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
+  const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
   const where: {
     homeId: string;
@@ -52,16 +50,11 @@ export default async function RemindersPage({
   } = { homeId };
 
   // Filter by status
-  if (status === "completed") {
-    where.archivedAt = { not: null };
-  } else if (status === "active" || !status) {
-    where.archivedAt = null;
-  }
-  // if status === "all", don't filter by archivedAt
+  if (status === "completed") where.archivedAt = { not: null };
+  else if (status === "active" || !status) where.archivedAt = null;
+  // status === "all" => no archivedAt filter
 
-  if (search) {
-    where.title = { contains: search, mode: "insensitive" };
-  }
+  if (search) where.title = { contains: search, mode: "insensitive" };
 
   type OrderBy = { dueAt: "asc" | "desc" } | { title: "asc" };
   let orderBy: OrderBy = { dueAt: "asc" };
@@ -78,13 +71,7 @@ export default async function RemindersPage({
       note: true,
       archivedAt: true,
       attachments: {
-        select: {
-          id: true,
-          filename: true,
-          url: true,
-          mimeType: true,
-          size: true,
-        },
+        select: { id: true, filename: true, url: true, mimeType: true, size: true },
       },
     },
   });
@@ -96,9 +83,7 @@ export default async function RemindersPage({
     const dueDate = new Date(r.dueAt);
     dueDate.setHours(0, 0, 0, 0);
 
-    const daysUntil = Math.ceil(
-      (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysUntil = Math.ceil((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
     const isCompleted = Boolean(r.archivedAt);
     const isOverdue = !isCompleted && dueDate < now;
@@ -130,8 +115,8 @@ export default async function RemindersPage({
       attachments: r.attachments.map((att) => ({
         id: att.id,
         filename: att.filename,
-        url: att.url,
-        mimeType: att.mimeType,
+        url: att.url ?? null,
+        mimeType: att.mimeType ?? null,
         size: Number(att.size ?? 0),
       })),
     };
@@ -145,7 +130,8 @@ export default async function RemindersPage({
   const next7DaysCount = activeReminders.filter((r) => !r.isOverdue && r.daysUntil <= 7).length;
 
   return (
-    <main className="min-h-screen text-white">
+    <main className="relative min-h-screen text-white">
+      {/* Background */}
       <div className="fixed inset-0 -z-50">
         <Image
           src="/myhomedox_home3.webp"
@@ -161,59 +147,28 @@ export default async function RemindersPage({
 
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb
-          href={`/home/${homeId}`}
-          label={addrLine}
-          current="Reminders"
+          items={[
+            { label: addrLine, href: `/home/${homeId}` },
+            { label: "Reminders" },
+          ]}
         />
 
-        <section className={glass}>
-          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <Link
-                href={`/home/${homeId}`}
-                className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border border-white/30 bg-white/10 transition-colors hover:bg-white/15"
-                aria-label="Back to home"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={2}
-                  stroke="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M10.5 19.5L3 12m0 0 7.5-7.5M3 12h18"
-                  />
-                </svg>
-              </Link>
-              <div className="min-w-0 flex-1">
-                <h1 className={`text-2xl font-bold ${heading}`}>Reminders</h1>
-                <p className={`mt-1 text-sm ${textMeta}`}>
-                  {remindersWithStatus.length}{" "}
-                  {remindersWithStatus.length === 1 ? "reminder" : "reminders"}
-                </p>
-              </div>
-            </div>
-            <div className="flex-shrink-0">
-              <AddRecordButton
-                homeId={homeId}
-                label="+ Add Reminder"
-                defaultType="reminder"
-              />
-            </div>
-          </div>
-        </section>
+        <PageHeader
+          backHref={`/home/${homeId}`}
+          backLabel="Back to home"
+          title="Reminders"
+          meta={
+            <span className={textMeta}>
+              {remindersWithStatus.length} {remindersWithStatus.length === 1 ? "reminder" : "reminders"}
+            </span>
+          }
+          rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />}
+        />
 
-        <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {/* Stats (compact surfaces) */}
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <StatCard label="Total" value={remindersWithStatus.length} />
-          <StatCard
-            label="Overdue"
-            value={overdueCount}
-            highlight={overdueCount > 0 ? "red" : undefined}
-          />
+          <StatCard label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
           <StatCard label="Upcoming" value={upcomingCount} />
           <StatCard
             label="Next 7 Days"
@@ -222,17 +177,25 @@ export default async function RemindersPage({
           />
         </section>
 
-        <RemindersPageClient
-          reminders={remindersWithStatus}
-          homeId={homeId}
-          initialSearch={search}
-          initialSort={sort}
-          initialStatus={status}
-          overdueCount={overdueCount}
-          upcomingCount={upcomingCount}
-          completedCount={completedCount}
-          activeCount={activeCount}
-        />
+        {/* Single body surface */}
+        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+          {/* Mobile-only CTA so it never disappears */}
+          <div className="mb-6 sm:hidden">
+            <AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />
+          </div>
+
+          <RemindersPageClient
+            reminders={remindersWithStatus}
+            homeId={homeId}
+            initialSearch={search}
+            initialSort={sort}
+            initialStatus={status}
+            overdueCount={overdueCount}
+            upcomingCount={upcomingCount}
+            completedCount={completedCount}
+            activeCount={activeCount}
+          />
+        </section>
 
         <div className="h-12" />
       </div>
@@ -250,16 +213,17 @@ function StatCard({
   highlight?: "red" | "yellow";
 }) {
   return (
-    <div className={glassTight}>
-      <div className="text-sm text-white/70">{label}</div>
+    <div className="rounded-2xl border border-white/12 bg-black/25 px-4 py-3">
+      <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</div>
       <div
-        className={`mt-1 text-xl font-semibold ${
+        className={[
+          "mt-1 text-lg font-semibold leading-tight",
           highlight === "red"
-            ? "text-red-400"
+            ? "text-red-300"
             : highlight === "yellow"
-            ? "text-yellow-400"
-            : "text-white"
-        }`}
+            ? "text-yellow-300"
+            : "text-white",
+        ].join(" ")}
       >
         {value}
       </div>
