@@ -43,39 +43,31 @@ export default async function RemindersPage({
 
   const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
-  // Base filter (used for counts) — DOES NOT include status filter
-  const baseWhere: {
+  // ✅ counts should NOT depend on the current status filter
+  const [activeCount, completedCount] = await Promise.all([
+    prisma.reminder.count({ where: { homeId, archivedAt: null } }),
+    prisma.reminder.count({ where: { homeId, archivedAt: { not: null } } }),
+  ]);
+
+  const where: {
     homeId: string;
+    archivedAt?: null | { not: null };
     title?: { contains: string; mode: "insensitive" };
   } = { homeId };
 
-  if (search) baseWhere.title = { contains: search, mode: "insensitive" };
-
-  // List filter (status affects ONLY the list)
-  const listWhere: typeof baseWhere & { archivedAt?: null | { not: null } } = { ...baseWhere };
-
-  if (status === "completed") listWhere.archivedAt = { not: null };
-  else if (status === "active" || !status) listWhere.archivedAt = null;
+  if (status === "completed") where.archivedAt = { not: null };
+  else if (status === "active" || !status) where.archivedAt = null;
   // status === "all" => no archivedAt filter
+
+  if (search) where.title = { contains: search, mode: "insensitive" };
 
   type OrderBy = { dueAt: "asc" | "desc" } | { title: "asc" };
   let orderBy: OrderBy = { dueAt: "asc" };
   if (sort === "latest") orderBy = { dueAt: "desc" };
   if (sort === "title") orderBy = { title: "asc" };
 
-  // Counts dataset (unfiltered by status)
-  const remindersForCounts = await prisma.reminder.findMany({
-    where: baseWhere,
-    select: {
-      id: true,
-      dueAt: true,
-      archivedAt: true,
-    },
-  });
-
-  // List dataset (filtered by status)
   const reminders = await prisma.reminder.findMany({
-    where: listWhere,
+    where,
     orderBy,
     select: {
       id: true,
@@ -83,40 +75,13 @@ export default async function RemindersPage({
       dueAt: true,
       note: true,
       archivedAt: true,
-      attachments: {
-        select: { id: true, filename: true, url: true, mimeType: true, size: true },
-      },
+      attachments: { select: { id: true, filename: true, url: true, mimeType: true, size: true } },
     },
   });
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
-  // ----- Counts (from remindersForCounts) -----
-  const completedCount = remindersForCounts.filter((r) => Boolean(r.archivedAt)).length;
-  const activeForCounts = remindersForCounts.filter((r) => !r.archivedAt);
-  const activeCount = activeForCounts.length;
-
-  const overdueCount = activeForCounts.filter((r) => {
-    const d = new Date(r.dueAt);
-    d.setHours(0, 0, 0, 0);
-    return d < now;
-  }).length;
-
-  const next7DaysCount = activeForCounts.filter((r) => {
-    const d = new Date(r.dueAt);
-    d.setHours(0, 0, 0, 0);
-    if (d < now) return false;
-    const daysUntil = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return daysUntil <= 7;
-  }).length;
-
-  const upcomingCount = activeCount - overdueCount;
-
-  // Total shown should match what user is currently viewing (status-filtered list)
-  const listCount = reminders.length;
-
-  // ----- List mapping (from reminders list) -----
   const remindersWithStatus: ReminderItem[] = reminders.map((r) => {
     const dueDate = new Date(r.dueAt);
     dueDate.setHours(0, 0, 0, 0);
@@ -144,11 +109,7 @@ export default async function RemindersPage({
       isOverdue,
       isDueSoon,
       daysUntil,
-      formattedDate: dueDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
+      formattedDate: dueDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       status: reminderStatus,
       attachments: r.attachments.map((att) => ({
         id: att.id,
@@ -160,57 +121,45 @@ export default async function RemindersPage({
     };
   });
 
+  const visibleActive = remindersWithStatus.filter((r) => !r.isCompleted);
+  const overdueCount = visibleActive.filter((r) => r.isOverdue).length;
+  const upcomingCount = visibleActive.filter((r) => !r.isOverdue).length;
+  const next7DaysCount = visibleActive.filter((r) => !r.isOverdue && r.daysUntil <= 7).length;
+
+  const totalVisible = remindersWithStatus.length;
+
   return (
     <main className="relative min-h-screen text-white">
-      {/* Background */}
       <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
+        <Image src="/myhomedox_home3.webp" alt="" fill sizes="100vw" className="object-cover object-center" priority />
         <div className="absolute inset-0 bg-black/45" />
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
       <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <Breadcrumb
-          items={[
-            { label: addrLine, href: `/home/${homeId}` },
-            { label: "Reminders" },
-          ]}
-        />
+        <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
 
         <PageHeader
           backHref={`/home/${homeId}`}
           backLabel="Back to home"
           title="Reminders"
           meta={
-            <span className={textMeta}>
-              {listCount} {listCount === 1 ? "reminder" : "reminders"}
+            <span>
+              {totalVisible} {totalVisible === 1 ? "reminder" : "reminders"}
             </span>
           }
           rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />}
         />
 
-        {/* Stats (counts are ALWAYS global for this search, not status-filtered) */}
+        {/* ✅ swap + drop Total */}
         <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
           <StatCard label="Upcoming" value={upcomingCount} />
           <StatCard label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
-          <StatCard
-            label="Next 7 Days"
-            value={next7DaysCount}
-            highlight={next7DaysCount > 0 ? "yellow" : undefined}
-          />
+          <StatCard label="Next 7 Days" value={next7DaysCount} highlight={next7DaysCount > 0 ? "yellow" : undefined} />
           <StatCard label="Completed" value={completedCount} />
         </section>
 
-        {/* Single body surface */}
         <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
-          {/* Mobile-only CTA so it never disappears */}
           <div className="mb-6 sm:hidden">
             <AddRecordButton homeId={homeId} label="+ Add Reminder" defaultType="reminder" />
           </div>
@@ -223,8 +172,8 @@ export default async function RemindersPage({
             initialStatus={status}
             overdueCount={overdueCount}
             upcomingCount={upcomingCount}
-            completedCount={completedCount}
-            activeCount={activeCount}
+            completedCount={completedCount} // ✅ now global
+            activeCount={activeCount} // ✅ now global
           />
         </section>
 
@@ -249,11 +198,7 @@ function StatCard({
       <div
         className={[
           "mt-1 text-lg font-semibold leading-tight",
-          highlight === "red"
-            ? "text-red-300"
-            : highlight === "yellow"
-            ? "text-yellow-300"
-            : "text-white",
+          highlight === "red" ? "text-red-300" : highlight === "yellow" ? "text-yellow-300" : "text-white",
         ].join(" ")}
       >
         {value}

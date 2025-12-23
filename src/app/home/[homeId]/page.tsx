@@ -101,10 +101,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
         { ownerId: session.user.id },
         {
           connections: {
-            some: {
-              contractorId: session.user.id,
-              status: "ACTIVE",
-            },
+            some: { contractorId: session.user.id, status: "ACTIVE" },
           },
         },
       ],
@@ -195,9 +192,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
     where: { homeId, status: "PENDING" },
   });
 
-  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${
-    home.zip ? ` ${home.zip}` : ""
-  }`;
+  const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
   const rawMeta = home.meta as unknown;
   const meta: HomeMeta | null = rawMeta && typeof rawMeta === "object" ? (rawMeta as HomeMeta) : null;
@@ -258,9 +253,10 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
 
   return (
     <main className="relative min-h-screen text-white">
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
-        {/* HERO keeps glass */}
-        <section aria-labelledby="home-hero" className={`${glass} relative z-[20] overflow-visible`}>
+      {/* ✅ FULL WIDTH PAGE FRAME (no max-w-7xl here) */}
+      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        {/* HERO */}
+        <section aria-labelledby="home-hero" className={`${glass} w-full relative z-[20] overflow-visible`}>
           <h2 id="home-hero" className="sr-only">
             Home overview
           </h2>
@@ -270,8 +266,8 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
               <Image
                 src={home.photos?.[0] ?? "/myhomedox_homeowner1.jpg"}
                 alt={addrLine}
-                width={800}
-                height={450}
+                width={1400}
+                height={788}
                 className="aspect-video w-full rounded-md object-cover"
               />
             </div>
@@ -300,199 +296,197 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
                 <PropertyStats homeId={home.id} stats={stats} />
               </div>
 
-              {/* ✅ remove homeAddress (unless you add it to HomeActionsProps) */}
-              <HomeActions homeId={home.id} unreadMessages={0} />
+              <HomeActions homeId={home.id} homeAddress={addrLine} unreadMessages={0} />
             </div>
           </div>
         </section>
 
-        {/* SINGLE BODY SURFACE (new standard) */}
-        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
-          <div className="space-y-6">
-            {/* Needs attention lives INSIDE, no extra glass surface */}
-            {showNeedsAttention ? (
-              <div className="rounded-2xl border border-orange-400/30 bg-orange-500/10 p-4">
-                <h2 className={`mb-4 text-lg font-semibold text-orange-300 ${heading}`}>⚡ Needs Your Attention</h2>
+        {/* NEEDS ATTENTION (✅ restore orange-tinted surface vibe) */}
+        {showNeedsAttention ? (
+          <section
+            className={[
+              glass,
+              "w-full",
+              // orange warmth + subtle vignette like your earlier look
+              "border border-orange-400/20",
+              "bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.18),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(251,146,60,0.10),transparent_60%)]",
+            ].join(" ")}
+          >
+            <h2 className={`mb-4 text-lg font-semibold text-orange-300 ${heading}`}>⚡ Needs Your Attention</h2>
 
-                <div className="space-y-3">
-                  <UnreadMessagesAlert homeId={home.id} />
+            <div className="space-y-3">
+              <UnreadMessagesAlert homeId={home.id} />
 
-                  {pendingServiceSubmissionsCount > 0 ? (
-                    <Link
-                      href={`/home/${home.id}/completed-service-submissions`}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">📋</span>
-                        <div>
-                          <p className="text-sm font-medium text-white">Review Completed Work</p>
-                          <p className="text-xs text-white/60">
-                            {pendingServiceSubmissionsCount} submission{pendingServiceSubmissionsCount !== 1 ? "s" : ""}{" "}
-                            awaiting approval
-                          </p>
-                        </div>
-                      </div>
-                      <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                        {pendingServiceSubmissionsCount}
-                      </span>
-                    </Link>
-                  ) : null}
+              {pendingServiceSubmissionsCount > 0 ? (
+                <Link
+                  href={`/home/${home.id}/completed-service-submissions`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">📋</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">Review Completed Work</p>
+                      <p className="text-xs text-white/60">
+                        {pendingServiceSubmissionsCount} submission{pendingServiceSubmissionsCount !== 1 ? "s" : ""} awaiting
+                        approval
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingServiceSubmissionsCount}
+                  </span>
+                </Link>
+              ) : null}
 
-                  {pendingServiceRequestsCount > 0 ? (
-                    <Link
-                      href={`/home/${home.id}/service-requests`}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">🔧</span>
-                        <div>
-                          <p className="text-sm font-medium text-white">Service Requests</p>
-                          <p className="text-xs text-white/60">
-                            {pendingServiceRequestsCount} request{pendingServiceRequestsCount !== 1 ? "s" : ""} pending
-                            response
-                          </p>
-                        </div>
-                      </div>
-                      <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                        {pendingServiceRequestsCount}
-                      </span>
-                    </Link>
-                  ) : null}
+              {pendingServiceRequestsCount > 0 ? (
+                <Link
+                  href={`/home/${home.id}/service-requests`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">🔧</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">Service Requests</p>
+                      <p className="text-xs text-white/60">
+                        {pendingServiceRequestsCount} request{pendingServiceRequestsCount !== 1 ? "s" : ""} pending response
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingServiceRequestsCount}
+                  </span>
+                </Link>
+              ) : null}
 
-                  {pendingInvitationsCount > 0 ? (
-                    <Link
-                      href={`/home/${home.id}/invitations`}
-                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-xl">✉️</span>
-                        <div>
-                          <p className="text-sm font-medium text-white">Pending Invitations</p>
-                          <p className="text-xs text-white/60">
-                            {pendingInvitationsCount} invitation{pendingInvitationsCount !== 1 ? "s" : ""} awaiting
-                            response
-                          </p>
-                        </div>
-                      </div>
-                      <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                        {pendingInvitationsCount}
-                      </span>
-                    </Link>
-                  ) : null}
+              {pendingInvitationsCount > 0 ? (
+                <Link
+                  href={`/home/${home.id}/invitations`}
+                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">✉️</span>
+                    <div>
+                      <p className="text-sm font-medium text-white">Pending Invitations</p>
+                      <p className="text-xs text-white/60">
+                        {pendingInvitationsCount} invitation{pendingInvitationsCount !== 1 ? "s" : ""} awaiting response
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                    {pendingInvitationsCount}
+                  </span>
+                </Link>
+              ) : null}
 
-                  {overdueReminders.length > 0 ? (
-                    <Link
-                      href={`/home/${home.id}/reminders`}
-                      className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-white">⚠️ Overdue Reminders ({overdueReminders.length})</p>
-                        <ul className="mt-1 space-y-0.5 text-xs text-white/70">
-                          {overdueReminders.slice(0, 3).map((r) => (
-                            <li key={r.id}>• {r.title} (due {formatDate(r.dueAt)})</li>
-                          ))}
-                          {overdueReminders.length > 3 ? <li>+{overdueReminders.length - 3} more…</li> : null}
-                        </ul>
-                      </div>
-                      <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
-                    </Link>
-                  ) : null}
+              {overdueReminders.length > 0 ? (
+                <Link
+                  href={`/home/${home.id}/reminders`}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white">⚠️ Overdue Reminders ({overdueReminders.length})</p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                      {overdueReminders.slice(0, 3).map((r) => (
+                        <li key={r.id}>• {r.title} (due {formatDate(r.dueAt)})</li>
+                      ))}
+                      {overdueReminders.length > 3 ? <li>+{overdueReminders.length - 3} more…</li> : null}
+                    </ul>
+                  </div>
+                  <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
+                </Link>
+              ) : null}
 
-                  {dueSoonReminders.length > 0 ? (
-                    <Link
-                      href={`/home/${home.id}/reminders`}
-                      className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-white">⏰ Upcoming Reminders (next 7 days)</p>
-                        <ul className="mt-1 space-y-0.5 text-xs text-white/70">
-                          {dueSoonReminders.slice(0, 3).map((r) => (
-                            <li key={r.id}>• {r.title} (due {formatDate(r.dueAt)})</li>
-                          ))}
-                          {dueSoonReminders.length > 3 ? <li>+{dueSoonReminders.length - 3} more…</li> : null}
-                        </ul>
-                      </div>
-                      <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
-                    </Link>
-                  ) : null}
+              {dueSoonReminders.length > 0 ? (
+                <Link
+                  href={`/home/${home.id}/reminders`}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white">⏰ Upcoming Reminders (next 7 days)</p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                      {dueSoonReminders.slice(0, 3).map((r) => (
+                        <li key={r.id}>• {r.title} (due {formatDate(r.dueAt)})</li>
+                      ))}
+                      {dueSoonReminders.length > 3 ? <li>+{dueSoonReminders.length - 3} more…</li> : null}
+                    </ul>
+                  </div>
+                  <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
+                </Link>
+              ) : null}
 
-                  {expiringSoonWarranties.length > 0 ? (
-                    <Link
-                      href={`/home/${home.id}/warranties`}
-                      className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-white">
-                          🛡️ Warranties Expiring Soon ({expiringSoonWarranties.length})
-                        </p>
-                        <ul className="mt-1 space-y-0.5 text-xs text-white/70">
-                          {expiringSoonWarranties.slice(0, 3).map((w) => (
-                            <li key={w.id}>
-                              • {w.item}
-                              {w.expiresAt ? ` (expires ${formatDate(w.expiresAt)})` : ""}
-                            </li>
-                          ))}
-                          {expiringSoonWarranties.length > 3 ? <li>+{expiringSoonWarranties.length - 3} more…</li> : null}
-                        </ul>
-                      </div>
-                      <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
-                    </Link>
-                  ) : null}
+              {expiringSoonWarranties.length > 0 ? (
+                <Link
+                  href={`/home/${home.id}/warranties`}
+                  className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-white">🛡️ Warranties Expiring Soon ({expiringSoonWarranties.length})</p>
+                    <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                      {expiringSoonWarranties.slice(0, 3).map((w) => (
+                        <li key={w.id}>
+                          • {w.item}
+                          {w.expiresAt ? ` (expires ${formatDate(w.expiresAt)})` : ""}
+                        </li>
+                      ))}
+                      {expiringSoonWarranties.length > 3 ? <li>+{expiringSoonWarranties.length - 3} more…</li> : null}
+                    </ul>
+                  </div>
+                  <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
+                </Link>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {/* BODY */}
+        <section className="grid w-full grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <ConnectedPros homeId={home.id} homeAddress={addrLine} connections={connections} />
+
+            <ClientCard title="Recent Records" viewAllLink={`/home/${home.id}/records`} homeId={home.id} addType="record">
+              {serializedRecords.length === 0 ? (
+                <div className="py-8 text-center text-white/70">
+                  <p className="mb-3">No records yet</p>
+                  <p className="mb-4 text-sm text-white/60">Start tracking your home&apos;s maintenance history</p>
                 </div>
-              </div>
-            ) : null}
+              ) : (
+                <div className="space-y-3">
+                  {serializedRecords.map((r) => (
+                    <RecordItem key={r.id} record={r} homeId={home.id} />
+                  ))}
+                </div>
+              )}
+            </ClientCard>
+          </div>
 
-            {/* Main content */}
-            <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-              <div className="space-y-6 lg:col-span-2">
-                <ConnectedPros homeId={home.id} homeAddress={addrLine} connections={connections} />
+          <div className="space-y-6">
+            <ClientCard title="Upcoming Reminders" viewAllLink={`/home/${home.id}/reminders`} homeId={home.id} addType="reminder">
+              {upcomingReminders.length === 0 ? (
+                <div className="py-8 text-center text-white/70">
+                  <p className="mb-2 text-sm">No upcoming reminders</p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {upcomingReminders.map((m) => (
+                    <ReminderItem key={m.id} reminder={m} homeId={home.id} today={today} />
+                  ))}
+                </ul>
+              )}
+            </ClientCard>
 
-                <ClientCard title="Recent Records" viewAllLink={`/home/${home.id}/records`} homeId={home.id} addType="record">
-                  {serializedRecords.length === 0 ? (
-                    <div className="py-8 text-center text-white/70">
-                      <p className="mb-3">No records yet</p>
-                      <p className="mb-4 text-sm text-white/60">Start tracking your home&apos;s maintenance history</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {serializedRecords.map((r) => (
-                        <RecordItem key={r.id} record={r} homeId={home.id} />
-                      ))}
-                    </div>
-                  )}
-                </ClientCard>
-              </div>
-
-              <div className="space-y-6">
-                <ClientCard title="Upcoming Reminders" viewAllLink={`/home/${home.id}/reminders`} homeId={home.id} addType="reminder">
-                  {upcomingReminders.length === 0 ? (
-                    <div className="py-8 text-center text-white/70">
-                      <p className="mb-2 text-sm">No upcoming reminders</p>
-                    </div>
-                  ) : (
-                    <ul className="space-y-3">
-                      {upcomingReminders.map((m) => (
-                        <ReminderItem key={m.id} reminder={m} homeId={home.id} today={today} />
-                      ))}
-                    </ul>
-                  )}
-                </ClientCard>
-
-                <ClientCard title="Active Warranties" viewAllLink={`/home/${home.id}/warranties`} homeId={home.id} addType="warranty">
-                  {home.warranties.length === 0 ? (
-                    <div className="py-8 text-center text-white/70">
-                      <p className="mb-2 text-sm">No warranties on file</p>
-                    </div>
-                  ) : (
-                    <ul className="space-y-3">
-                      {home.warranties.map((w) => (
-                        <WarrantyItem key={w.id} warranty={w} homeId={home.id} now={now} />
-                      ))}
-                    </ul>
-                  )}
-                </ClientCard>
-              </div>
-            </section>
+            <ClientCard title="Active Warranties" viewAllLink={`/home/${home.id}/warranties`} homeId={home.id} addType="warranty">
+              {home.warranties.length === 0 ? (
+                <div className="py-8 text-center text-white/70">
+                  <p className="mb-2 text-sm">No warranties on file</p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {home.warranties.map((w) => (
+                    <WarrantyItem key={w.id} warranty={w} homeId={home.id} now={now} />
+                  ))}
+                </ul>
+              )}
+            </ClientCard>
           </div>
         </section>
 
@@ -547,9 +541,7 @@ function ReminderItem({ reminder, homeId, today }: { reminder: Reminder; homeId:
         <div className="flex flex-col items-end gap-1">
           <span className={`text-xs font-medium ${isOverdue ? "text-red-400" : "text-white/70"}`}>{formatDate(dueDate)}</span>
           {!isOverdue && daysUntilDue <= 7 ? (
-            <span className="text-xs text-yellow-400">
-              {daysUntilDue === 0 ? "Today" : daysUntilDue === 1 ? "Tomorrow" : `${daysUntilDue} days`}
-            </span>
+            <span className="text-xs text-yellow-400">{daysUntilDue === 0 ? "Today" : daysUntilDue === 1 ? "Tomorrow" : `${daysUntilDue} days`}</span>
           ) : null}
         </div>
       </div>
