@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -128,10 +129,10 @@ export default async function ContractorsPage({
   const activeConnections = activeConnectionsRaw.map(mapConnection);
   const archivedConnections = archivedConnectionsRaw.map(mapConnection);
 
-  const totalContractors = activeConnectionsRaw.length;
+  const totalContractors = activeConnectionsRaw.length + archivedConnectionsRaw.length;
+  const activeContractors = activeConnectionsRaw.length;
   const totalVerifiedServices = serviceRecords.length;
   const totalSpentAmount = Array.from(spentByContractor.values()).reduce((sum, n) => sum + n, 0);
-  const activeContractors = activeConnectionsRaw.length;
 
   const breadcrumbItems = [
     { label: addrLine || "Home", href: `/home/${homeId}` },
@@ -142,7 +143,22 @@ export default async function ContractorsPage({
 
   return (
     <main className="relative min-h-screen text-white">
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
+      {/* Background */}
+      <div className="fixed inset-0 -z-50">
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
+      </div>
+
+      {/* ✅ FULL WIDTH PAGE FRAME */}
+      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <Breadcrumb items={breadcrumbItems} />
 
         <PageHeader
@@ -158,23 +174,17 @@ export default async function ContractorsPage({
           rightDesktop={<ContractorActions homeId={homeId} homeAddress={addrLine} />}
         />
 
-        {/* Stats (compact; avoids giant tiles) */}
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <StatCard label="Total Contractors" value={totalContractors} />
-          <StatCard label="Verified Jobs" value={totalVerifiedServices} />
-          <StatCard
-            label="Total Spent"
-            value={totalSpentAmount > 0 ? `$${totalSpentAmount.toLocaleString()}` : "$0"}
-            highlight={totalSpentAmount > 0 ? "green" : undefined}
-          />
-          <StatCard label="Active Pros" value={activeContractors} />
-        </section>
+        {/* ✅ Mobile action button (never disappears) */}
+        <div className="sm:hidden">
+          <ContractorActions homeId={homeId} homeAddress={addrLine} />
+        </div>
 
-        {!hasAny ? (
-          <section className="rounded-2xl border border-white/15 bg-black/55 p-8 shadow-2xl backdrop-blur-xl">
-            <div className="py-6 text-center">
+        {/* ✅ Single body surface */}
+        <section className="rounded-2xl border border-white/15 bg-black/55 p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+          {!hasAny ? (
+            <div className="py-8 text-center">
               <div className="mb-4 text-5xl">👷</div>
-              <h2 className="text-xl font-semibold text-white">No connected contractors yet</h2>
+              <h2 className="text-xl font-semibold text-white">No connected pros yet</h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-white/70">
                 Connect with pros who&apos;ve worked on your home to build your trusted network and get verified records.
               </p>
@@ -183,45 +193,23 @@ export default async function ContractorsPage({
                 <ContractorActions homeId={homeId} homeAddress={addrLine} />
               </div>
             </div>
-          </section>
-        ) : (
-          <ContractorsListClient
-            homeId={homeId}
-            activeConnections={activeConnections}
-            archivedConnections={archivedConnections}
-          />
-        )}
+          ) : (
+            <ContractorsListClient
+              homeId={homeId}
+              activeConnections={activeConnections}
+              archivedConnections={archivedConnections}
+              stats={{
+                totalContractors,
+                activeContractors,
+                totalVerifiedServices,
+                totalSpentAmount,
+              }}
+            />
+          )}
+        </section>
 
         <div className="h-12" />
       </div>
     </main>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string | number;
-  highlight?: "green" | "yellow";
-}) {
-  return (
-    <div className="rounded-2xl border border-white/12 bg-black/25 px-4 py-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</div>
-      <div
-        className={[
-          "mt-1 text-lg font-semibold leading-tight",
-          highlight === "green"
-            ? "text-emerald-300"
-            : highlight === "yellow"
-            ? "text-yellow-300"
-            : "text-white",
-        ].join(" ")}
-      >
-        {value}
-      </div>
-    </div>
   );
 }

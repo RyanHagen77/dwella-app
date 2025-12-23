@@ -1,8 +1,11 @@
 // app/home/[homeId]/contractors/ContractorsListClient.tsx
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+
+import { glass, heading, textMeta } from "@/lib/glass";
 
 type ContractorConnection = {
   id: string;
@@ -25,28 +28,75 @@ type Props = {
   homeId: string;
   activeConnections: ContractorConnection[];
   archivedConnections: ContractorConnection[];
+  stats: {
+    totalContractors: number;
+    activeContractors: number;
+    totalVerifiedServices: number;
+    totalSpentAmount: number;
+  };
 };
 
-const sectionSurface = "rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl";
 const cardLink =
-  "block rounded-2xl border border-white/12 bg-black/25 p-5 transition-colors " +
-  "hover:border-white/20 hover:bg-black/30";
+  "group relative block overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur " +
+  "transition hover:bg-black/30 hover:border-white/15";
 
 export function ContractorsListClient({
   homeId,
   activeConnections,
   archivedConnections,
+  stats,
 }: Props) {
   const active = activeConnections ?? [];
   const archived = archivedConnections ?? [];
 
+  // collapsed by default only on mobile (PropertyStats pattern)
+  const [isExpanded, setIsExpanded] = useState(false);
+
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
+      {/* ✅ Stats: collapsible on mobile, always visible on desktop */}
+      <section aria-labelledby="contractor-stats" className="space-y-3">
+        <div className="flex items-center justify-between">
+  <button
+    type="button"
+    onClick={() => setIsExpanded((prev) => !prev)}
+    className="inline-flex items-center gap-2 text-left lg:cursor-default"
+  >
+    <h2 id="contractor-stats" className={`text-lg font-semibold ${heading}`}>
+      Overview
+    </h2>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+</div>
+
+        <div className={`${isExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
+          <StatTile label="Total Pros" value={stats.totalContractors} />
+          <StatTile label="Active Pros" value={stats.activeContractors} />
+          <StatTile label="Verified Jobs" value={stats.totalVerifiedServices} />
+          <StatTile
+            label="Total Spent"
+            value={stats.totalSpentAmount > 0 ? `$${stats.totalSpentAmount.toLocaleString()}` : "$0"}
+          />
+        </div>
+      </section>
+
+      {/* Lists */}
       {active.length > 0 ? (
-        <section className={sectionSurface}>
-          <div className="mb-4 text-xs font-semibold uppercase tracking-wide text-white/55">
-            Active ({active.length})
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
+              Active ({active.length})
+            </div>
           </div>
+
           <div className="space-y-3">
             {active.map((conn) => (
               <ContractorCard key={conn.id} homeId={homeId} connection={conn} statusLabel="Active" />
@@ -56,19 +106,14 @@ export function ContractorsListClient({
       ) : null}
 
       {archived.length > 0 ? (
-        <section className={sectionSurface}>
-          <div className="mb-4 text-xs font-semibold uppercase tracking-wide text-white/55">
+        <section className="space-y-3">
+          <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
             Archived ({archived.length})
           </div>
+
           <div className="space-y-3">
             {archived.map((conn) => (
-              <ContractorCard
-                key={conn.id}
-                homeId={homeId}
-                connection={conn}
-                statusLabel="Archived"
-                dimmed
-              />
+              <ContractorCard key={conn.id} homeId={homeId} connection={conn} statusLabel="Archived" dimmed />
             ))}
           </div>
         </section>
@@ -108,7 +153,16 @@ function ContractorCard({
   });
 
   return (
-    <Link href={href} className={[cardLink, dimmed ? "opacity-85" : ""].join(" ")}>
+    <Link
+      href={href}
+      className={[
+        cardLink,
+        dimmed ? "opacity-85" : "",
+        // subtle left accent (status)
+        "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
+        statusLabel === "Active" ? "before:bg-emerald-400/70" : "before:bg-white/12",
+      ].join(" ")}
+    >
       <div className="flex items-start gap-4">
         {/* Avatar */}
         {contractor?.image ? (
@@ -117,10 +171,10 @@ function ContractorCard({
             alt={name}
             width={48}
             height={48}
-            className="h-12 w-12 flex-shrink-0 rounded-full border border-white/10 object-cover"
+            className="h-12 w-12 flex-shrink-0 rounded-2xl border border-white/10 object-cover"
           />
         ) : (
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full border border-white/10 bg-black/20 text-lg font-semibold text-white/80">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg font-semibold text-white/80">
             {name[0]?.toUpperCase() || "C"}
           </div>
         )}
@@ -144,12 +198,10 @@ function ContractorCard({
                 </span>
               </div>
 
-              {contractor?.email ? (
-                <p className="mt-1 truncate text-xs text-white/60">{contractor.email}</p>
-              ) : null}
+              {contractor?.email ? <p className="mt-1 truncate text-xs text-white/60">{contractor.email}</p> : null}
             </div>
 
-            <div className="flex items-center text-white/40" aria-hidden>
+            <div className="flex items-center text-white/35" aria-hidden>
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -173,5 +225,14 @@ function ContractorCard({
         </div>
       </div>
     </Link>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className={`${glass} p-4`} title={label}>
+      <p className={`text-xs ${textMeta} whitespace-nowrap`}>{label}</p>
+      <p className="mt-2 text-lg lg:text-xl font-bold text-white">{value}</p>
+    </div>
   );
 }
