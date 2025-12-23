@@ -70,16 +70,11 @@ type ConnectionWithContractor = {
     name: string | null;
     email: string;
     image: string | null;
-    proProfile: {
-      businessName: string | null;
-    } | null;
+    proProfile: { businessName: string | null } | null;
   };
 };
 
-function formatDate(
-  value: Date | string | null | undefined,
-  fallback: string = "—"
-): string {
+function formatDate(value: Date | string | null | undefined, fallback: string = "—"): string {
   if (!value) return fallback;
   const d = typeof value === "string" ? new Date(value) : value;
   if (Number.isNaN(d.getTime())) return fallback;
@@ -92,11 +87,7 @@ function isWarrantyExpiringSoon(expiresAt: Date | null, now: Date): boolean {
   return expiresAt >= now && expiresAt <= in90Days;
 }
 
-export default async function HomePage({
-  params,
-}: {
-  params: Promise<{ homeId: string }>;
-}) {
+export default async function HomePage({ params }: { params: Promise<{ homeId: string }> }) {
   const { homeId } = await params;
 
   const session = await getServerSession(authConfig);
@@ -104,7 +95,6 @@ export default async function HomePage({
 
   await requireHomeAccess(homeId, session.user.id);
 
-  // Check how many homes the user has access to
   const userHomesCount = await prisma.home.count({
     where: {
       OR: [
@@ -152,29 +142,18 @@ export default async function HomePage({
       },
 
       reminders: {
-        where: {
-          archivedAt: null,
-          deletedAt: null,
-        },
+        where: { archivedAt: null, deletedAt: null },
         orderBy: { dueAt: "asc" },
         take: 10,
-        select: {
-          id: true,
-          title: true,
-          dueAt: true,
-        },
+        select: { id: true, title: true, dueAt: true },
       },
 
       warranties: {
         orderBy: { expiresAt: "asc" },
         take: 5,
-        select: {
-          id: true,
-          item: true,
-          provider: true,
-          expiresAt: true,
-        },
+        select: { id: true, item: true, provider: true, expiresAt: true },
       },
+
       connections: {
         where: { status: "ACTIVE" },
         orderBy: { updatedAt: "desc" },
@@ -189,11 +168,7 @@ export default async function HomePage({
               name: true,
               email: true,
               image: true,
-              proProfile: {
-                select: {
-                  businessName: true,
-                },
-              },
+              proProfile: { select: { businessName: true } },
             },
           },
         },
@@ -207,39 +182,25 @@ export default async function HomePage({
     where: {
       homeId,
       isVerified: false,
-      status: {
-        in: [
-          "PENDING_REVIEW",
-          "DOCUMENTED_UNVERIFIED",
-          "DOCUMENTED",
-          "DISPUTED",
-        ],
-      },
+      status: { in: ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED", "DISPUTED"] },
       archivedAt: null,
     },
   });
 
   const pendingServiceRequestsCount = await prisma.serviceRequest.count({
-    where: {
-      homeId,
-      status: { in: ["PENDING", "QUOTED"] },
-    },
+    where: { homeId, status: { in: ["PENDING", "QUOTED"] } },
   });
 
   const pendingInvitationsCount = await prisma.invitation.count({
-    where: {
-      homeId,
-      status: "PENDING",
-    },
+    where: { homeId, status: "PENDING" },
   });
 
-  const addrLine = `${home.address}${
-    home.city ? `, ${home.city}` : ""
-  }${home.state ? `, ${home.state}` : ""}${home.zip ? ` ${home.zip}` : ""}`;
+  const addrLine = `${home.address}${home.city ? `, ${home.city}` : ""}${home.state ? `, ${home.state}` : ""}${
+    home.zip ? ` ${home.zip}` : ""
+  }`;
 
   const rawMeta = home.meta as unknown;
-  const meta: HomeMeta | null =
-    rawMeta && typeof rawMeta === "object" ? (rawMeta as HomeMeta) : null;
+  const meta: HomeMeta | null = rawMeta && typeof rawMeta === "object" ? (rawMeta as HomeMeta) : null;
   const attrs = meta?.attrs ?? {};
 
   const stats = {
@@ -254,7 +215,7 @@ export default async function HomePage({
 
   const serializedRecords: HomeRecord[] = home.records.map((record) => ({
     ...record,
-    cost: record.cost ? Number(record.cost) : null,
+    cost: record.cost != null ? Number(record.cost) : null,
   }));
 
   const now = new Date();
@@ -278,30 +239,32 @@ export default async function HomePage({
   const dueSoonReminders = upcomingReminders.filter((r) => {
     const d = new Date(r.dueAt);
     d.setHours(0, 0, 0, 0);
-    const daysUntil = Math.ceil(
-      (d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysUntil = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return daysUntil >= 0 && daysUntil <= 7;
   });
 
-  const expiringSoonWarranties = home.warranties.filter((w: Warranty) =>
-    isWarrantyExpiringSoon(w.expiresAt, now)
-  );
+  const expiringSoonWarranties = home.warranties.filter((w: Warranty) => isWarrantyExpiringSoon(w.expiresAt, now));
 
   const connections = home.connections as ConnectionWithContractor[];
-  const verificationStatus =
-    home.verificationStatus as HomeVerificationStatus | null;
+  const verificationStatus = home.verificationStatus as HomeVerificationStatus | null;
+
+  const showNeedsAttention =
+    pendingServiceSubmissionsCount > 0 ||
+    pendingServiceRequestsCount > 0 ||
+    pendingInvitationsCount > 0 ||
+    overdueReminders.length > 0 ||
+    dueSoonReminders.length > 0 ||
+    expiringSoonWarranties.length > 0;
 
   return (
     <main className="relative min-h-screen text-white">
-      <div className="mx-auto max-w-7xl p-6 space-y-6">
-        <section
-          aria-labelledby="home-hero"
-          className={`${glass} overflow-visible relative z-[20]`}
-        >
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        {/* HERO keeps glass */}
+        <section aria-labelledby="home-hero" className={`${glass} relative z-[20] overflow-visible`}>
           <h2 id="home-hero" className="sr-only">
             Home overview
           </h2>
+
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
             <div>
               <Image
@@ -315,300 +278,221 @@ export default async function HomePage({
 
             <div className="flex flex-col justify-between space-y-4">
               <div className="space-y-3">
-                {userHomesCount > 1 && (
-                  <HomePicker
-                    currentHomeId={home.id}
-                    initialAddress={addrLine}
-                  />
-                )}
+                {userHomesCount > 1 ? <HomePicker currentHomeId={home.id} initialAddress={addrLine} /> : null}
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <h1 className={`text-2xl font-semibold ${heading}`}>
-                    {addrLine}
-                  </h1>
+                  <h1 className={`text-2xl font-semibold ${heading}`}>{addrLine}</h1>
 
-                  {verificationStatus && (
+                  {verificationStatus ? (
                     <div className="flex items-center gap-2">
                       <HomeVerificationBadge status={verificationStatus} />
-                      {verificationStatus === "UNVERIFIED" && (
-                        <Link
-                          href={`/home/${home.id}/verify`}
-                          className="text-xs text-indigo-300 hover:text-indigo-200"
-                        >
+                      {verificationStatus === "UNVERIFIED" ? (
+                        <Link href={`/home/${home.id}/verify`} className="text-xs text-indigo-300 hover:text-indigo-200">
                           Verify
                         </Link>
-                      )}
+                      ) : null}
                     </div>
-                  )}
+                  ) : null}
                 </div>
 
-                <p className={`text-sm ${textMeta}`}>
-                  Last updated {formatDate(stats.lastUpdated)}
-                </p>
+                <p className={`text-sm ${textMeta}`}>Last updated {formatDate(stats.lastUpdated)}</p>
 
                 <PropertyStats homeId={home.id} stats={stats} />
               </div>
 
-              <HomeActions
-                homeId={home.id}
-                homeAddress={addrLine}
-                unreadMessages={0}
-              />
+              {/* ✅ remove homeAddress (unless you add it to HomeActionsProps) */}
+              <HomeActions homeId={home.id} unreadMessages={0} />
             </div>
           </div>
         </section>
 
-        {(pendingServiceSubmissionsCount > 0 ||
-          pendingServiceRequestsCount > 0 ||
-          pendingInvitationsCount > 0 ||
-          overdueReminders.length > 0 ||
-          dueSoonReminders.length > 0 ||
-          expiringSoonWarranties.length > 0) && (
-          <section className={`${glass} border-l-4 border-orange-400`}>
-            <h2
-              className={`mb-4 text-lg font-semibold text-orange-400 ${heading}`}
-            >
-              ⚡ Needs Your Attention
-            </h2>
-
-            <div className="space-y-3">
-              <UnreadMessagesAlert homeId={home.id} />
-
-              {pendingServiceSubmissionsCount > 0 && (
-                <Link
-                  href={`/home/${home.id}/completed-service-submissions`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">📋</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Review Completed Work
-                      </p>
-                      <p className="text-xs text-white/60">
-                        {pendingServiceSubmissionsCount} submission
-                        {pendingServiceSubmissionsCount !== 1 ? "s" : ""} awaiting
-                        approval
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingServiceSubmissionsCount}
-                  </span>
-                </Link>
-              )}
-
-              {pendingServiceRequestsCount > 0 && (
-                <Link
-                  href={`/home/${home.id}/completed-service-submissions`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">🔧</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Service Requests
-                      </p>
-                      <p className="text-xs text-white/60">
-                        {pendingServiceRequestsCount} request
-                        {pendingServiceRequestsCount !== 1 ? "s" : ""} pending
-                        response
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingServiceRequestsCount}
-                  </span>
-                </Link>
-              )}
-
-              {pendingInvitationsCount > 0 && (
-                <Link
-                  href={`/home/${home.id}/invitations`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">✉️</span>
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Pending Invitations
-                      </p>
-                      <p className="text-xs text-white/60">
-                        {pendingInvitationsCount} invitation
-                        {pendingInvitationsCount !== 1 ? "s" : ""} awaiting
-                        response
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
-                    {pendingInvitationsCount}
-                  </span>
-                </Link>
-              )}
-
-              {overdueReminders.length > 0 && (
-                <div className="flex items-center justify-between rounded-lg bg_WHITE/5 p-3 transition hover:bg-white/10">
-                  <div>
-                    <p className="text-sm font-medium text_WHITE">
-                      ⚠️ Overdue Reminders ({overdueReminders.length})
-                    </p>
-                    <ul className="mt-1 space-y-0.5 text-xs text_WHITE/70">
-                      {overdueReminders.slice(0, 3).map((r) => (
-                        <li key={r.id}>
-                          • {r.title} (due {formatDate(r.dueAt)})
-                        </li>
-                      ))}
-                      {overdueReminders.length > 3 && (
-                        <li>+{overdueReminders.length - 3} more…</li>
-                      )}
-                    </ul>
-                  </div>
-                  <Link
-                    href={`/home/${home.id}/reminders`}
-                    className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap"
-                  >
-                    View All
-                  </Link>
-                </div>
-              )}
-
-              {dueSoonReminders.length > 0 && (
-                <div className="flex items-center justify-between rounded-lg bg_WHITE/5 p-3 transition hover:bg_WHITE/10">
-                  <div>
-                    <p className="text-sm font-medium text_WHITE">
-                      ⏰ Upcoming Reminders (next 7 days)
-                    </p>
-                    <ul className="mt-1 space-y-0.5 text-xs text_WHITE/70">
-                      {dueSoonReminders.slice(0, 3).map((r) => (
-                        <li key={r.id}>
-                          • {r.title} (due {formatDate(r.dueAt)})
-                        </li>
-                      ))}
-                      {dueSoonReminders.length > 3 && (
-                        <li>+{dueSoonReminders.length - 3} more…</li>
-                      )}
-                    </ul>
-                  </div>
-                  <Link
-                    href={`/home/${home.id}/reminders`}
-                    className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap"
-                  >
-                    View All
-                  </Link>
-                </div>
-              )}
-
-              {expiringSoonWarranties.length > 0 && (
-                <div className="flex items-center justify-between rounded-lg bg_WHITE/5 p-3 transition hover:bg_WHITE/10">
-                  <div>
-                    <p className="text-sm font-medium text_WHITE">
-                      🛡️ Warranties Expiring Soon (
-                      {expiringSoonWarranties.length})
-                    </p>
-                    <ul className="mt-1 space-y-0.5 text-xs text_WHITE/70">
-                      {expiringSoonWarranties.slice(0, 3).map((w) => (
-                        <li key={w.id}>
-                          • {w.item}
-                          {w.expiresAt &&
-                            ` (expires ${formatDate(w.expiresAt)})`}
-                        </li>
-                      ))}
-                      {expiringSoonWarranties.length > 3 && (
-                        <li>+{expiringSoonWarranties.length - 3} more…</li>
-                      )}
-                    </ul>
-                  </div>
-                  <Link
-                    href={`/home/${home.id}/warranties`}
-                    className="text-sm text-indigo-300 hover:text-indigo-200 whitespace-nowrap"
-                  >
-                    View All
-                  </Link>
-                </div>
-              )}
-            </div>
-          </section>
-        )}
-
-        <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="space-y-6 lg:col-span-2">
-            <ConnectedPros
-              homeId={home.id}
-              homeAddress={addrLine}
-              connections={connections}
-            />
-
-            <ClientCard
-              title="Recent Records"
-              viewAllLink={`/home/${home.id}/records`}
-              homeId={home.id}
-              addType="record"
-            >
-              {serializedRecords.length === 0 ? (
-                <div className="py-8 text-center text-white/70">
-                  <p className="mb-3">No records yet</p>
-                  <p className="mb-4 text-sm text-white/60">
-                    Start tracking your home&apos;s maintenance history
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {serializedRecords.map((r) => (
-                    <RecordItem key={r.id} record={r} homeId={home.id} />
-                  ))}
-                </div>
-              )}
-            </ClientCard>
-          </div>
-
+        {/* SINGLE BODY SURFACE (new standard) */}
+        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
           <div className="space-y-6">
-            <ClientCard
-              title="Upcoming Reminders"
-              viewAllLink={`/home/${home.id}/reminders`}
-              homeId={home.id}
-              addType="reminder"
-            >
-              {upcomingReminders.length === 0 ? (
-                <div className="py-8 text-center text-white/70">
-                  <p className="mb-2 text-sm">No upcoming reminders</p>
-                </div>
-              ) : (
-                <ul className="space-y-3">
-                  {upcomingReminders.map((m) => (
-                    <ReminderItem
-                      key={m.id}
-                      reminder={m}
-                      homeId={home.id}
-                      now={now}
-                    />
-                  ))}
-                </ul>
-              )}
-            </ClientCard>
+            {/* Needs attention lives INSIDE, no extra glass surface */}
+            {showNeedsAttention ? (
+              <div className="rounded-2xl border border-orange-400/30 bg-orange-500/10 p-4">
+                <h2 className={`mb-4 text-lg font-semibold text-orange-300 ${heading}`}>⚡ Needs Your Attention</h2>
 
-            <ClientCard
-              title="Active Warranties"
-              viewAllLink={`/home/${home.id}/warranties`}
-              homeId={home.id}
-              addType="warranty"
-            >
-              {home.warranties.length === 0 ? (
-                <div className="py-8 text-center text-white/70">
-                  <p className="mb-2 text-sm">No warranties on file</p>
+                <div className="space-y-3">
+                  <UnreadMessagesAlert homeId={home.id} />
+
+                  {pendingServiceSubmissionsCount > 0 ? (
+                    <Link
+                      href={`/home/${home.id}/completed-service-submissions`}
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">📋</span>
+                        <div>
+                          <p className="text-sm font-medium text-white">Review Completed Work</p>
+                          <p className="text-xs text-white/60">
+                            {pendingServiceSubmissionsCount} submission{pendingServiceSubmissionsCount !== 1 ? "s" : ""}{" "}
+                            awaiting approval
+                          </p>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                        {pendingServiceSubmissionsCount}
+                      </span>
+                    </Link>
+                  ) : null}
+
+                  {pendingServiceRequestsCount > 0 ? (
+                    <Link
+                      href={`/home/${home.id}/service-requests`}
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">🔧</span>
+                        <div>
+                          <p className="text-sm font-medium text-white">Service Requests</p>
+                          <p className="text-xs text-white/60">
+                            {pendingServiceRequestsCount} request{pendingServiceRequestsCount !== 1 ? "s" : ""} pending
+                            response
+                          </p>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                        {pendingServiceRequestsCount}
+                      </span>
+                    </Link>
+                  ) : null}
+
+                  {pendingInvitationsCount > 0 ? (
+                    <Link
+                      href={`/home/${home.id}/invitations`}
+                      className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">✉️</span>
+                        <div>
+                          <p className="text-sm font-medium text-white">Pending Invitations</p>
+                          <p className="text-xs text-white/60">
+                            {pendingInvitationsCount} invitation{pendingInvitationsCount !== 1 ? "s" : ""} awaiting
+                            response
+                          </p>
+                        </div>
+                      </div>
+                      <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
+                        {pendingInvitationsCount}
+                      </span>
+                    </Link>
+                  ) : null}
+
+                  {overdueReminders.length > 0 ? (
+                    <Link
+                      href={`/home/${home.id}/reminders`}
+                      className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white">⚠️ Overdue Reminders ({overdueReminders.length})</p>
+                        <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                          {overdueReminders.slice(0, 3).map((r) => (
+                            <li key={r.id}>• {r.title} (due {formatDate(r.dueAt)})</li>
+                          ))}
+                          {overdueReminders.length > 3 ? <li>+{overdueReminders.length - 3} more…</li> : null}
+                        </ul>
+                      </div>
+                      <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
+                    </Link>
+                  ) : null}
+
+                  {dueSoonReminders.length > 0 ? (
+                    <Link
+                      href={`/home/${home.id}/reminders`}
+                      className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white">⏰ Upcoming Reminders (next 7 days)</p>
+                        <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                          {dueSoonReminders.slice(0, 3).map((r) => (
+                            <li key={r.id}>• {r.title} (due {formatDate(r.dueAt)})</li>
+                          ))}
+                          {dueSoonReminders.length > 3 ? <li>+{dueSoonReminders.length - 3} more…</li> : null}
+                        </ul>
+                      </div>
+                      <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
+                    </Link>
+                  ) : null}
+
+                  {expiringSoonWarranties.length > 0 ? (
+                    <Link
+                      href={`/home/${home.id}/warranties`}
+                      className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/20 p-3 transition hover:bg-black/25"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-white">
+                          🛡️ Warranties Expiring Soon ({expiringSoonWarranties.length})
+                        </p>
+                        <ul className="mt-1 space-y-0.5 text-xs text-white/70">
+                          {expiringSoonWarranties.slice(0, 3).map((w) => (
+                            <li key={w.id}>
+                              • {w.item}
+                              {w.expiresAt ? ` (expires ${formatDate(w.expiresAt)})` : ""}
+                            </li>
+                          ))}
+                          {expiringSoonWarranties.length > 3 ? <li>+{expiringSoonWarranties.length - 3} more…</li> : null}
+                        </ul>
+                      </div>
+                      <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
+                    </Link>
+                  ) : null}
                 </div>
-              ) : (
-                <ul className="space-y-3">
-                  {home.warranties.map((w) => (
-                    <WarrantyItem
-                      key={w.id}
-                      warranty={w}
-                      homeId={home.id}
-                      now={now}
-                    />
-                  ))}
-                </ul>
-              )}
-            </ClientCard>
+              </div>
+            ) : null}
+
+            {/* Main content */}
+            <section className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+              <div className="space-y-6 lg:col-span-2">
+                <ConnectedPros homeId={home.id} homeAddress={addrLine} connections={connections} />
+
+                <ClientCard title="Recent Records" viewAllLink={`/home/${home.id}/records`} homeId={home.id} addType="record">
+                  {serializedRecords.length === 0 ? (
+                    <div className="py-8 text-center text-white/70">
+                      <p className="mb-3">No records yet</p>
+                      <p className="mb-4 text-sm text-white/60">Start tracking your home&apos;s maintenance history</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {serializedRecords.map((r) => (
+                        <RecordItem key={r.id} record={r} homeId={home.id} />
+                      ))}
+                    </div>
+                  )}
+                </ClientCard>
+              </div>
+
+              <div className="space-y-6">
+                <ClientCard title="Upcoming Reminders" viewAllLink={`/home/${home.id}/reminders`} homeId={home.id} addType="reminder">
+                  {upcomingReminders.length === 0 ? (
+                    <div className="py-8 text-center text-white/70">
+                      <p className="mb-2 text-sm">No upcoming reminders</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {upcomingReminders.map((m) => (
+                        <ReminderItem key={m.id} reminder={m} homeId={home.id} today={today} />
+                      ))}
+                    </ul>
+                  )}
+                </ClientCard>
+
+                <ClientCard title="Active Warranties" viewAllLink={`/home/${home.id}/warranties`} homeId={home.id} addType="warranty">
+                  {home.warranties.length === 0 ? (
+                    <div className="py-8 text-center text-white/70">
+                      <p className="mb-2 text-sm">No warranties on file</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-3">
+                      {home.warranties.map((w) => (
+                        <WarrantyItem key={w.id} warranty={w} homeId={home.id} now={now} />
+                      ))}
+                    </ul>
+                  )}
+                </ClientCard>
+              </div>
+            </section>
           </div>
         </section>
 
@@ -618,133 +502,77 @@ export default async function HomePage({
   );
 }
 
-function RecordItem({
-  record,
-  homeId,
-}: {
-  record: HomeRecord;
-  homeId: string;
-}) {
+function RecordItem({ record, homeId }: { record: HomeRecord; homeId: string }) {
   return (
-    <Link
-      href={`/home/${homeId}/records/${record.id}`}
-      className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
-    >
+    <Link href={`/home/${homeId}/records/${record.id}`} className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-medium text-white">{record.title}</h3>
-            {record.kind && (
+            {record.kind ? (
               <span className="inline-flex items-center rounded bg-blue-400/20 px-2 py-0.5 text-xs font-medium text-blue-300">
                 {record.kind}
               </span>
-            )}
+            ) : null}
           </div>
 
           <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-white/70">
-            {record.date && <span>📅 {formatDate(record.date)}</span>}
-            {record.vendor && <span>🔧 {record.vendor}</span>}
-            {record.cost != null && (
-              <span className="font-medium text-green-300">
-                ${Number(record.cost).toLocaleString()}
-              </span>
-            )}
+            {record.date ? <span>📅 {formatDate(record.date)}</span> : null}
+            {record.vendor ? <span>🔧 {record.vendor}</span> : null}
+            {record.cost != null ? <span className="font-medium text-green-300">${Number(record.cost).toLocaleString()}</span> : null}
           </div>
 
-          {record.note && (
-            <p className="mt-2 line-clamp-2 text-sm text-white/80">
-              {record.note}
-            </p>
-          )}
+          {record.note ? <p className="mt-2 line-clamp-2 text-sm text-white/80">{record.note}</p> : null}
         </div>
       </div>
     </Link>
   );
 }
 
-function ReminderItem({
-  reminder,
-  homeId,
-  now,
-}: {
-  reminder: Reminder;
-  homeId: string;
-  now: Date;
-}) {
+function ReminderItem({ reminder, homeId, today }: { reminder: Reminder; homeId: string; today: Date }) {
   const dueDate = new Date(reminder.dueAt);
-  const isOverdue = dueDate < now;
-  const daysUntilDue = Math.ceil(
-    (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const d = new Date(dueDate);
+  d.setHours(0, 0, 0, 0);
+
+  const isOverdue = d < today;
+  const daysUntilDue = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <Link
-      href={`/home/${homeId}/reminders/${reminder.id}`}
-      className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
-    >
+    <Link href={`/home/${homeId}/reminders/${reminder.id}`} className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium text-white">
-            {reminder.title}
-          </h3>
+          <h3 className="truncate font-medium text-white">{reminder.title}</h3>
         </div>
+
         <div className="flex flex-col items-end gap-1">
-          <span
-            className={`text-xs font-medium ${
-              isOverdue ? "text-red-400" : "text-white/70"
-            }`}
-          >
-            {formatDate(dueDate)}
-          </span>
-          {!isOverdue && daysUntilDue <= 7 && (
+          <span className={`text-xs font-medium ${isOverdue ? "text-red-400" : "text-white/70"}`}>{formatDate(dueDate)}</span>
+          {!isOverdue && daysUntilDue <= 7 ? (
             <span className="text-xs text-yellow-400">
-              {daysUntilDue} day{daysUntilDue !== 1 ? "s" : ""}
+              {daysUntilDue === 0 ? "Today" : daysUntilDue === 1 ? "Tomorrow" : `${daysUntilDue} days`}
             </span>
-          )}
+          ) : null}
         </div>
       </div>
     </Link>
   );
 }
 
-function WarrantyItem({
-  warranty,
-  homeId,
-  now,
-}: {
-  warranty: Warranty;
-  homeId: string;
-  now: Date;
-}) {
-  const expiresAt = warranty.expiresAt
-    ? new Date(warranty.expiresAt)
-    : null;
+function WarrantyItem({ warranty, homeId, now }: { warranty: Warranty; homeId: string; now: Date }) {
+  const expiresAt = warranty.expiresAt ? new Date(warranty.expiresAt) : null;
   const expiringSoon = isWarrantyExpiringSoon(expiresAt, now);
 
   return (
-    <Link
-      href={`/home/${homeId}/warranties/${warranty.id}`}
-      className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
-    >
-      <div className="flex items-start justify_between gap-2">
+    <Link href={`/home/${homeId}/warranties/${warranty.id}`} className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10">
+      <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium text-white">
-            {warranty.item}
-          </h3>
-          {warranty.provider && (
-            <p className="text-sm text-white/70">
-              {warranty.provider}
-            </p>
-          )}
+          <h3 className="truncate font-medium text-white">{warranty.item}</h3>
+          {warranty.provider ? <p className="text-sm text-white/70">{warranty.provider}</p> : null}
         </div>
+
         <div className="flex flex-col items-end gap-1">
           {expiresAt ? (
             <>
-              <span
-                className={`text-xs font-medium ${
-                  expiringSoon ? "text-yellow-400" : "text-white/70"
-                }`}
-              >
+              <span className={`text-xs font-medium ${expiringSoon ? "text-yellow-400" : "text-white/70"}`}>
                 {formatDate(expiresAt)}
               </span>
               <span className="text-xs text-white/60">Expires</span>

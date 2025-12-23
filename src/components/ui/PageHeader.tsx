@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { heading, textMeta } from "@/lib/glass";
 
@@ -33,7 +34,9 @@ export function PageHeader({
 
         <div className="min-w-0">
           <h1 className={`text-2xl font-bold ${heading}`}>{title}</h1>
-          {meta ? <p className={`mt-1 text-sm ${textMeta}`}>{meta}</p> : null}
+
+          {/* meta can be any ReactNode; don't wrap in <p> to avoid invalid nesting */}
+          {meta ? <div className={`mt-1 text-sm ${textMeta}`}>{meta}</div> : null}
         </div>
       </div>
 

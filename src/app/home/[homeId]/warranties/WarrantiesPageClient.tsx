@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { glass, glassTight, ctaGhost } from "@/lib/glass";
+
 import { EditWarrantyModal } from "./_components/EditWarrantyModal";
 
 export type WarrantyItem = {
@@ -20,8 +20,8 @@ export type WarrantyItem = {
   attachments: Array<{
     id: string;
     filename: string;
-    url: string;
-    mimeType: string;
+    url: string; // ✅ always string now
+    mimeType: string | null;
     size: number | null;
     uploadedBy: string;
   }>;
@@ -35,6 +35,9 @@ type Props = {
 };
 
 type SortKey = "soonest" | "latest" | "item";
+
+const filterSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
+const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
 
 function expiryLabel(w: WarrantyItem) {
   if (!w.expiresAt) return "No expiry";
@@ -68,19 +71,12 @@ function truncFilename(name: string) {
   return name.slice(0, 18) + "…" + name.slice(-8);
 }
 
-export function WarrantiesPageClient({
-  warranties,
-  homeId,
-  initialSearch,
-  initialSort,
-}: Props) {
+export function WarrantiesPageClient({ warranties, homeId, initialSearch, initialSort }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState(initialSearch ?? "");
-  const [sort, setSort] = useState<SortKey>(
-    (initialSort as SortKey) ?? "soonest"
-  );
+  const [sort, setSort] = useState<SortKey>((initialSort as SortKey) ?? "soonest");
 
   // Debounce URL updates
   const debounceRef = useRef<number | null>(null);
@@ -109,6 +105,7 @@ export function WarrantiesPageClient({
   }, [search, sort, homeId]);
 
   const emptyHref = useMemo(() => {
+    // If searching, "clear search"; else go back to home (or keep on warranties)
     if (!search.trim()) return `/home/${homeId}`;
     const params = new URLSearchParams(searchParams?.toString());
     params.delete("search");
@@ -117,65 +114,72 @@ export function WarrantiesPageClient({
   }, [homeId, search, searchParams]);
 
   return (
-    <>
-      {/* Filters (dark + consistent) */}
-      <section className={glass}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="flex-1">
-            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
-              Search
-            </label>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search warranties…"
-              className="w-full rounded-xl border border-white/15 bg-black/35 px-4 py-2 text-sm text-white outline-none backdrop-blur transition focus:border-white/30 focus:bg-black/45 placeholder:text-white/35"
-            />
+    <div className="space-y-6">
+      {/* Filters */}
+      <section className={filterSurface}>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="md:col-span-2">
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">Search</label>
+            <div className="rounded-2xl border border-white/12 bg-black/20 px-4 py-2">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search warranties…"
+                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+              />
+            </div>
           </div>
 
-          <div className="w-full md:w-72">
-            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
-              Sort
-            </label>
-            <select
-              value={sort}
-              onChange={(e) => setSort(e.target.value as SortKey)}
-              className="w-full rounded-xl border border-white/15 bg-black/35 px-4 py-2 text-sm text-white outline-none backdrop-blur transition focus:border-white/30 focus:bg-black/45"
-            >
-              <option value="soonest" className="bg-gray-900">
-                Expiring Soonest
-              </option>
-              <option value="latest" className="bg-gray-900">
-                Expiring Latest
-              </option>
-              <option value="item" className="bg-gray-900">
-                Item (A–Z)
-              </option>
-            </select>
+          <div>
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">Sort</label>
+            <div className="relative rounded-2xl border border-white/12 bg-black/20 px-4 py-2">
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as SortKey)}
+                className="w-full appearance-none bg-transparent pr-8 text-sm text-white outline-none"
+              >
+                <option value="soonest">Expiring Soonest</option>
+                <option value="latest">Expiring Latest</option>
+                <option value="item">Item (A–Z)</option>
+              </select>
+
+              <svg
+                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
           </div>
         </div>
       </section>
 
       {/* List */}
-      <section className={glass}>
-        {warranties.length === 0 ? (
-          <div className="py-14 text-center">
-            <p className="mb-4 text-white/70">
-              {search ? "No warranties match your search." : "No warranties yet."}
-            </p>
-            <Link href={emptyHref} className={ctaGhost}>
-              {search ? "Clear search" : "+ Add your first warranty"}
-            </Link>
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {warranties.map((w) => (
-              <WarrantyCard key={w.id} warranty={w} homeId={homeId} />
-            ))}
-          </ul>
-        )}
-      </section>
-    </>
+      {warranties.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+          <p className="mb-3 text-white/80">
+            {search.trim() ? "No warranties match your search." : "No warranties yet for this home."}
+          </p>
+          <Link
+            href={emptyHref}
+            className="inline-flex rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-white/10"
+          >
+            {search.trim() ? "Clear search" : "Back to home"}
+          </Link>
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {warranties.map((w) => (
+            <WarrantyCard key={w.id} warranty={w} homeId={homeId} />
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -195,9 +199,7 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
   async function handleDelete() {
     setDeleting(true);
     try {
-      const res = await fetch(`/api/home/${homeId}/warranties/${warranty.id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/home/${homeId}/warranties/${warranty.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete warranty");
       router.refresh();
     } catch (e) {
@@ -222,130 +224,99 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
 
   return (
     <>
-      <div
-        className={[
-          "group relative overflow-hidden rounded-2xl border border-white/10",
-          "bg-black/35 backdrop-blur",
-          "hover:border-white/18 hover:bg-black/45 transition",
-          "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
-          leftAccent,
-        ].join(" ")}
-      >
-        {/* Whole card navigates, but keep actions clickable */}
-        <Link
-          href={`/home/${homeId}/warranties/${warranty.id}`}
-          className="block px-4 py-3"
+      <li className="list-none">
+        <div
+          className={[
+            "group relative overflow-hidden rounded-2xl border border-white/12 bg-black/25 transition",
+            "hover:border-white/18 hover:bg-black/30",
+            "before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[3px] before:rounded-full",
+            leftAccent,
+          ].join(" ")}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className={`h-2.5 w-2.5 rounded-full ${statusDotClass(warranty)}`} />
-                <h3 className="truncate text-[15px] font-semibold text-white">
-                  {warranty.item}
-                </h3>
-              </div>
-
-              {metaParts.length > 0 && (
-                <p className="mt-1 truncate text-xs text-white/55">
-                  {metaParts.join(" • ")}
-                </p>
-              )}
-
-              {warranty.note && (
-                <p className="mt-2 line-clamp-1 text-xs text-white/65">
-                  {warranty.note}
-                </p>
-              )}
-
-              {warranty.attachments?.length > 0 && (
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-[11px] text-white/45">
-                    📎 {warranty.attachments.length}
-                  </span>
-                  {warranty.attachments.slice(0, 2).map((att) => (
-                    <span
-                      key={att.id}
-                      className="max-w-[260px] truncate rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60"
-                      title={att.filename}
-                    >
-                      {truncFilename(att.filename)}
-                    </span>
-                  ))}
-                  {warranty.attachments.length > 2 && (
-                    <span className="text-[11px] text-white/45">
-                      +{warranty.attachments.length - 2} more
-                    </span>
-                  )}
+          <Link href={`/home/${homeId}/warranties/${warranty.id}`} className="block px-5 py-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={`h-2.5 w-2.5 rounded-full ${statusDotClass(warranty)}`} />
+                  <h3 className="truncate text-[15px] font-semibold text-white">{warranty.item}</h3>
                 </div>
-              )}
-            </div>
 
-            <div className="shrink-0 text-right">
-              <div className={`text-xs font-medium ${statusTextClass(warranty)}`}>
-                {expiryLabel(warranty)}
+                {metaParts.length > 0 ? (
+                  <p className="mt-1 truncate text-xs text-white/55">{metaParts.join(" • ")}</p>
+                ) : null}
+
+                {warranty.note ? <p className="mt-2 line-clamp-1 text-xs text-white/65">{warranty.note}</p> : null}
+
+                {warranty.attachments?.length ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] text-white/45">📎 {warranty.attachments.length}</span>
+                    {warranty.attachments.slice(0, 2).map((att) => (
+                      <span
+                        key={att.id}
+                        className="max-w-[260px] truncate rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60"
+                        title={att.filename}
+                      >
+                        {truncFilename(att.filename)}
+                      </span>
+                    ))}
+                    {warranty.attachments.length > 2 ? (
+                      <span className="text-[11px] text-white/45">+{warranty.attachments.length - 2} more</span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-              <div className="mt-0.5 text-[11px] text-white/50">
-                {warranty.formattedExpiry}
-              </div>
 
-              {/* Actions: appear on hover/focus within card */}
-              <div className="mt-2 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                <button
-                  type="button"
-                  className="rounded-lg border border-white/20 bg-white/5 px-2.5 py-1 text-xs text-white/80 hover:bg-white/10"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    setEditOpen(true);
-                  }}
-                >
-                  Edit
-                </button>
+              <div className="shrink-0 text-right">
+                <div className={`text-xs font-medium ${statusTextClass(warranty)}`}>{expiryLabel(warranty)}</div>
+                <div className="mt-0.5 text-[11px] text-white/50">{warranty.formattedExpiry}</div>
 
-                <button
-                  type="button"
-                  disabled={deleting}
-                  className={[
-                    "rounded-lg border px-2.5 py-1 text-xs transition disabled:opacity-60",
-                    confirmDelete
-                      ? "border-red-400/50 bg-red-500/25 text-red-100 hover:bg-red-500/35"
-                      : "border-red-400/30 bg-red-500/10 text-red-200 hover:bg-red-500/20",
-                  ].join(" ")}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                {/* Actions appear on hover/focus */}
+                <div className="mt-2 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+                  <button
+                    type="button"
+                    className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setEditOpen(true);
+                    }}
+                  >
+                    Edit
+                  </button>
 
-                    if (!confirmDelete) {
-                      setConfirmDelete(true);
-                      if (confirmTimerRef.current) {
-                        window.clearTimeout(confirmTimerRef.current);
+                  <button
+                    type="button"
+                    disabled={deleting}
+                    className={[
+                      "rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-60",
+                      confirmDelete
+                        ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
+                        : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/20",
+                    ].join(" ")}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+
+                      if (!confirmDelete) {
+                        setConfirmDelete(true);
+                        if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+                        confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2500);
+                        return;
                       }
-                      confirmTimerRef.current = window.setTimeout(() => {
-                        setConfirmDelete(false);
-                      }, 2500);
-                      return;
-                    }
 
-                    void handleDelete();
-                  }}
-                >
-                  {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
-                </button>
+                      void handleDelete();
+                    }}
+                  >
+                    {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        </Link>
+          </Link>
+        </div>
+      </li>
 
-        {/* subtle inner padding/contrast guardrail */}
-        <div className={glassTight + " hidden"} />
-      </div>
-
-      <EditWarrantyModal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        warranty={warranty}
-        homeId={homeId}
-      />
+      <EditWarrantyModal open={editOpen} onClose={() => setEditOpen(false)} warranty={warranty as any} homeId={homeId} />
     </>
   );
 }

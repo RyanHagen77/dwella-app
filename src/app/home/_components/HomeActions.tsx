@@ -5,13 +5,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ctaPrimary, ctaGhost } from "@/lib/glass";
-import {
-  AddRecordModal,
-  type UnifiedRecordPayload,
-} from "@/app/home/_components/AddRecordModal";
+import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
 
 type HomeActionsProps = {
   homeId: string;
+  homeAddress?: string; // ✅ add this
   unreadMessages?: number;
 };
 
@@ -23,11 +21,8 @@ type UnreadResponse = {
 
 async function fetchUnreadMessages(homeId: string): Promise<number> {
   try {
-    const res = await fetch(`/api/home/${homeId}/messages/unread`, {
-      cache: "no-store",
-    });
+    const res = await fetch(`/api/home/${homeId}/messages/unread`, { cache: "no-store" });
     if (!res.ok) return 0;
-
     const data = (await res.json().catch(() => ({}))) as UnreadResponse;
     return data.total ?? data.count ?? data.unread ?? 0;
   } catch (error) {
@@ -47,15 +42,12 @@ type PersistAttachment = {
   size: number;
   contentType: string;
   storageKey: string;
-  url: string | null;
+  url: string; // ✅ persist expects string (avoid nulls)
   visibility: "OWNER" | "HOME" | "PUBLIC";
   notes?: string;
 };
 
-export function HomeActions({
-  homeId,
-  unreadMessages,
-}: HomeActionsProps) {
+export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
   const router = useRouter();
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(unreadMessages ?? 0);
@@ -109,8 +101,7 @@ export function HomeActions({
 
       if (!presignRes.ok) continue;
 
-      const { url, key, publicUrl } =
-        (await presignRes.json()) as PresignPayload;
+      const { url, key, publicUrl } = (await presignRes.json()) as PresignPayload;
 
       const put = await fetch(url, {
         method: "PUT",
@@ -120,12 +111,15 @@ export function HomeActions({
 
       if (!put.ok) continue;
 
+      // ✅ Avoid null url (type + downstream UI expects a string)
+      const finalUrl = publicUrl ?? "";
+
       uploaded.push({
         filename: file.name,
         size: file.size,
         contentType: file.type || "application/octet-stream",
         storageKey: key,
-        url: publicUrl,
+        url: finalUrl,
         visibility: "OWNER",
       });
     }
@@ -150,13 +144,7 @@ export function HomeActions({
     }
   }
 
-  async function handleCreateAction({
-    payload,
-    files,
-  }: {
-    payload: UnifiedRecordPayload;
-    files: File[];
-  }) {
+  async function handleCreateAction({ payload, files }: { payload: UnifiedRecordPayload; files: File[] }) {
     let endpoint = "";
     let body: Record<string, unknown> = {};
 
@@ -215,46 +203,29 @@ export function HomeActions({
   return (
     <>
       <div className="flex flex-wrap gap-3 pt-2">
-        <button
-          type="button"
-          onClick={() => setAddModalOpen(true)}
-          className={`${ctaPrimary} text-sm`}
-        >
+        <button type="button" onClick={() => setAddModalOpen(true)} className={`${ctaPrimary} text-sm`}>
           + Add Record
         </button>
 
-        <Link
-          href={`/home/${homeId}/messages`}
-          className={`${ctaGhost} relative text-sm`}
-        >
+        <Link href={`/home/${homeId}/messages`} className={`${ctaGhost} relative text-sm`}>
           💬 Messages
-          {unreadCount > 0 && (
+          {unreadCount > 0 ? (
             <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">
               {unreadCount}
             </span>
-          )}
+          ) : null}
         </Link>
 
-        <Link
-          href={`/home/${homeId}/completed-service-submissions`}
-          className={`${ctaGhost} text-sm`}
-        >
+        <Link href={`/home/${homeId}/completed-service-submissions`} className={`${ctaGhost} text-sm`}>
           🔧 Request Service
         </Link>
 
-        <Link
-          href={`/home/${homeId}/invitations`}
-          className={`${ctaGhost} text-sm`}
-        >
+        <Link href={`/home/${homeId}/invitations`} className={`${ctaGhost} text-sm`}>
           ✉️ Invite Pro
         </Link>
       </div>
 
-      <AddRecordModal
-        open={addModalOpen}
-        onCloseAction={() => setAddModalOpen(false)}
-        onCreateAction={handleCreateAction}
-      />
+      <AddRecordModal open={addModalOpen} onCloseAction={() => setAddModalOpen(false)} onCreateAction={handleCreateAction} />
     </>
   );
 }

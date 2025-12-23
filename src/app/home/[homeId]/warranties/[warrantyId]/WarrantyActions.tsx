@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { ctaGhost } from "@/lib/glass";
 import { EditWarrantyModal } from "../_components/EditWarrantyModal";
 
@@ -19,74 +20,78 @@ export type WarrantyDetail = {
   attachments: Array<{
     id: string;
     filename: string;
-    url: string;
-    mimeType: string;
-    size: number | null;
+    url: string; // ✅ always string
+    mimeType: string | null;
+    size: number | bigint | null;
     uploadedBy: string;
   }>;
 };
 
-export function WarrantyActions({
-  homeId,
-  warranty,
-}: {
+type Props = {
   homeId: string;
   warranty: WarrantyDetail;
-}) {
+};
+
+export function WarrantyActions({ homeId, warranty }: Props) {
   const router = useRouter();
+
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
   async function handleDelete() {
     setDeleting(true);
-
     try {
-      const res = await fetch(`/api/home/${homeId}/warranties/${warranty.id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to delete warranty");
-      }
+      const res = await fetch(`/api/home/${homeId}/warranties/${warranty.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete warranty");
 
       router.push(`/home/${homeId}/warranties`);
       router.refresh();
     } catch (e) {
       console.error(e);
-      alert("Failed to delete warranty.");
+      alert("Failed to delete warranty. Please try again.");
       setDeleting(false);
+      setShowConfirm(false);
     }
   }
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        <button className={ctaGhost} onClick={() => setEditOpen(true)}>
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          className={ctaGhost}
+          onClick={() => setEditOpen(true)}
+          disabled={deleting}
+        >
           Edit
         </button>
 
         {showConfirm ? (
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={() => setShowConfirm(false)}
-              className="rounded-lg border border-white/30 bg-white/10 px-3 py-2 text-sm transition-colors hover:bg-white/15"
+              className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-white/10"
               disabled={deleting}
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleDelete}
               disabled={deleting}
-              className="rounded-lg border border-red-400/30 bg-red-500/20 px-3 py-2 text-sm text-red-300 transition-colors hover:bg-red-500/30 disabled:opacity-50"
+              className="rounded-full border border-red-400/35 bg-red-500/15 px-4 py-2 text-sm text-red-100 transition-colors hover:bg-red-500/25 disabled:opacity-60"
             >
-              {deleting ? "Deleting..." : "Confirm Delete"}
+              {deleting ? "Deleting…" : "Confirm delete"}
             </button>
           </div>
         ) : (
           <button
+            type="button"
             onClick={() => setShowConfirm(true)}
-            className="rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-sm text-red-300 transition-colors hover:bg-red-500/20"
+            disabled={deleting}
+            className="rounded-full border border-red-400/25 bg-red-500/10 px-4 py-2 text-sm text-red-200 transition-colors hover:bg-red-500/15 disabled:opacity-60"
           >
             Delete
           </button>
@@ -96,7 +101,7 @@ export function WarrantyActions({
       <EditWarrantyModal
         open={editOpen}
         onClose={() => setEditOpen(false)}
-        warranty={warranty}
+        warranty={warranty as any}
         homeId={homeId}
       />
     </>
