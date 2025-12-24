@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+import AddRecordButton from "@/app/home/_components/AddRecordButton";
+import { glass, heading, indigoActionLink, textMeta } from "@/lib/glass";
 import { EditWarrantyModal } from "./_components/EditWarrantyModal";
 
 export type WarrantyItem = {
@@ -17,14 +19,14 @@ export type WarrantyItem = {
   isExpiringSoon: boolean;
   daysUntilExpiry: number;
   formattedExpiry: string;
-  attachments: Array<{
+  attachments: {
     id: string;
     filename: string;
-    url: string; // ✅ always string now
+    url: string;
     mimeType: string | null;
     size: number | null;
     uploadedBy: string;
-  }>;
+  }[];
 };
 
 type Props = {
@@ -32,12 +34,16 @@ type Props = {
   homeId: string;
   initialSearch?: string;
   initialSort?: string;
+
+  activeCount: number;
+  expiringSoonCount: number;
+  expiredCount: number;
+  totalCount: number;
 };
 
 type SortKey = "soonest" | "latest" | "item";
 
 const filterSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
-const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
 
 function expiryLabel(w: WarrantyItem) {
   if (!w.expiresAt) return "No expiry";
@@ -71,16 +77,28 @@ function truncFilename(name: string) {
   return name.slice(0, 18) + "…" + name.slice(-8);
 }
 
-export function WarrantiesPageClient({ warranties, homeId, initialSearch, initialSort }: Props) {
+export function WarrantiesPageClient({
+  warranties,
+  homeId,
+  initialSearch,
+  initialSort,
+  activeCount,
+  expiringSoonCount,
+  expiredCount,
+  totalCount,
+}: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState(initialSearch ?? "");
   const [sort, setSort] = useState<SortKey>((initialSort as SortKey) ?? "soonest");
 
-  // Debounce URL updates
+  // ✅ Match Contractors: collapsed by default only on mobile
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const debounceRef = useRef<number | null>(null);
 
+  // URL sync
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
@@ -105,7 +123,6 @@ export function WarrantiesPageClient({ warranties, homeId, initialSearch, initia
   }, [search, sort, homeId]);
 
   const emptyHref = useMemo(() => {
-    // If searching, "clear search"; else go back to home (or keep on warranties)
     if (!search.trim()) return `/home/${homeId}`;
     const params = new URLSearchParams(searchParams?.toString());
     params.delete("search");
@@ -113,13 +130,65 @@ export function WarrantiesPageClient({ warranties, homeId, initialSearch, initia
     return `/home/${homeId}/warranties${qs ? `?${qs}` : ""}`;
   }, [homeId, search, searchParams]);
 
+  // EXACT “Contractors-style” indigo action: no slab, no orange hover
+  const IndigoAddWarranty = (
+    <span
+      className={[
+        indigoActionLink,
+        "text-sm",
+        "[&_button]:!bg-transparent [&_button:hover]:!bg-transparent",
+        "[&_button]:!border-0 [&_button]:!shadow-none [&_button:hover]:!shadow-none",
+        "[&_button]:!p-0 [&_button]:!rounded-none",
+        "[&_button]:!text-indigo-300 [&_button:hover]:!text-indigo-200",
+        "[&_button]:inline-flex [&_button]:items-center",
+      ].join(" ")}
+    >
+      <AddRecordButton homeId={homeId} label="Add warranty" defaultType="warranty" />
+    </span>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-full space-y-6 overflow-x-hidden">
+      {/* ✅ Stats: match Contractors exactly */}
+      <section aria-labelledby="warranty-stats" className="space-y-3">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-2 text-left lg:cursor-default"
+          >
+            <h2 id="warranty-stats" className={`text-lg font-semibold ${heading}`}>
+              Overview
+            </h2>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {IndigoAddWarranty}
+        </div>
+
+        <div className={`${isExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
+          <StatTile label="Active" value={activeCount} />
+          <StatTile label="Expiring Soon" value={expiringSoonCount} />
+          <StatTile label="Expired" value={expiredCount} />
+          <StatTile label="Total" value={totalCount} />
+        </div>
+      </section>
+
       {/* Filters */}
       <section className={filterSurface}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div className="md:col-span-2">
-            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">Search</label>
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              Search
+            </label>
             <div className="rounded-2xl border border-white/12 bg-black/20 px-4 py-2">
               <input
                 value={search}
@@ -131,7 +200,9 @@ export function WarrantiesPageClient({ warranties, homeId, initialSearch, initia
           </div>
 
           <div>
-            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">Sort</label>
+            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+              Sort
+            </label>
             <div className="relative rounded-2xl border border-white/12 bg-black/20 px-4 py-2">
               <select
                 value={sort}
@@ -179,6 +250,15 @@ export function WarrantiesPageClient({ warranties, homeId, initialSearch, initia
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className={`${glass} p-4`} title={label}>
+      <p className={`text-xs ${textMeta} whitespace-nowrap`}>{label}</p>
+      <p className="mt-2 text-lg lg:text-xl font-bold text-white">{value}</p>
     </div>
   );
 }
@@ -270,7 +350,6 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
                 <div className={`text-xs font-medium ${statusTextClass(warranty)}`}>{expiryLabel(warranty)}</div>
                 <div className="mt-0.5 text-[11px] text-white/50">{warranty.formattedExpiry}</div>
 
-                {/* Actions appear on hover/focus */}
                 <div className="mt-2 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
                   <button
                     type="button"

@@ -19,7 +19,6 @@ import { requireHomeAccess } from "@/lib/authz";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { textMeta } from "@/lib/glass";
-import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
 import { WarrantiesPageClient } from "./WarrantiesPageClient";
 
@@ -42,7 +41,7 @@ type WarrantyItem = {
   attachments: Array<{
     id: string;
     filename: string;
-    url: string; // ✅ always a string
+    url: string; // always string
     mimeType: string | null;
     size: number | null;
     uploadedBy: string;
@@ -95,16 +94,8 @@ export default async function WarrantiesPage({ params, searchParams }: PageProps
       policyNo: true,
       expiresAt: true,
       note: true,
-      createdAt: true,
       attachments: {
-        select: {
-          id: true,
-          filename: true,
-          url: true,
-          mimeType: true,
-          size: true,
-          uploadedBy: true,
-        },
+        select: { id: true, filename: true, url: true, mimeType: true, size: true, uploadedBy: true },
       },
     },
   });
@@ -133,13 +124,12 @@ export default async function WarrantiesPage({ params, searchParams }: PageProps
       });
     }
 
-    // ✅ Normalize attachments (uploadedBy required; url ALWAYS string)
     const attachments = (w.attachments ?? [])
       .filter((att) => att.uploadedBy !== null)
       .map((att) => ({
         id: att.id,
         filename: att.filename,
-        url: att.url ?? `/api/home/${homeId}/attachments/${att.id}`, // ✅ fallback
+        url: att.url ?? `/api/home/${homeId}/attachments/${att.id}`,
         mimeType: att.mimeType ?? null,
         size: att.size == null ? null : typeof att.size === "bigint" ? Number(att.size) : Number(att.size),
         uploadedBy: att.uploadedBy as string,
@@ -162,9 +152,10 @@ export default async function WarrantiesPage({ params, searchParams }: PageProps
 
   const expiredCount = warrantiesWithStatus.filter((w) => w.isExpired).length;
   const expiringSoonCount = warrantiesWithStatus.filter((w) => w.isExpiringSoon).length;
-
-  // Active = has expiry + not expired
   const activeCount = warrantiesWithStatus.filter((w) => Boolean(w.expiresAt) && !w.isExpired).length;
+  const totalCount = warrantiesWithStatus.length;
+
+  const hasAny = totalCount > 0;
 
   return (
     <main className="relative min-h-screen text-white">
@@ -182,13 +173,9 @@ export default async function WarrantiesPage({ params, searchParams }: PageProps
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
+      {/* MATCH Contractors frame */}
       <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <Breadcrumb
-          items={[
-            { label: addrLine, href: `/home/${homeId}` },
-            { label: "Warranties" },
-          ]}
-        />
+        <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Warranties" }]} />
 
         <PageHeader
           backHref={`/home/${homeId}`}
@@ -196,61 +183,37 @@ export default async function WarrantiesPage({ params, searchParams }: PageProps
           title="Warranties"
           meta={
             <span className={textMeta}>
-              {warrantiesWithStatus.length} {warrantiesWithStatus.length === 1 ? "warranty" : "warranties"}
+              {totalCount} {totalCount === 1 ? "warranty" : "warranties"} •
             </span>
           }
-          rightDesktop={<AddRecordButton homeId={homeId} label="+ Add Warranty" defaultType="warranty" />}
         />
 
-        {/* Stats */}
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
-          <StatCard label="Active" value={activeCount} />
-          <StatCard label="Expiring Soon" value={expiringSoonCount} highlight={expiringSoonCount > 0 ? "yellow" : undefined} />
-          <StatCard label="Expired" value={expiredCount} highlight={expiredCount > 0 ? "red" : undefined} />
-          <StatCard label="Total" value={warrantiesWithStatus.length} />
-        </section>
-
-        {/* Single body surface */}
-        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
-          {/* Mobile-only CTA so it never disappears */}
-          <div className="mb-6 sm:hidden">
-            <AddRecordButton homeId={homeId} label="+ Add Warranty" defaultType="warranty" />
-          </div>
-
+        {!hasAny ? (
+          <section className="rounded-2xl border border-white/15 bg-black/55 p-8 shadow-2xl backdrop-blur-xl">
+            <div className="py-6 text-center">
+              <div className="mb-4 text-5xl">🧾</div>
+              <h2 className="text-xl font-semibold text-white">No warranties yet</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-white/70">
+                Add warranties for appliances, systems, or policies so you can track expirations and documents in one
+                place.
+              </p>
+            </div>
+          </section>
+        ) : (
           <WarrantiesPageClient
             warranties={warrantiesWithStatus}
             homeId={homeId}
             initialSearch={search}
             initialSort={sort}
+            activeCount={activeCount}
+            expiringSoonCount={expiringSoonCount}
+            expiredCount={expiredCount}
+            totalCount={totalCount}
           />
-        </section>
+        )}
 
         <div className="h-12" />
       </div>
     </main>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: string | number;
-  highlight?: "red" | "yellow";
-}) {
-  return (
-    <div className="rounded-2xl border border-white/12 bg-black/25 px-4 py-3">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{label}</div>
-      <div
-        className={[
-          "mt-1 text-lg font-semibold leading-tight",
-          highlight === "red" ? "text-red-300" : highlight === "yellow" ? "text-yellow-300" : "text-white",
-        ].join(" ")}
-      >
-        {value}
-      </div>
-    </div>
   );
 }
