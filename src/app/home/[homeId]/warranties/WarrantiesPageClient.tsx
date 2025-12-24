@@ -1,3 +1,4 @@
+// src/app/home/[homeId]/warranties/WarrantiesPageClient.tsx
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -43,7 +44,13 @@ type Props = {
 
 type SortKey = "soonest" | "latest" | "item";
 
-const filterSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
+/** Match ContractorsListClient */
+const cardLink =
+  "group relative block overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur " +
+  "transition hover:bg-black/30 hover:border-white/15";
+
+/** Tight + consistent filter slab */
+const filterSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
 
 function expiryLabel(w: WarrantyItem) {
   if (!w.expiresAt) return "No expiry";
@@ -56,13 +63,6 @@ function expiryLabel(w: WarrantyItem) {
   if (w.daysUntilExpiry === 0) return "Expires today";
   if (w.daysUntilExpiry === 1) return "Expires tomorrow";
   return `Expires in ${w.daysUntilExpiry} days`;
-}
-
-function statusDotClass(w: WarrantyItem) {
-  if (w.isExpired) return "bg-red-400";
-  if (w.isExpiringSoon) return "bg-yellow-400";
-  if (w.expiresAt) return "bg-emerald-400";
-  return "bg-white/30";
 }
 
 function statusTextClass(w: WarrantyItem) {
@@ -130,7 +130,7 @@ export function WarrantiesPageClient({
     return `/home/${homeId}/warranties${qs ? `?${qs}` : ""}`;
   }, [homeId, search, searchParams]);
 
-  // EXACT “Contractors-style” indigo action: no slab, no orange hover
+  // Indigo action link styling (no slab/hover)
   const IndigoAddWarranty = (
     <span
       className={[
@@ -149,7 +149,7 @@ export function WarrantiesPageClient({
 
   return (
     <div className="w-full max-w-full space-y-6 overflow-x-hidden">
-      {/* ✅ Stats: match Contractors exactly */}
+      {/* ✅ Overview (match ContractorsListClient) */}
       <section aria-labelledby="warranty-stats" className="space-y-3">
         <div className="flex items-center justify-between">
           <button
@@ -182,14 +182,14 @@ export function WarrantiesPageClient({
         </div>
       </section>
 
-      {/* Filters */}
+      {/* ✅ Tight filters */}
       <section className={filterSurface}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div className="md:col-span-2">
-            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-end">
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
               Search
             </label>
-            <div className="rounded-2xl border border-white/12 bg-black/20 px-4 py-2">
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-1.5">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -200,10 +200,10 @@ export function WarrantiesPageClient({
           </div>
 
           <div>
-            <label className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
+            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
               Sort
             </label>
-            <div className="relative rounded-2xl border border-white/12 bg-black/20 px-4 py-2">
+            <div className="relative rounded-2xl border border-white/10 bg-black/20 px-3 py-1.5">
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
@@ -230,7 +230,7 @@ export function WarrantiesPageClient({
         </div>
       </section>
 
-      {/* List */}
+      {/* ✅ List */}
       {warranties.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
           <p className="mb-3 text-white/80">
@@ -246,13 +246,17 @@ export function WarrantiesPageClient({
       ) : (
         <ul className="space-y-3">
           {warranties.map((w) => (
-            <WarrantyCard key={w.id} warranty={w} homeId={homeId} />
+            <li key={w.id} className="list-none">
+              <WarrantyCard warranty={w} homeId={homeId} />
+            </li>
           ))}
         </ul>
       )}
     </div>
   );
 }
+
+/* ---------- Contractors-style overview tiles ---------- */
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
   return (
@@ -262,6 +266,8 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
     </div>
   );
 }
+
+/* ---------- Contractors-style list row ---------- */
 
 function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: string }) {
   const router = useRouter();
@@ -290,110 +296,139 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
     }
   }
 
-  const metaParts: string[] = [];
-  if (warranty.provider) metaParts.push(warranty.provider);
-  if (warranty.policyNo) metaParts.push(`Policy ${warranty.policyNo}`);
+  const href = `/home/${homeId}/warranties/${warranty.id}`;
 
-  const leftAccent = warranty.isExpired
-    ? "before:bg-red-400/80"
+  const statusLabel = warranty.isExpired
+    ? "Expired"
     : warranty.isExpiringSoon
-    ? "before:bg-yellow-400/80"
+    ? "Expiring Soon"
     : warranty.expiresAt
-    ? "before:bg-emerald-400/70"
-    : "before:bg-white/15";
+    ? "Active"
+    : "No expiry";
+
+  const statusPill =
+    warranty.isExpired
+      ? "border-red-400/25 bg-red-400/10 text-red-100"
+      : warranty.isExpiringSoon
+      ? "border-yellow-400/25 bg-yellow-400/10 text-yellow-100"
+      : warranty.expiresAt
+      ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
+      : "border-white/10 bg-white/5 text-white/60";
+
+  const leftAccent =
+    warranty.isExpired
+      ? "before:bg-red-400/80"
+      : warranty.isExpiringSoon
+      ? "before:bg-yellow-400/80"
+      : warranty.expiresAt
+      ? "before:bg-emerald-400/70"
+      : "before:bg-white/12";
+
+  const meta: string[] = [];
+  if (warranty.provider) meta.push(warranty.provider);
+  if (warranty.policyNo) meta.push(`Policy ${warranty.policyNo}`);
+  if (warranty.expiresAt) meta.push(`Expiry: ${warranty.formattedExpiry}`);
+  if (warranty.attachments?.length) meta.push(`Attachments: ${warranty.attachments.length}`);
 
   return (
     <>
-      <li className="list-none">
-        <div
-          className={[
-            "group relative overflow-hidden rounded-2xl border border-white/12 bg-black/25 transition",
-            "hover:border-white/18 hover:bg-black/30",
-            "before:absolute before:left-0 before:top-4 before:bottom-4 before:w-[3px] before:rounded-full",
-            leftAccent,
-          ].join(" ")}
-        >
-          <Link href={`/home/${homeId}/warranties/${warranty.id}`} className="block px-5 py-4">
-            <div className="flex items-start justify-between gap-4">
+      <Link
+        href={href}
+        className={[
+          cardLink,
+          "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
+          leftAccent,
+        ].join(" ")}
+      >
+        <div className="flex items-start gap-4">
+          {/* Icon tile (avatar-like) */}
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg">
+            🧾
+          </div>
+
+          <div className="min-w-0 flex-1">
+            {/* Top row */}
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={`h-2.5 w-2.5 rounded-full ${statusDotClass(warranty)}`} />
-                  <h3 className="truncate text-[15px] font-semibold text-white">{warranty.item}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-base font-semibold text-white">{warranty.item}</h3>
+
+                  <span
+                    className={[
+                      "inline-flex flex-shrink-0 items-center rounded-full border px-2 py-0.5 text-xs",
+                      statusPill,
+                    ].join(" ")}
+                  >
+                    {statusLabel}
+                  </span>
                 </div>
 
-                {metaParts.length > 0 ? (
-                  <p className="mt-1 truncate text-xs text-white/55">{metaParts.join(" • ")}</p>
-                ) : null}
-
-                {warranty.note ? <p className="mt-2 line-clamp-1 text-xs text-white/65">{warranty.note}</p> : null}
-
-                {warranty.attachments?.length ? (
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] text-white/45">📎 {warranty.attachments.length}</span>
-                    {warranty.attachments.slice(0, 2).map((att) => (
-                      <span
-                        key={att.id}
-                        className="max-w-[260px] truncate rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60"
-                        title={att.filename}
-                      >
-                        {truncFilename(att.filename)}
-                      </span>
-                    ))}
-                    {warranty.attachments.length > 2 ? (
-                      <span className="text-[11px] text-white/45">+{warranty.attachments.length - 2} more</span>
-                    ) : null}
-                  </div>
-                ) : null}
+                {meta.length ? <p className="mt-1 truncate text-xs text-white/60">{meta.join(" • ")}</p> : null}
               </div>
 
-              <div className="shrink-0 text-right">
-                <div className={`text-xs font-medium ${statusTextClass(warranty)}`}>{expiryLabel(warranty)}</div>
-                <div className="mt-0.5 text-[11px] text-white/50">{warranty.formattedExpiry}</div>
-
-                <div className="mt-2 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
-                  <button
-                    type="button"
-                    className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setEditOpen(true);
-                    }}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={deleting}
-                    className={[
-                      "rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-60",
-                      confirmDelete
-                        ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
-                        : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/20",
-                    ].join(" ")}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-
-                      if (!confirmDelete) {
-                        setConfirmDelete(true);
-                        if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
-                        confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2500);
-                        return;
-                      }
-
-                      void handleDelete();
-                    }}
-                  >
-                    {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
-                  </button>
-                </div>
+              <div className="flex items-center text-white/35" aria-hidden>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               </div>
             </div>
-          </Link>
+
+            {/* Meta row */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/60">
+              <span className={statusTextClass(warranty)}>{expiryLabel(warranty)}</span>
+              {warranty.note ? <span className="truncate max-w-[520px]">Note: {warranty.note}</span> : null}
+            </div>
+
+            {/* Actions (hover) */}
+            <div className="mt-3 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
+              <button
+                type="button"
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditOpen(true);
+                }}
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                disabled={deleting}
+                className={[
+                  "rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-60",
+                  confirmDelete
+                    ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
+                    : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/20",
+                ].join(" ")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+
+                  if (!confirmDelete) {
+                    setConfirmDelete(true);
+                    if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+                    confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2500);
+                    return;
+                  }
+
+                  void handleDelete();
+                }}
+              >
+                {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
+              </button>
+            </div>
+          </div>
         </div>
-      </li>
+      </Link>
 
       <EditWarrantyModal open={editOpen} onClose={() => setEditOpen(false)} warranty={warranty as any} homeId={homeId} />
     </>
