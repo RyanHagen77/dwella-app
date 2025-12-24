@@ -1,11 +1,12 @@
 // app/home/[homeId]/contractors/ContractorsListClient.tsx
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
 import { glass, heading, textMeta } from "@/lib/glass";
+import { ContractorActions } from "./ContractorActions";
 
 type ContractorConnection = {
   id: string;
@@ -26,6 +27,9 @@ type ContractorConnection = {
 
 type Props = {
   homeId: string;
+  /** needed for Invite Pro modal */
+  homeAddress: string;
+
   activeConnections: ContractorConnection[];
   archivedConnections: ContractorConnection[];
   stats: {
@@ -42,6 +46,7 @@ const cardLink =
 
 export function ContractorsListClient({
   homeId,
+  homeAddress,
   activeConnections,
   archivedConnections,
   stats,
@@ -52,30 +57,60 @@ export function ContractorsListClient({
   // collapsed by default only on mobile (PropertyStats pattern)
   const [isExpanded, setIsExpanded] = useState(false);
 
+  // We’ll keep ContractorActions mounted but visually hidden, then “click” its trigger.
+  const actionsHostRef = useRef<HTMLDivElement | null>(null);
+
+  function openInviteModal() {
+    const host = actionsHostRef.current;
+    if (!host) return;
+
+    // Try common interactive triggers inside ContractorActions
+    const trigger =
+      (host.querySelector('button[type="button"]') as HTMLButtonElement | null) ??
+      (host.querySelector("button") as HTMLButtonElement | null) ??
+      (host.querySelector('a[role="button"]') as HTMLAnchorElement | null);
+
+    trigger?.click();
+  }
+
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full max-w-full space-y-6 overflow-x-hidden">
+      {/* Hidden actions (keeps your existing modal behavior) */}
+      <div ref={actionsHostRef} className="sr-only">
+        <ContractorActions homeId={homeId} homeAddress={homeAddress} />
+      </div>
+
       {/* ✅ Stats: collapsible on mobile, always visible on desktop */}
       <section aria-labelledby="contractor-stats" className="space-y-3">
         <div className="flex items-center justify-between">
-  <button
-    type="button"
-    onClick={() => setIsExpanded((prev) => !prev)}
-    className="inline-flex items-center gap-2 text-left lg:cursor-default"
-  >
-    <h2 id="contractor-stats" className={`text-lg font-semibold ${heading}`}>
-      Overview
-    </h2>
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  </button>
-</div>
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-2 text-left lg:cursor-default"
+          >
+            <h2 id="contractor-stats" className={`text-lg font-semibold ${heading}`}>
+              Overview
+            </h2>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* ✅ Inline indigo link (opens modal) */}
+          <button
+            type="button"
+            onClick={openInviteModal}
+            className="text-sm text-indigo-300 hover:text-indigo-200"
+          >
+            Invite Pro
+          </button>
+        </div>
 
         <div className={`${isExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
           <StatTile label="Total Pros" value={stats.totalContractors} />
@@ -158,7 +193,6 @@ function ContractorCard({
       className={[
         cardLink,
         dimmed ? "opacity-85" : "",
-        // subtle left accent (status)
         "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
         statusLabel === "Active" ? "before:bg-emerald-400/70" : "before:bg-white/12",
       ].join(" ")}

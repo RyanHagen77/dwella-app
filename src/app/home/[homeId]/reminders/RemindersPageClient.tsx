@@ -4,16 +4,10 @@ import { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-import { heading, textMeta, ctaPrimary } from "@/lib/glass";
+import { heading, textMeta } from "@/lib/glass";
 import { useToast } from "@/components/ui/Toast";
 
-import {
-  formFieldShell,
-  formInputInner,
-  formSelectInner,
-  formLabelCaps,
-} from "@/components/ui/formFields";
-
+import { formFieldShell, formInputInner, formSelectInner, formLabelCaps } from "@/components/ui/formFields";
 import { EditReminderModal } from "./_components/EditReminderModal";
 
 export type ReminderStatus = "overdue" | "due-soon" | "upcoming" | "completed";
@@ -45,7 +39,6 @@ type Props = {
   initialSearch?: string;
   initialSort?: string;
 
-  // summary counts
   overdueCount: number;
   upcomingCount: number;
   next7DaysCount: number;
@@ -76,7 +69,7 @@ export function RemindersPageClient({
   const [status, setStatus] = useState(initialStatus || "active");
   const [sort, setSort] = useState(initialSort || "soonest");
 
-  // ✅ Summary drawer (same pattern as PropertyStats)
+  // Summary collapsible (PropertyStats pattern)
   const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   function updateFilters(updates: { search?: string; status?: string; sort?: string }) {
@@ -109,24 +102,13 @@ export function RemindersPageClient({
       if (status === "completed") return r.isCompleted;
       if (status === "overdue") return !r.isCompleted && r.status === "overdue";
       if (status === "upcoming") return !r.isCompleted && (r.status === "due-soon" || r.status === "upcoming");
-      // "active" (default) => not completed
-      return !r.isCompleted;
+      return !r.isCompleted; // active
     });
   }, [reminders, status]);
 
   return (
     <div className="space-y-6">
-      {/* ✅ Mobile add button (guaranteed visible) */}
-      <div className="sm:hidden">
-        <Link
-          href={`/home/${homeId}?add=reminder`}
-          className={`${ctaPrimary} inline-flex text-sm`}
-        >
-          + Add Reminder
-        </Link>
-      </div>
-
-      {/* ✅ Summary (collapsible on mobile; always open on desktop) */}
+      {/* Summary */}
       <section aria-labelledby="summary" className="space-y-3">
         <div className="flex items-center justify-between">
           <button
@@ -154,20 +136,19 @@ export function RemindersPageClient({
           </span>
         </div>
 
-        <div
-          className={[
-            summaryExpanded ? "grid" : "hidden",
-            "grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4",
-          ].join(" ")}
-        >
+        <div className={`${summaryExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
           <StatTile label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
-          <StatTile label="Next 7 Days" value={next7DaysCount} highlight={next7DaysCount > 0 ? "yellow" : undefined} />
+          <StatTile
+            label="Next 7 Days"
+            value={next7DaysCount}
+            highlight={next7DaysCount > 0 ? "yellow" : undefined}
+          />
           <StatTile label="Upcoming" value={upcomingCount} />
           <StatTile label="Completed" value={completedCount} />
         </div>
       </section>
 
-      {/* ✅ Filters (your original 3-field row) */}
+      {/* Filters (keep your original 3-field row) */}
       <section className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
@@ -251,7 +232,7 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
   const { push: toast } = useToast();
 
   const [editOpen, setEditOpen] = useState(false);
-  const [showDetails, setShowDetails] = useState(false); // ✅ mobile details toggle
+  const [showDetails, setShowDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -288,87 +269,113 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
     }
   }
 
-  const badge = isCompleted
-    ? "Completed"
+  // subtle left accent
+  const leftAccent = isCompleted
+    ? "before:bg-emerald-400/60"
     : isOverdue
-    ? "Overdue"
+    ? "before:bg-red-400/70"
     : isDueSoon
-    ? "Due soon"
-    : "";
+    ? "before:bg-yellow-400/70"
+    : "before:bg-white/12";
 
   return (
     <>
-      <div className={rowSurface}>
+      <div
+        className={[
+          rowSurface,
+          "group relative overflow-hidden",
+          "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
+          leftAccent,
+        ].join(" ")}
+      >
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <Link
-              href={`/home/${homeId}/reminders/${reminder.id}`}
-              className="block min-w-0"
-            >
-              <div className="flex flex-wrap items-center gap-2">
-                <h3 className="truncate text-base font-semibold text-white sm:text-lg">
-                  {reminder.title}
-                </h3>
+          <div className="min-w-0 flex-1">
+            {/* Title row (no link) */}
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="min-w-0 truncate text-base font-semibold text-white sm:text-lg">
+                {reminder.title}
+              </h3>
 
-                {badge ? (
-                  <span
-                    className={[
-                      "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
-                      isCompleted
-                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
-                        : isOverdue
-                        ? "border-red-400/30 bg-red-400/10 text-red-200"
-                        : "border-yellow-400/30 bg-yellow-400/10 text-yellow-200",
-                    ].join(" ")}
-                  >
-                    {badge}
+              {/* ✅ Completion control lives where the "Completed" pill is */}
+              <div className="shrink-0">
+                {isCompleted ? (
+                  <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
+                    Completed
                   </span>
-                ) : null}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => void handleComplete()}
+                    disabled={completing || deleting}
+                    className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
+                  >
+                    {completing ? "Marking…" : "Mark complete"}
+                  </button>
+                )}
               </div>
+            </div>
 
-              <div className={`mt-1 text-sm ${textMeta}`}>
-                📅 {reminder.formattedDate}
-                {!isCompleted ? (
-                  <>
-                    {" "}
-                    •{" "}
-                    {isOverdue
-                      ? `${Math.abs(reminder.daysUntil)} day${Math.abs(reminder.daysUntil) === 1 ? "" : "s"} overdue`
-                      : reminder.daysUntil === 0
-                      ? "Due today"
-                      : reminder.daysUntil === 1
-                      ? "Due tomorrow"
-                      : `${reminder.daysUntil} days away`}
-                  </>
-                ) : null}
-                {reminder.attachments?.length ? ` • 📎 ${reminder.attachments.length}` : ""}
-              </div>
-            </Link>
+            {/* Meta line keeps due/overdue context */}
+            <div className={`mt-1 text-sm ${textMeta}`}>
+              📅 {reminder.formattedDate}
+              {!isCompleted ? (
+                <>
+                  {" "}
+                  •{" "}
+                  {isOverdue
+                    ? `${Math.abs(reminder.daysUntil)} day${Math.abs(reminder.daysUntil) === 1 ? "" : "s"} overdue`
+                    : reminder.daysUntil === 0
+                    ? "Due today"
+                    : reminder.daysUntil === 1
+                    ? "Due tomorrow"
+                    : `${reminder.daysUntil} days away`}
+                </>
+              ) : null}
+              {reminder.attachments?.length ? ` • 📎 ${reminder.attachments.length}` : ""}
+            </div>
 
-            {/* ✅ Mobile: Details toggle controls notes/attachments/actions without “card chaos” */}
-            <div className="mt-3 flex items-center gap-2 sm:hidden">
+            {/* Actions row */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => setShowDetails((p) => !p)}
                 className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 transition hover:bg-white/10"
               >
-                {showDetails ? "Hide details" : "Details"}
+                {showDetails ? "Less" : "More"}
               </button>
 
-              {!isCompleted ? (
-                <button
-                  type="button"
-                  onClick={() => void handleComplete()}
-                  disabled={completing || deleting}
-                  className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
-                >
-                  {completing ? "Marking…" : "Mark complete"}
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 transition hover:bg-white/10"
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirmDelete) void handleDelete();
+                  else {
+                    setConfirmDelete(true);
+                    window.setTimeout(() => setConfirmDelete(false), 2500);
+                  }
+                }}
+                disabled={deleting}
+                className={[
+                  "rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-50",
+                  confirmDelete
+                    ? "border-red-400/35 bg-red-400/15 text-red-100 hover:bg-red-400/20"
+                    : "border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15",
+                ].join(" ")}
+              >
+                {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
+              </button>
             </div>
 
+            {/* Details */}
             {showDetails ? (
-              <div className="mt-4 space-y-3 sm:hidden">
+              <div className="mt-4 space-y-3">
                 {reminder.note ? (
                   <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
                     <div className={`mb-1 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Notes</div>
@@ -394,80 +401,8 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
                     ) : null}
                   </div>
                 ) : null}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditOpen(true)}
-                    className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/90 transition hover:bg-white/10"
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (confirmDelete) void handleDelete();
-                      else {
-                        setConfirmDelete(true);
-                        window.setTimeout(() => setConfirmDelete(false), 2500);
-                      }
-                    }}
-                    disabled={deleting}
-                    className={[
-                      "rounded-full border px-4 py-2 text-sm transition disabled:opacity-50",
-                      confirmDelete
-                        ? "border-red-400/35 bg-red-400/15 text-red-100 hover:bg-red-400/20"
-                        : "border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15",
-                    ].join(" ")}
-                  >
-                    {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
-                  </button>
-                </div>
               </div>
             ) : null}
-          </div>
-
-          {/* ✅ Desktop actions live on the right (no weird nested borders) */}
-          <div className="hidden shrink-0 items-start gap-2 sm:flex">
-            {!isCompleted ? (
-              <button
-                type="button"
-                onClick={() => void handleComplete()}
-                disabled={completing || deleting}
-                className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
-              >
-                {completing ? "Marking…" : "Mark complete"}
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm text-white/90 transition hover:bg-white/10"
-            >
-              Edit
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (confirmDelete) void handleDelete();
-                else {
-                  setConfirmDelete(true);
-                  window.setTimeout(() => setConfirmDelete(false), 2500);
-                }
-              }}
-              disabled={deleting}
-              className={[
-                "rounded-full border px-4 py-2 text-sm transition disabled:opacity-50",
-                confirmDelete
-                  ? "border-red-400/35 bg-red-400/15 text-red-100 hover:bg-red-400/20"
-                  : "border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15",
-              ].join(" ")}
-            >
-              {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
-            </button>
           </div>
         </div>
       </div>
@@ -497,11 +432,7 @@ function StatTile({
       <div
         className={[
           "mt-2 text-lg font-bold",
-          highlight === "red"
-            ? "text-red-300"
-            : highlight === "yellow"
-            ? "text-yellow-300"
-            : "text-white",
+          highlight === "red" ? "text-red-300" : highlight === "yellow" ? "text-yellow-300" : "text-white",
         ].join(" ")}
       >
         {value}

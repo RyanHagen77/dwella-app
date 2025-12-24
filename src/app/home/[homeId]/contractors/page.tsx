@@ -4,13 +4,12 @@ import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { textMeta } from "@/lib/glass";
-import { ContractorActions } from "./ContractorActions";
 import { ContractorsListClient } from "./ContractorsListClient";
+import { ContractorActions } from "./ContractorActions";
 
 export const dynamic = "force-dynamic";
 
@@ -99,10 +98,7 @@ export default async function ContractorsPage({
     );
 
     const cost = record.cost ? Number(record.cost) : 0;
-    spentByContractor.set(
-      record.contractorId,
-      (spentByContractor.get(record.contractorId) || 0) + cost
-    );
+    spentByContractor.set(record.contractorId, (spentByContractor.get(record.contractorId) || 0) + cost);
   }
 
   type ConnRow = (typeof activeConnectionsRaw)[number];
@@ -129,10 +125,10 @@ export default async function ContractorsPage({
   const activeConnections = activeConnectionsRaw.map(mapConnection);
   const archivedConnections = archivedConnectionsRaw.map(mapConnection);
 
-  const totalContractors = activeConnectionsRaw.length + archivedConnectionsRaw.length;
-  const activeContractors = activeConnectionsRaw.length;
+  const totalContractors = activeConnectionsRaw.length;
   const totalVerifiedServices = serviceRecords.length;
   const totalSpentAmount = Array.from(spentByContractor.values()).reduce((sum, n) => sum + n, 0);
+  const activeContractors = activeConnectionsRaw.length;
 
   const breadcrumbItems = [
     { label: addrLine || "Home", href: `/home/${homeId}` },
@@ -143,22 +139,7 @@ export default async function ContractorsPage({
 
   return (
     <main className="relative min-h-screen text-white">
-      {/* Background */}
-      <div className="fixed inset-0 -z-50">
-        <Image
-          src="/myhomedox_home3.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover object-center"
-          priority
-        />
-        <div className="absolute inset-0 bg-black/45" />
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
-      </div>
-
-      {/* ✅ FULL WIDTH PAGE FRAME */}
-      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={breadcrumbItems} />
 
         <PageHeader
@@ -168,45 +149,44 @@ export default async function ContractorsPage({
           meta={
             <span className={textMeta}>
               {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"} •{" "}
-              {totalVerifiedServices} verified {totalVerifiedServices === 1 ? "job" : "jobs"}
+              {totalVerifiedServices} verified {totalVerifiedServices === 1 ? "job" : "jobs"} •{" "}
+              <ContractorActions homeId={homeId} homeAddress={addrLine} />
             </span>
           }
-          rightDesktop={<ContractorActions homeId={homeId} homeAddress={addrLine} />}
         />
 
-        {/* ✅ Mobile action button (never disappears) */}
-        <div className="sm:hidden">
-          <ContractorActions homeId={homeId} homeAddress={addrLine} />
-        </div>
-
-        {/* ✅ Single body surface */}
-        <section className="rounded-2xl border border-white/15 bg-black/55 p-5 shadow-2xl backdrop-blur-xl sm:p-6">
-          {!hasAny ? (
-            <div className="py-8 text-center">
+        {!hasAny ? (
+          <section className="rounded-2xl border border-white/15 bg-black/55 p-8 shadow-2xl backdrop-blur-xl">
+            <div className="py-6 text-center">
               <div className="mb-4 text-5xl">👷</div>
-              <h2 className="text-xl font-semibold text-white">No connected pros yet</h2>
+              <h2 className="text-xl font-semibold text-white">No connected contractors yet</h2>
               <p className="mx-auto mt-2 max-w-md text-sm text-white/70">
                 Connect with pros who&apos;ve worked on your home to build your trusted network and get verified records.
               </p>
 
-              <div className="mt-6 flex justify-center">
-                <ContractorActions homeId={homeId} homeAddress={addrLine} />
-              </div>
+              <p className="mt-4 text-sm text-white/60">
+                Use{" "}
+                <span className="inline-block">
+                  <ContractorActions homeId={homeId} homeAddress={addrLine} />
+                </span>{" "}
+                to invite one.
+              </p>
             </div>
-          ) : (
-            <ContractorsListClient
-              homeId={homeId}
-              activeConnections={activeConnections}
-              archivedConnections={archivedConnections}
-              stats={{
-                totalContractors,
-                activeContractors,
-                totalVerifiedServices,
-                totalSpentAmount,
-              }}
-            />
-          )}
-        </section>
+          </section>
+        ) : (
+          <ContractorsListClient
+            homeId={homeId}
+            homeAddress={addrLine}
+            activeConnections={activeConnections}
+            archivedConnections={archivedConnections}
+            stats={{
+              totalContractors,
+              activeContractors,
+              totalVerifiedServices,
+              totalSpentAmount,
+            }}
+          />
+        )}
 
         <div className="h-12" />
       </div>

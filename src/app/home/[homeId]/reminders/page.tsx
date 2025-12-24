@@ -41,18 +41,12 @@ export default async function RemindersPage({
   });
   if (!home) notFound();
 
-  const addrLine = [home.address, home.city, home.state, home.zip]
-    .filter(Boolean)
-    .join(", ");
+  const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
   // Global counts (do NOT depend on current filter)
   const [activeCount, completedCount] = await Promise.all([
-    prisma.reminder.count({
-      where: { homeId, archivedAt: null, deletedAt: null },
-    }),
-    prisma.reminder.count({
-      where: { homeId, archivedAt: { not: null }, deletedAt: null },
-    }),
+    prisma.reminder.count({ where: { homeId, archivedAt: null, deletedAt: null } }),
+    prisma.reminder.count({ where: { homeId, archivedAt: { not: null }, deletedAt: null } }),
   ]);
 
   const where: {
@@ -82,9 +76,7 @@ export default async function RemindersPage({
       dueAt: true,
       note: true,
       archivedAt: true,
-      attachments: {
-        select: { id: true, filename: true, url: true, mimeType: true, size: true },
-      },
+      attachments: { select: { id: true, filename: true, url: true, mimeType: true, size: true } },
     },
   });
 
@@ -95,9 +87,7 @@ export default async function RemindersPage({
     const due = new Date(r.dueAt);
     due.setHours(0, 0, 0, 0);
 
-    const daysUntil = Math.ceil(
-      (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-    );
+    const daysUntil = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
     const isCompleted = Boolean(r.archivedAt);
     const isOverdue = !isCompleted && due < today;
@@ -116,11 +106,7 @@ export default async function RemindersPage({
       title: r.title,
       dueAt: r.dueAt.toISOString(),
       note: r.note,
-      formattedDate: due.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
+      formattedDate: due.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       status: reminderStatus,
       isCompleted,
       isOverdue,
@@ -139,11 +125,29 @@ export default async function RemindersPage({
   const visibleActive = remindersWithStatus.filter((r) => !r.isCompleted);
   const overdueCount = visibleActive.filter((r) => r.isOverdue).length;
   const upcomingCount = visibleActive.filter((r) => !r.isOverdue).length;
-  const next7DaysCount = visibleActive.filter(
-    (r) => !r.isOverdue && r.daysUntil <= 7
-  ).length;
+  const next7DaysCount = visibleActive.filter((r) => !r.isOverdue && r.daysUntil <= 7).length;
 
   const totalVisible = remindersWithStatus.length;
+
+  /**
+   * Indigo “link” wrapper that FORCE-OVERRIDES AddRecordButton’s internal ctaPrimary button styles.
+   * This is why the orange hover goes away.
+   */
+  const IndigoAddReminder = (
+    <span
+      className={[
+        "text-sm text-indigo-300 hover:text-indigo-200",
+        // force the internal <button> (ctaPrimary) to behave like plain text
+        "[&_button]:!bg-transparent [&_button]:!border-transparent [&_button]:!shadow-none [&_button]:!rounded-none",
+        "[&_button]:!p-0 [&_button]:!text-indigo-300 [&_button]:!text-xs [&_button]:!font-medium",
+        "[&_button:hover]:!bg-transparent [&_button:hover]:!border-transparent [&_button:hover]:!text-indigo-200",
+        "[&_button:active]:!bg-transparent [&_button:active]:!border-transparent",
+        "[&_button:focus]:!outline-none [&_button:focus-visible]:!ring-0 [&_button:focus-visible]:!ring-offset-0",
+      ].join(" ")}
+    >
+      <AddRecordButton homeId={homeId} label="Add reminder" defaultType="reminder" />
+    </span>
+  );
 
   return (
     <main className="relative min-h-screen text-white">
@@ -161,14 +165,9 @@ export default async function RemindersPage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      {/* ✅ FULL-WIDTH FRAME */}
+      {/* FULL-WIDTH FRAME */}
       <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
-        <Breadcrumb
-          items={[
-            { label: addrLine, href: `/home/${homeId}` },
-            { label: "Reminders" },
-          ]}
-        />
+        <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
 
         <PageHeader
           backHref={`/home/${homeId}`}
@@ -179,17 +178,15 @@ export default async function RemindersPage({
               {activeCount} active • {completedCount} completed
             </span>
           }
-          rightDesktop={
-            <AddRecordButton
-              homeId={homeId}
-              label="+ Add Reminder"
-              defaultType="reminder"
-            />
-          }
+          // ✅ same line as header (desktop)
+          rightDesktop={IndigoAddReminder}
         />
 
-        {/* Body surface (single layer, full width) */}
+        {/* Body surface */}
         <section className="rounded-2xl border border-white/15 bg-black/55 p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+          {/* ✅ mobile: indigo text (no orange button / no orange hover) */}
+          <div className="mb-4 sm:hidden">{IndigoAddReminder}</div>
+
           <RemindersPageClient
             reminders={remindersWithStatus}
             homeId={homeId}

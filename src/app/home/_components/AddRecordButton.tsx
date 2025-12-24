@@ -1,4 +1,3 @@
-// app/home/_components/AddRecordButton.tsx
 "use client";
 
 import { useState } from "react";
@@ -26,10 +25,14 @@ export function AddRecordButton({
   homeId,
   label = "+ Add Record",
   defaultType = "record",
+  variant = "button",
+  className,
 }: {
   homeId: string;
   label?: string;
   defaultType?: "record" | "reminder" | "warranty";
+  variant?: "button" | "link";
+  className?: string;
 }) {
   const router = useRouter();
   const { push } = useToast();
@@ -180,13 +183,7 @@ export function AddRecordButton({
     return { id: json.id };
   }
 
-  async function onCreateUnified({
-    payload,
-    files,
-  }: {
-    payload: UnifiedRecordPayload;
-    files: File[];
-  }) {
+  async function onCreateUnified({ payload, files }: { payload: UnifiedRecordPayload; files: File[] }) {
     try {
       if (payload.type === "record") {
         const record = await createRecord({
@@ -226,16 +223,21 @@ export function AddRecordButton({
     } catch (err) {
       console.error(err);
       push(err instanceof Error ? err.message : "Something went wrong");
-      // keep modal open so user can retry
     }
   }
+
+  const linkClasses =
+    "text-xs text-indigo-300 hover:text-indigo-200 underline-offset-4 hover:underline";
 
   return (
     <>
       <button
         type="button"
         onClick={() => setAddOpen(true)}
-        className={`${ctaPrimary} text-sm`}
+        className={[
+          variant === "link" ? linkClasses : `${ctaPrimary} text-sm`,
+          className ?? "",
+        ].join(" ")}
       >
         {label}
       </button>
