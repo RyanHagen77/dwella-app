@@ -150,7 +150,6 @@ export default async function ContractorsPage({
             <span className={textMeta}>
               {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"} •{" "}
               {totalVerifiedServices} verified {totalVerifiedServices === 1 ? "job" : "jobs"} •{" "}
-              <ContractorActions homeId={homeId} homeAddress={addrLine} />
             </span>
           }
         />

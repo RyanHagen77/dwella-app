@@ -32,6 +32,30 @@ export const ctaGhost =
   "text-sm font-medium text-white border border-white/40 bg-white/10 hover:bg-white/20 " +
   `${focusRing}`;
 
+export const indigoActionLink =
+  [
+    // visible text
+    "text-sm font-medium text-indigo-300 hover:text-indigo-200",
+
+    // force internal <button> to behave like text
+    "[&_button]:!bg-transparent",
+    "[&_button]:!border-transparent",
+    "[&_button]:!shadow-none",
+    "[&_button]:!rounded-none",
+    "[&_button]:!p-0",
+    "[&_button]:!text-sm",
+    "[&_button]:!font-medium",
+    "[&_button]:!text-indigo-300",
+
+    // hover / focus hygiene (kill orange pill forever)
+    "[&_button:hover]:!bg-transparent",
+    "[&_button:hover]:!border-transparent",
+    "[&_button:hover]:!text-indigo-200",
+    "[&_button:focus]:!outline-none",
+    "[&_button:focus-visible]:!ring-0",
+    "[&_button:focus-visible]:!ring-offset-0",
+  ].join(" ");  
+
 // --- Universal field tokens ---
 export const fieldBase =
   "block w-full rounded-xl px-3 py-2 outline-none transition-colors " +

@@ -15,7 +15,7 @@ import Image from "next/image";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { textMeta } from "@/lib/glass";
+import { textMeta, indigoActionLink } from "@/lib/glass";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 
 import { RemindersPageClient } from "./RemindersPageClient";
@@ -129,22 +129,9 @@ export default async function RemindersPage({
 
   const totalVisible = remindersWithStatus.length;
 
-  /**
-   * Indigo “link” wrapper that FORCE-OVERRIDES AddRecordButton’s internal ctaPrimary button styles.
-   * This is why the orange hover goes away.
-   */
+  // ✅ one reusable indigo “link-style” trigger (desktop + mobile)
   const IndigoAddReminder = (
-    <span
-      className={[
-        "text-sm text-indigo-300 hover:text-indigo-200",
-        // force the internal <button> (ctaPrimary) to behave like plain text
-        "[&_button]:!bg-transparent [&_button]:!border-transparent [&_button]:!shadow-none [&_button]:!rounded-none",
-        "[&_button]:!p-0 [&_button]:!text-indigo-300 [&_button]:!text-xs [&_button]:!font-medium",
-        "[&_button:hover]:!bg-transparent [&_button:hover]:!border-transparent [&_button:hover]:!text-indigo-200",
-        "[&_button:active]:!bg-transparent [&_button:active]:!border-transparent",
-        "[&_button:focus]:!outline-none [&_button:focus-visible]:!ring-0 [&_button:focus-visible]:!ring-offset-0",
-      ].join(" ")}
-    >
+    <span className={indigoActionLink}>
       <AddRecordButton homeId={homeId} label="Add reminder" defaultType="reminder" />
     </span>
   );
@@ -165,7 +152,7 @@ export default async function RemindersPage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      {/* FULL-WIDTH FRAME */}
+      {/* ✅ FULL-WIDTH FRAME */}
       <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
 
@@ -184,7 +171,7 @@ export default async function RemindersPage({
 
         {/* Body surface */}
         <section className="rounded-2xl border border-white/15 bg-black/55 p-5 shadow-2xl backdrop-blur-xl sm:p-6">
-          {/* ✅ mobile: indigo text (no orange button / no orange hover) */}
+          {/* ✅ Mobile: same indigo link-style trigger (NOT orange button) */}
           <div className="mb-4 sm:hidden">{IndigoAddReminder}</div>
 
           <RemindersPageClient

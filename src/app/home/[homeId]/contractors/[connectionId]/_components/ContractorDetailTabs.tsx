@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { textMeta, ctaPrimary, ctaGhost } from "@/lib/glass";
+import { textMeta, ctaPrimary, ctaGhost, indigoActionLink } from "@/lib/glass";
 
 type PendingServiceAttachment = {
   id: string;
@@ -279,8 +279,8 @@ function ServiceRequestsTab({
     <div className="space-y-4">
       {/* Mobile row: Request + Filters (same line) */}
       <div className="flex items-center justify-between gap-3 sm:hidden">
-        <Link href={requestHref} className={ctaPrimary}>
-          + Request Service
+        <Link href={requestHref} className={`${indigoActionLink} text-sm`}>
+          + Request service
         </Link>
 
         <button
@@ -342,8 +342,8 @@ function ServiceRequestsTab({
           <div className="mb-4 text-5xl">📋</div>
           <p className="text-lg text-white">No service requests yet.</p>
           <p className={`mt-2 text-sm ${textMeta}`}>Request work from your connected pros to get started.</p>
-          <Link href={requestHref} className={`${ctaPrimary} mt-4 inline-block`}>
-            + Request Service
+          <Link href={requestHref} className={`${indigoActionLink} mt-4 inline-block text-sm`}>
+            + Request service
           </Link>
         </div>
       ) : (

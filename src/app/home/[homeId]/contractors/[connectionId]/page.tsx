@@ -318,14 +318,14 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
 
         {/* Header: NO window wrapper */}
         <ContractorHeaderDrawer
-  title={contractorLabel}
-  backHref={`/home/${homeId}/contractors`}
-  backLabel="Back to contractors"
-  messageHref={messageHref}
-  phone={contractorData.phone}   // <-- this must be present
-  spendAmount={totalSpent}
-  verifiedJobs={verifiedServicesCount}
->
+          title={contractorLabel}
+          backHref={`/home/${homeId}/contractors`}
+          backLabel="Back to contractors"
+          messageHref={messageHref}
+          phone={contractorData.phone}   // <-- this must be present
+          spendAmount={totalSpent}
+          verifiedJobs={verifiedServicesCount}
+        >
           {/* Details content (hidden until opened) */}
           <div className="rounded-2xl border border-white/12 bg-black/25 p-5">
             <div className="flex items-start gap-4">
