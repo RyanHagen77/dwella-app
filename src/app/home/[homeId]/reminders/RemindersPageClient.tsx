@@ -1,13 +1,12 @@
+// src/app/home/[homeId]/reminders/RemindersPageClient.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import * as React from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 
-import { heading, textMeta } from "@/lib/glass";
+import { heading, textMeta, glass } from "@/lib/glass";
 import { useToast } from "@/components/ui/Toast";
-
-import { formFieldShell, formInputInner, formSelectInner, formLabelCaps } from "@/components/ui/formFields";
 import { EditReminderModal } from "./_components/EditReminderModal";
 
 export type ReminderStatus = "overdue" | "due-soon" | "upcoming" | "completed";
@@ -45,10 +44,34 @@ type Props = {
   completedCount: number;
   activeCount: number;
   totalVisible: number;
+
+  /** ✅ aligns “Add reminder” with the Overview row (desktop + mobile) */
+  rightAction?: React.ReactNode;
 };
 
+type StatusKey = "active" | "overdue" | "upcoming" | "completed";
+type SortKey = "soonest" | "latest" | "title";
+
+/** Tight slab (match Warranties filter card) */
+const filterSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
+
+/** List row surface (match Contractors/Warranties list cards) */
 const rowSurface =
-  "rounded-2xl border border-white/10 bg-black/20 px-4 py-4 backdrop-blur transition hover:bg-black/25";
+  "group relative overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur " +
+  "transition hover:bg-black/30 hover:border-white/15";
+
+/** Clean glass controls: NO rings, focus via border only */
+const fieldShell =
+  "rounded-2xl border border-white/25 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
+  "focus-within:border-[#33C17D] focus-within:border-2";
+
+const fieldInner =
+  "w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40 " +
+  "border-0 ring-0 focus:ring-0 focus:outline-none";
+
+const inputInner = `${fieldInner} px-4 py-2`;
+const selectInner = `${fieldInner} px-4 py-2 pr-9 appearance-none`;
+const labelCaps = "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
 
 export function RemindersPageClient({
   reminders,
@@ -61,16 +84,17 @@ export function RemindersPageClient({
   next7DaysCount,
   completedCount,
   activeCount,
+  rightAction,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [search, setSearch] = useState(initialSearch || "");
-  const [status, setStatus] = useState(initialStatus || "active");
-  const [sort, setSort] = useState(initialSort || "soonest");
+  const [status, setStatus] = useState<StatusKey>((initialStatus as StatusKey) || "active");
+  const [sort, setSort] = useState<SortKey>((initialSort as SortKey) || "soonest");
 
-  // Summary collapsible (PropertyStats pattern)
-  const [summaryExpanded, setSummaryExpanded] = useState(false);
+  // ✅ match Contractors: collapsed by default on mobile, open on desktop
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
 
   function updateFilters(updates: { search?: string; status?: string; sort?: string }) {
     const params = new URLSearchParams(searchParams?.toString());
@@ -98,31 +122,42 @@ export function RemindersPageClient({
   }
 
   const filteredReminders = useMemo(() => {
-    return reminders.filter((r) => {
+    let list = reminders.filter((r) => {
       if (status === "completed") return r.isCompleted;
       if (status === "overdue") return !r.isCompleted && r.status === "overdue";
       if (status === "upcoming") return !r.isCompleted && (r.status === "due-soon" || r.status === "upcoming");
       return !r.isCompleted; // active
     });
-  }, [reminders, status]);
+
+    // keep UI stable (query unchanged)
+    list = [...list].sort((a, b) => {
+      if (sort === "title") return a.title.localeCompare(b.title);
+      const da = new Date(a.dueAt).getTime();
+      const db = new Date(b.dueAt).getTime();
+      return sort === "latest" ? db - da : da - db;
+    });
+
+    return list;
+  }, [reminders, status, sort]);
 
   return (
     <div className="space-y-6">
-      {/* Summary */}
-      <section aria-labelledby="summary" className="space-y-3">
-        <div className="flex items-center justify-between">
+      {/* ===== Overview row (match Warranties/Contractors) ===== */}
+      <section aria-labelledby="overview" className="space-y-3">
+        <div className="flex items-center justify-between gap-4">
           <button
             type="button"
-            onClick={() => setSummaryExpanded((p) => !p)}
+            onClick={() => setOverviewExpanded((p) => !p)}
             className="inline-flex items-center gap-2 text-left lg:cursor-default"
+            aria-expanded={overviewExpanded}
           >
-            <h2 id="summary" className={`text-lg font-semibold ${heading}`}>
-              Summary
+            <h2 id="overview" className={`text-lg font-semibold ${heading}`}>
+              Overview
             </h2>
 
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-4 w-4 transition-transform lg:hidden ${summaryExpanded ? "rotate-180" : ""}`}
+              className={`h-4 w-4 transition-transform lg:hidden ${overviewExpanded ? "rotate-180" : ""}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -131,12 +166,15 @@ export function RemindersPageClient({
             </svg>
           </button>
 
-          <span className={`text-sm ${textMeta}`}>
-            {activeCount} active • {completedCount} completed
-          </span>
+          <div className="flex items-center gap-4">
+            <span className={`text-sm ${textMeta}`}>
+              {activeCount} active • {completedCount} completed
+            </span>
+            {rightAction ? <div>{rightAction}</div> : null}
+          </div>
         </div>
 
-        <div className={`${summaryExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
+        <div className={`${overviewExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
           <StatTile label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
           <StatTile
             label="Next 7 Days"
@@ -148,14 +186,14 @@ export function RemindersPageClient({
         </div>
       </section>
 
-      {/* Filters (keep your original 3-field row) */}
-      <section className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      {/* ===== Filters (tight + consistent; no rings) ===== */}
+      <section className={filterSurface}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-end">
           <div>
-            <label className={formLabelCaps}>Search</label>
-            <div className={formFieldShell}>
+            <label className={labelCaps}>Search</label>
+            <div className={fieldShell}>
               <input
-                className={formInputInner}
+                className={inputInner}
                 value={search}
                 placeholder="Search reminders…"
                 onChange={(e) => {
@@ -168,14 +206,14 @@ export function RemindersPageClient({
           </div>
 
           <div>
-            <label className={formLabelCaps}>Status</label>
-            <div className={`${formFieldShell} relative`}>
+            <label className={labelCaps}>Status</label>
+            <div className={`relative ${fieldShell}`}>
               <select
-                className={formSelectInner}
+                className={selectInner}
                 value={status}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setStatus(v);
+                  setStatus(v as StatusKey);
                   updateFilters({ status: v });
                 }}
               >
@@ -189,14 +227,14 @@ export function RemindersPageClient({
           </div>
 
           <div>
-            <label className={formLabelCaps}>Sort</label>
-            <div className={`${formFieldShell} relative`}>
+            <label className={labelCaps}>Sort</label>
+            <div className={`relative ${fieldShell}`}>
               <select
-                className={formSelectInner}
+                className={selectInner}
                 value={sort}
                 onChange={(e) => {
                   const v = e.target.value;
-                  setSort(v);
+                  setSort(v as SortKey);
                   updateFilters({ sort: v });
                 }}
               >
@@ -210,18 +248,20 @@ export function RemindersPageClient({
         </div>
       </section>
 
-      {/* List */}
+      {/* ===== List ===== */}
       {filteredReminders.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-10 text-center">
           <p className="mb-2 text-white/80">No reminders match your selection.</p>
           <p className={`text-sm ${textMeta}`}>Try a different status or search term.</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <ul className="space-y-3">
           {filteredReminders.map((rem) => (
-            <ReminderRow key={rem.id} reminder={rem} homeId={homeId} />
+            <li key={rem.id} className="list-none">
+              <ReminderRow reminder={rem} homeId={homeId} />
+            </li>
           ))}
-        </div>
+        </ul>
       )}
     </div>
   );
@@ -236,6 +276,14 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
   const [deleting, setDeleting] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const confirmTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
 
   const isCompleted = reminder.isCompleted;
   const isOverdue = reminder.status === "overdue";
@@ -269,73 +317,101 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
     }
   }
 
-  // subtle left accent
   const leftAccent = isCompleted
-    ? "before:bg-emerald-400/60"
+    ? "before:bg-emerald-400/70"
     : isOverdue
-    ? "before:bg-red-400/70"
+    ? "before:bg-red-400/75"
     : isDueSoon
-    ? "before:bg-yellow-400/70"
+    ? "before:bg-yellow-400/75"
     : "before:bg-white/12";
+
+  const statusLabel = isCompleted ? "Completed" : isOverdue ? "Overdue" : isDueSoon ? "Due soon" : "Upcoming";
+
+  const statusPill = isCompleted
+    ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
+    : isOverdue
+    ? "border-red-400/25 bg-red-400/10 text-red-100"
+    : isDueSoon
+    ? "border-yellow-400/25 bg-yellow-400/10 text-yellow-100"
+    : "border-white/10 bg-white/5 text-white/60";
 
   return (
     <>
       <div
         className={[
           rowSurface,
-          "group relative overflow-hidden",
           "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
           leftAccent,
         ].join(" ")}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            {/* Title row (no link) */}
-            <div className="flex items-start justify-between gap-3">
-              <h3 className="min-w-0 truncate text-base font-semibold text-white sm:text-lg">
-                {reminder.title}
-              </h3>
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg">
+            ⏰
+          </div>
 
-              {/* ✅ Completion control lives where the "Completed" pill is */}
-              <div className="shrink-0">
-                {isCompleted ? (
-                  <span className="inline-flex items-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-200">
-                    Completed
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => void handleComplete()}
-                    disabled={completing || deleting}
-                    className="inline-flex items-center rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1 text-xs font-semibold text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate text-base font-semibold text-white sm:text-[15px]">{reminder.title}</h3>
+
+                  <span
+                    className={[
+                      "inline-flex flex-shrink-0 items-center rounded-full border px-2 py-0.5 text-xs",
+                      statusPill,
+                    ].join(" ")}
                   >
-                    {completing ? "Marking…" : "Mark complete"}
-                  </button>
-                )}
+                    {statusLabel}
+                  </span>
+                </div>
+
+                <p className={`mt-1 truncate text-xs ${textMeta}`}>
+                  📅 {reminder.formattedDate}
+                  {!isCompleted ? (
+                    <>
+                      {" "}
+                      •{" "}
+                      {isOverdue
+                        ? `${Math.abs(reminder.daysUntil)} day${Math.abs(reminder.daysUntil) === 1 ? "" : "s"} overdue`
+                        : reminder.daysUntil === 0
+                        ? "Due today"
+                        : reminder.daysUntil === 1
+                        ? "Due tomorrow"
+                        : `${reminder.daysUntil} days away`}
+                    </>
+                  ) : null}
+                  {reminder.attachments?.length ? ` • 📎 ${reminder.attachments.length}` : ""}
+                </p>
+              </div>
+
+              <div className="flex items-center text-white/35" aria-hidden>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  strokeWidth={1.5}
+                  stroke="currentColor"
+                  className="h-5 w-5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
               </div>
             </div>
 
-            {/* Meta line keeps due/overdue context */}
-            <div className={`mt-1 text-sm ${textMeta}`}>
-              📅 {reminder.formattedDate}
-              {!isCompleted ? (
-                <>
-                  {" "}
-                  •{" "}
-                  {isOverdue
-                    ? `${Math.abs(reminder.daysUntil)} day${Math.abs(reminder.daysUntil) === 1 ? "" : "s"} overdue`
-                    : reminder.daysUntil === 0
-                    ? "Due today"
-                    : reminder.daysUntil === 1
-                    ? "Due tomorrow"
-                    : `${reminder.daysUntil} days away`}
-                </>
-              ) : null}
-              {reminder.attachments?.length ? ` • 📎 ${reminder.attachments.length}` : ""}
-            </div>
+            {reminder.note ? <div className="mt-3 line-clamp-1 text-xs text-white/65">Note: {reminder.note}</div> : null}
 
-            {/* Actions row */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
+              {!isCompleted ? (
+                <button
+                  type="button"
+                  onClick={() => void handleComplete()}
+                  disabled={completing || deleting}
+                  className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
+                >
+                  {completing ? "Marking…" : "Mark complete"}
+                </button>
+              ) : null}
+
               <button
                 type="button"
                 onClick={() => setShowDetails((p) => !p)}
@@ -355,25 +431,28 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
               <button
                 type="button"
                 onClick={() => {
-                  if (confirmDelete) void handleDelete();
-                  else {
+                  if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+
+                  if (!confirmDelete) {
                     setConfirmDelete(true);
-                    window.setTimeout(() => setConfirmDelete(false), 2500);
+                    confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2500);
+                    return;
                   }
+
+                  void handleDelete();
                 }}
                 disabled={deleting}
                 className={[
                   "rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-50",
                   confirmDelete
-                    ? "border-red-400/35 bg-red-400/15 text-red-100 hover:bg-red-400/20"
-                    : "border-red-400/25 bg-red-400/10 text-red-200 hover:bg-red-400/15",
+                    ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
+                    : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/20",
                 ].join(" ")}
               >
                 {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
               </button>
             </div>
 
-            {/* Details */}
             {showDetails ? (
               <div className="mt-4 space-y-3">
                 {reminder.note ? (
@@ -393,7 +472,7 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
                         className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-white/75 hover:bg-black/25 hover:text-white"
                         title={att.filename}
                       >
-                        {att.filename.length > 18 ? att.filename.slice(0, 15) + "…" : att.filename}
+                        {trunc(att.filename)}
                       </button>
                     ))}
                     {reminder.attachments.length > 6 ? (
@@ -417,6 +496,7 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
   );
 }
 
+/* Warranties-sized stat tiles */
 function StatTile({
   label,
   value,
@@ -426,17 +506,13 @@ function StatTile({
   value: number;
   highlight?: "red" | "yellow";
 }) {
+  const valueClass =
+    highlight === "red" ? "text-red-300" : highlight === "yellow" ? "text-yellow-300" : "text-white";
+
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4 backdrop-blur">
-      <div className={`text-xs font-semibold uppercase tracking-wide ${textMeta}`}>{label}</div>
-      <div
-        className={[
-          "mt-2 text-lg font-bold",
-          highlight === "red" ? "text-red-300" : highlight === "yellow" ? "text-yellow-300" : "text-white",
-        ].join(" ")}
-      >
-        {value}
-      </div>
+    <div className={`${glass} p-4`} title={label}>
+      <p className={`text-xs ${textMeta} whitespace-nowrap`}>{label}</p>
+      <p className={`mt-2 text-lg lg:text-xl font-bold ${valueClass}`}>{value}</p>
     </div>
   );
 }
@@ -455,4 +531,9 @@ function Chevron() {
       />
     </svg>
   );
+}
+
+function trunc(name: string) {
+  if (name.length <= 18) return name;
+  return name.slice(0, 15) + "…";
 }

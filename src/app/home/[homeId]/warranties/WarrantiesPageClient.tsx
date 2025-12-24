@@ -52,6 +52,19 @@ const cardLink =
 /** Tight + consistent filter slab */
 const filterSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
 
+/** Clean glass controls: NO rings, focus via border only */
+const fieldShell =
+  "rounded-2xl border border-white/25 bg-black/35 backdrop-blur transition-colors overflow-hidden " +
+  "focus-within:border-[#33C17D] focus-within:border-2";
+
+const fieldInner =
+  "w-full bg-transparent text-sm text-white outline-none placeholder:text-white/40 " +
+  "border-0 ring-0 focus:ring-0 focus:outline-none";
+
+const inputInner = `${fieldInner} px-4 py-2`;
+const selectInner = `${fieldInner} px-4 py-2 pr-9 appearance-none`;
+const labelCaps = "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
+
 function expiryLabel(w: WarrantyItem) {
   if (!w.expiresAt) return "No expiry";
   if (w.isExpired) {
@@ -93,12 +106,12 @@ export function WarrantiesPageClient({
   const [search, setSearch] = useState(initialSearch ?? "");
   const [sort, setSort] = useState<SortKey>((initialSort as SortKey) ?? "soonest");
 
-  // ✅ Match Contractors: collapsed by default only on mobile
+  // ✅ parity with Contractors/Reminders: collapsed by default on mobile, visible on desktop
   const [isExpanded, setIsExpanded] = useState(false);
 
   const debounceRef = useRef<number | null>(null);
 
-  // URL sync
+  // URL sync (routes unchanged)
   useEffect(() => {
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
 
@@ -149,9 +162,9 @@ export function WarrantiesPageClient({
 
   return (
     <div className="w-full max-w-full space-y-6 overflow-x-hidden">
-      {/* ✅ Overview (match ContractorsListClient) */}
+      {/* ✅ Overview (match Contractors/Reminders) */}
       <section aria-labelledby="warranty-stats" className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
@@ -160,6 +173,7 @@ export function WarrantiesPageClient({
             <h2 id="warranty-stats" className={`text-lg font-semibold ${heading}`}>
               Overview
             </h2>
+
             <svg
               xmlns="http://www.w3.org/2000/svg"
               className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
@@ -182,49 +196,30 @@ export function WarrantiesPageClient({
         </div>
       </section>
 
-      {/* ✅ Tight filters */}
+      {/* ✅ Filters (UPDATED borders; no rings) */}
       <section className={filterSurface}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-end">
           <div className="sm:col-span-2">
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
-              Search
-            </label>
-            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-1.5">
+            <label className={labelCaps}>Search</label>
+            <div className={fieldShell}>
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search warranties…"
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-white/35"
+                className={inputInner}
               />
             </div>
           </div>
 
           <div>
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
-              Sort
-            </label>
-            <div className="relative rounded-2xl border border-white/10 bg-black/20 px-3 py-1.5">
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
-                className="w-full appearance-none bg-transparent pr-8 text-sm text-white outline-none"
-              >
+            <label className={labelCaps}>Sort</label>
+            <div className={`relative ${fieldShell}`}>
+              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className={selectInner}>
                 <option value="soonest">Expiring Soonest</option>
                 <option value="latest">Expiring Latest</option>
                 <option value="item">Item (A–Z)</option>
               </select>
-
-              <svg
-                className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <Chevron />
             </div>
           </div>
         </div>
@@ -264,6 +259,22 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
       <p className={`text-xs ${textMeta} whitespace-nowrap`}>{label}</p>
       <p className="mt-2 text-lg lg:text-xl font-bold text-white">{value}</p>
     </div>
+  );
+}
+
+function Chevron() {
+  return (
+    <svg
+      className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+    >
+      <path
+        fillRule="evenodd"
+        d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z"
+        clipRule="evenodd"
+      />
+    </svg>
   );
 }
 
@@ -341,13 +352,11 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
         ].join(" ")}
       >
         <div className="flex items-start gap-4">
-          {/* Icon tile (avatar-like) */}
           <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg">
             🧾
           </div>
 
           <div className="min-w-0 flex-1">
-            {/* Top row */}
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -364,6 +373,26 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
                 </div>
 
                 {meta.length ? <p className="mt-1 truncate text-xs text-white/60">{meta.join(" • ")}</p> : null}
+
+                {warranty.note ? <p className="mt-2 line-clamp-1 text-xs text-white/65">{warranty.note}</p> : null}
+
+                {warranty.attachments?.length ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] text-white/45">📎 {warranty.attachments.length}</span>
+                    {warranty.attachments.slice(0, 2).map((att) => (
+                      <span
+                        key={att.id}
+                        className="max-w-[260px] truncate rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60"
+                        title={att.filename}
+                      >
+                        {truncFilename(att.filename)}
+                      </span>
+                    ))}
+                    {warranty.attachments.length > 2 ? (
+                      <span className="text-[11px] text-white/45">+{warranty.attachments.length - 2} more</span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex items-center text-white/35" aria-hidden>
@@ -380,13 +409,11 @@ function WarrantyCard({ warranty, homeId }: { warranty: WarrantyItem; homeId: st
               </div>
             </div>
 
-            {/* Meta row */}
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/60">
               <span className={statusTextClass(warranty)}>{expiryLabel(warranty)}</span>
               {warranty.note ? <span className="truncate max-w-[520px]">Note: {warranty.note}</span> : null}
             </div>
 
-            {/* Actions (hover) */}
             <div className="mt-3 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
               <button
                 type="button"

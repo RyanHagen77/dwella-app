@@ -165,15 +165,11 @@ export default async function RemindersPage({
               {activeCount} active • {completedCount} completed
             </span>
           }
-          // ✅ same line as header (desktop)
           rightDesktop={IndigoAddReminder}
         />
 
         {/* Body surface */}
         <section className="rounded-2xl border border-white/15 bg-black/55 p-5 shadow-2xl backdrop-blur-xl sm:p-6">
-          {/* ✅ Mobile: same indigo link-style trigger (NOT orange button) */}
-          <div className="mb-4 sm:hidden">{IndigoAddReminder}</div>
-
           <RemindersPageClient
             reminders={remindersWithStatus}
             homeId={homeId}
@@ -186,6 +182,7 @@ export default async function RemindersPage({
             completedCount={completedCount}
             activeCount={activeCount}
             totalVisible={totalVisible}
+            rightAction={IndigoAddReminder}
           />
         </section>
 
