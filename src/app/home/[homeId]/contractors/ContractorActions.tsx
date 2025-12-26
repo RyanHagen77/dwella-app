@@ -19,7 +19,7 @@ export function ContractorActions({
   homeId,
   homeAddress,
   className,
-  label = "Invite Pro",
+  label = "Invite a pro",
 }: ContractorActionsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

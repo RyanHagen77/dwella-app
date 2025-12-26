@@ -224,7 +224,7 @@ export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
         </Link>
 
         <Link href={`/home/${homeId}/invitations`} className={`${ctaGhost} !text-sm`}>
-          ✉️ Invite Pro
+          ✉️ Invite a pro
         </Link>
       </div>
 

@@ -98,7 +98,7 @@ export function ContractorsListClient({
           {/* ✅ Indigo link-style trigger */}
           <span className={indigoActionLink}>
             <button type="button" onClick={openInviteModal}>
-             + Invite Pro
+             + Invite a pro
             </button>
           </span>
         </div>
