@@ -4,10 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ctaPrimary } from "@/lib/glass";
 import { useToast } from "@/components/ui/Toast";
-import {
-  AddRecordModal,
-  type UnifiedRecordPayload,
-} from "@/app/home/_components/AddRecordModal";
+import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
 
 type PresignResponse = { key: string; url: string; publicUrl: string | null };
 
@@ -131,12 +128,12 @@ export function AddRecordButton({
 
   async function createRecord(payload: {
     title: string;
-    note?: string | null | undefined;
-    date?: string | undefined;
-    kind?: string | null | undefined;
-    vendor?: string | null | undefined;
-    cost?: number | null | undefined;
-    verified?: boolean | null | undefined;
+    note?: string | null;
+    date?: string;
+    kind?: string | null;
+    vendor?: string | null;
+    cost?: number | null;
+    verified?: boolean | null;
   }): Promise<{ id: string }> {
     const res = await fetch(`/api/home/${homeId}/records`, {
       method: "POST",
@@ -152,7 +149,7 @@ export function AddRecordButton({
   async function createReminder(payload: {
     title: string;
     dueAt: string;
-    note?: string | null | undefined;
+    note?: string | null;
   }): Promise<{ id: string }> {
     const res = await fetch(`/api/home/${homeId}/reminders`, {
       method: "POST",
@@ -167,10 +164,9 @@ export function AddRecordButton({
 
   async function createWarranty(payload: {
     item: string;
-    provider?: string | null | undefined;
-    policyNo?: string | null | undefined;
-    expiresAt?: string | null | undefined;
-    note?: string | null | undefined;
+    provider?: string | null;
+    expiresAt?: string | null;
+    note?: string | null;
   }): Promise<{ id: string }> {
     const res = await fetch(`/api/home/${homeId}/warranties`, {
       method: "POST",
@@ -206,10 +202,10 @@ export function AddRecordButton({
 
         await uploadAndPersistAttachments({ homeId, reminderId: reminder.id, files });
       } else if (payload.type === "warranty") {
+        // ✅ DO NOT reference fields your UnifiedRecordPayload doesn't define (e.g., policyNo)
         const warranty = await createWarranty({
           item: payload.item!,
           provider: payload.provider ?? undefined,
-          policyNo: undefined,
           expiresAt: payload.expiresAt ?? undefined,
           note: payload.note ?? undefined,
         });
@@ -226,18 +222,22 @@ export function AddRecordButton({
     }
   }
 
+  /**
+   * ✅ Standard “indigo link” (NO border/slab, NO padding, text-base)
+   * Works even if a parent wrapper tries to style buttons.
+   */
   const linkClasses =
-    "text-xs text-indigo-300 hover:text-indigo-200 underline-offset-4 hover:underline";
+    "inline-flex items-center " +
+    "!bg-transparent !border-0 !shadow-none !ring-0 !outline-none " +
+    "!p-0 !rounded-none " +
+    "!text-base !font-medium !text-indigo-300 hover:!text-indigo-200";
 
   return (
     <>
       <button
         type="button"
         onClick={() => setAddOpen(true)}
-        className={[
-        variant === "link" ? linkClasses : ctaPrimary, // ✅ Removed text-sm
-        className ?? "",
-      ].join(" ")}
+        className={[variant === "link" ? linkClasses : ctaPrimary, className ?? ""].join(" ")}
       >
         {label}
       </button>

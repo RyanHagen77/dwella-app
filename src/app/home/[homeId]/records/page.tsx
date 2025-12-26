@@ -156,18 +156,21 @@ export default async function RecordsPage({
 
         {/* NO outer frame (matches warranties list pages) */}
         <RecordsPageClient
-          records={records}
-          homeId={homeId}
-          initialCategory={category}
-          initialSearch={search}
-          initialSort={sort}
-          categoryCounts={categoryCounts}
-          rightAction={
-            <span className={indigoActionLink}>
-              <AddRecordButton homeId={homeId} label="+ Add record" defaultType="record" />
-            </span>
-          }
-        />
+  records={records}
+  homeId={homeId}
+  initialCategory={category}
+  initialSearch={search}
+  initialSort={sort}
+  categoryCounts={categoryCounts}
+  rightAction={
+    <AddRecordButton
+      homeId={homeId}
+      label="+ Add record"
+      defaultType="record"
+      variant="link"   // ✅ THIS is the key
+    />
+  }
+/>
 
         <div className="h-12" />
       </div>

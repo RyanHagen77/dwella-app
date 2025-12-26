@@ -17,9 +17,9 @@ import Image from "next/image";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { textMeta, indigoActionLink } from "@/lib/glass";
-import AddRecordButton from "@/app/home/_components/AddRecordButton";
+import { textMeta } from "@/lib/glass";
 
+import AddRecordButton from "@/app/home/_components/AddRecordButton";
 import { RemindersPageClient } from "./RemindersPageClient";
 import type { ReminderItem } from "./RemindersPageClient";
 
@@ -132,10 +132,14 @@ export default async function RemindersPage({
   const totalVisible = remindersWithStatus.length;
   const hasAny = totalVisible > 0;
 
+  // ✅ Standard action: link variant owns styling (text-base, no border/slab)
   const IndigoAddReminder = (
-    <span className={indigoActionLink}>
-      <AddRecordButton homeId={homeId} label="Add reminder" defaultType="reminder" />
-    </span>
+    <AddRecordButton
+      homeId={homeId}
+      label="Add reminder"
+      defaultType="reminder"
+      variant="link"
+    />
   );
 
   return (
@@ -154,10 +158,11 @@ export default async function RemindersPage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      {/* MATCH Warranties frame */}
+      {/* Frame */}
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
 
+        {/* ✅ NO actions in header */}
         <PageHeader
           backHref={`/home/${homeId}`}
           backLabel="Back to home"
