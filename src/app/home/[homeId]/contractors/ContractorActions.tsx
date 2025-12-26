@@ -4,13 +4,23 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { InviteProModal } from "@/app/home/[homeId]/invitations/_components/InviteProModal";
+import { indigoActionLink } from "@/lib/glass";
 
 type ContractorActionsProps = {
   homeId: string;
   homeAddress: string;
+  /** Optional override when used outside PageHeader */
+  className?: string;
+  /** Optional label override */
+  label?: string;
 };
 
-export function ContractorActions({ homeId, homeAddress }: ContractorActionsProps) {
+export function ContractorActions({
+  homeId,
+  homeAddress,
+  className,
+  label = "Invite Pro",
+}: ContractorActionsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -56,9 +66,9 @@ export function ContractorActions({ homeId, homeAddress }: ContractorActionsProp
       <button
         type="button"
         onClick={openInvite}
-        className="text-xs text-indigo-300 hover:text-indigo-200"
+        className={[indigoActionLink, "text-base", className].filter(Boolean).join(" ")}
       >
-        Invite Pro
+        {label}
       </button>
 
       <InviteProModal

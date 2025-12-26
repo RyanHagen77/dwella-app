@@ -167,9 +167,21 @@ export default async function ContractorsPage({
           title="Your Trusted Pros"
           meta={
             <span className={textMeta}>
-              {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"} • {totalVerifiedServices}{" "}
-              verified {totalVerifiedServices === 1 ? "job" : "jobs"} •{" "}
-              {totalSpentAmount > 0 ? `$${totalSpentAmount.toLocaleString()} spent` : "$0 spent"}
+              {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"} •{" "}
+              {totalVerifiedServices} verified {totalVerifiedServices === 1 ? "job" : "jobs"} •{" "}
+              {totalSpentAmount > 0
+                ? `$${totalSpentAmount.toLocaleString()} spent`
+                : "$0 spent"}
+            </span>
+          }
+          rightDesktop={
+            <span className="text-base">
+              <ContractorActions homeId={homeId} homeAddress={addrLine} />
+            </span>
+          }
+          rightMobile={
+            <span className="text-base">
+              <ContractorActions homeId={homeId} homeAddress={addrLine} />
             </span>
           }
         />

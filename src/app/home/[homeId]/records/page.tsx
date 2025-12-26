@@ -157,6 +157,11 @@ export default async function RecordsPage({
               <AddRecordButton homeId={homeId} label="+ Add record" defaultType="record" />
             </span>
           }
+          rightMobile={
+            <span className={indigoActionLink}>
+              <AddRecordButton homeId={homeId} label="+ Add record" defaultType="record" />
+            </span>
+          }
         />
 
         {/* NO outer frame (matches warranties list pages) */}

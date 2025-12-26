@@ -44,7 +44,6 @@ type Props = {
   activeCount: number;
   totalVisible: number;
 
-  rightAction?: React.ReactNode;
 };
 
 type StatusKey = "active" | "overdue" | "upcoming" | "completed";
@@ -107,7 +106,6 @@ export function RemindersPageClient({
   next7DaysCount,
   completedCount,
   activeCount,
-  rightAction,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -179,7 +177,9 @@ export function RemindersPageClient({
 
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className={`h-4 w-4 transition-transform lg:hidden ${overviewExpanded ? "rotate-180" : ""}`}
+              className={`h-4 w-4 transition-transform lg:hidden ${
+                overviewExpanded ? "rotate-180" : ""
+              }`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -187,8 +187,6 @@ export function RemindersPageClient({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
-
-          {rightAction ? <div>{rightAction}</div> : null}
         </div>
 
         <div className={`${overviewExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>

@@ -10,6 +10,7 @@ type PageHeaderProps = {
   backHref?: string;
   backLabel?: string;
   rightDesktop?: React.ReactNode;
+  rightMobile?: React.ReactNode;
 };
 
 export function PageHeader({
@@ -18,29 +19,35 @@ export function PageHeader({
   backHref,
   backLabel,
   rightDesktop,
+  rightMobile,
 }: PageHeaderProps) {
   return (
-    <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-3">
+    <header className="flex items-start justify-between gap-3">
+      {/* Left */}
+      <div className="flex min-w-0 items-start gap-3">
         {backHref ? (
           <Link
             href={backHref}
             aria-label={backLabel ?? "Back"}
-            className="mt-1 inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-black/20 text-white/80"
+            className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/20 text-white/80"
           >
             ←
           </Link>
         ) : null}
 
         <div className="min-w-0">
-          <h1 className={`text-2xl font-bold ${heading}`}>{title}</h1>
-
-          {/* meta can be any ReactNode; don't wrap in <p> to avoid invalid nesting */}
+          <h1 className={`truncate text-2xl font-bold ${heading}`}>{title}</h1>
           {meta ? <div className={`mt-1 text-sm ${textMeta}`}>{meta}</div> : null}
         </div>
       </div>
 
-      {rightDesktop ? <div className="hidden sm:block">{rightDesktop}</div> : null}
+      {/* Right */}
+      {(rightMobile || rightDesktop) ? (
+        <div className="flex flex-shrink-0 items-start">
+          {rightMobile ? <div className="sm:hidden">{rightMobile}</div> : null}
+          {rightDesktop ? <div className="hidden sm:block">{rightDesktop}</div> : null}
+        </div>
+      ) : null}
     </header>
   );
 }

@@ -75,33 +75,28 @@ export function ContractorsListClient({
       </div>
 
       <section aria-labelledby="contractor-stats" className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <button
-            type="button"
-            onClick={() => setIsExpanded((prev) => !prev)}
-            className="inline-flex items-center gap-2 text-left lg:cursor-default"
-          >
-            <h2 id="contractor-stats" className={`text-lg font-semibold ${heading}`}>
-              Overview
-            </h2>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
+      <div className="flex items-center justify-between gap-4">
+        <button
+          type="button"
+          onClick={() => setIsExpanded((prev) => !prev)}
+          className="inline-flex items-center gap-2 text-left lg:cursor-default"
+        >
+          <h2 id="contractor-stats" className={`text-lg font-semibold ${heading}`}>
+            Overview
+          </h2>
 
-          {/* ✅ Indigo link-style trigger */}
-          <span className={indigoActionLink}>
-            <button type="button" onClick={openInviteModal}>
-              Invite Pro
-            </button>
-          </span>
-        </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
+
 
         <div className={`${isExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
           <StatTile label="Total Pros" value={stats.totalContractors} />
