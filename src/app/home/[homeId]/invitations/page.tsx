@@ -47,7 +47,6 @@ export default async function HomeInvitationsPage({
 
   const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
-  // Invitations received (to this homeowner for this home)
   const receivedRaw = await prisma.invitation.findMany({
     where: { invitedEmail: user.email, homeId },
     include: {
@@ -73,7 +72,6 @@ export default async function HomeInvitationsPage({
     orderBy: { createdAt: "desc" },
   });
 
-  // Invitations sent (by this homeowner for this home)
   const sentRaw = await prisma.invitation.findMany({
     where: { homeId, invitedBy: userId },
     include: {
@@ -82,7 +80,6 @@ export default async function HomeInvitationsPage({
     orderBy: { createdAt: "desc" },
   });
 
-  // Serialize Dates for client safety
   const receivedInvitations = receivedRaw.map((inv) => ({
     ...inv,
     createdAt: inv.createdAt.toISOString(),
@@ -98,11 +95,7 @@ export default async function HomeInvitationsPage({
             : null,
         }
       : null,
-    home: inv.home
-      ? {
-          ...inv.home,
-        }
-      : null,
+    home: inv.home ? { ...inv.home } : null,
   }));
 
   const sentInvitations = sentRaw.map((inv) => ({
@@ -148,20 +141,20 @@ export default async function HomeInvitationsPage({
           meta={
             <span className={textMeta}>
               {total} {total === 1 ? "invitation" : "invitations"}
-              {totalPending > 0 ? <span className="ml-2 text-orange-400">({totalPending} pending)</span> : null}
+              {totalPending > 0 ? (
+                <span className="ml-2 text-indigo-300">({totalPending} pending)</span>
+              ) : null}
             </span>
           }
         />
 
-        {/* Single body surface (no glass-on-glass) */}
-        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
-          <HomeInvitationsClient
-            homeId={homeId}
-            homeAddress={addrLine}
-            receivedInvitations={receivedInvitations as any}
-            sentInvitations={sentInvitations as any}
-          />
-        </section>
+        {/* ✅ No outer slab here (removes the extra border/width mismatch) */}
+        <HomeInvitationsClient
+          homeId={homeId}
+          homeAddress={addrLine}
+          receivedInvitations={receivedInvitations as any}
+          sentInvitations={sentInvitations as any}
+        />
 
         <div className="h-12" />
       </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import AddressVerification from "@/components/AddressVerification";
-import { glassTight, textMeta } from "@/lib/glass";
+import { glass, glassTight, heading, indigoActionLink, textMeta } from "@/lib/glass";
 import { InviteProModal } from "./_components/InviteProModal";
 import { useToast } from "@/components/ui/Toast";
 
@@ -69,7 +69,6 @@ function fmtDate(d: string | Date) {
   }
 }
 
-// Company-first label (matches your contractor pattern)
 function inviterLabel(inv: ReceivedInvitation) {
   return (
     inv.inviter?.proProfile?.businessName ||
@@ -371,6 +370,9 @@ export default function HomeInvitationsClient({
 
   const [inviteOpen, setInviteOpen] = useState(false);
 
+  // ✅ parity with Warranties: collapsed by default on mobile
+  const [isExpanded, setIsExpanded] = useState(false);
+
   const received = receivedInvitations ?? [];
   const sent = sentInvitations ?? [];
 
@@ -463,16 +465,49 @@ export default function HomeInvitationsClient({
     }
   }
 
-  // ✅ Option 1: keep as a pill, but make it indigo (no orange)
-  const invitePill =
-    "inline-flex items-center justify-center rounded-full border border-indigo-400/25 bg-indigo-400/10 px-4 py-2 " +
-    "text-sm font-medium text-indigo-100 transition hover:bg-indigo-400/15 hover:border-indigo-300/35";
-
   return (
-    <>
-      {/* Top row: tabs + invite (always visible, mobile-safe) */}
+    <div className="w-full max-w-full space-y-6 overflow-x-hidden">
+      {/* ✅ Overview (match Warranties/Reminders) */}
+      <section aria-labelledby="invites-overview" className="space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <button
+            type="button"
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="inline-flex items-center gap-2 text-left lg:cursor-default"
+          >
+            <h2 id="invites-overview" className={`text-lg font-semibold ${heading}`}>
+              Overview
+            </h2>
+
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className={`h-4 w-4 transition-transform lg:hidden ${isExpanded ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {/* ✅ standard indigo action link */}
+          <button type="button" onClick={() => setInviteOpen(true)} className={indigoActionLink}>
+            + Invite a Pro
+          </button>
+        </div>
+
+        <div className={`${isExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
+          <StatTile label="Pending received" value={pendingReceived} />
+          <StatTile label="Pending sent" value={pendingSent} />
+          <StatTile label="Total received" value={received.length} />
+          <StatTile label="Total sent" value={sent.length} />
+        </div>
+      </section>
+
+      {/* Tabs (secondary control) */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm">
+        {/* ✅ remove border to match “standard” (you called this out) */}
+        <div className="inline-flex overflow-hidden rounded-full bg-white/5 p-0.5 backdrop-blur-sm">
           <button
             type="button"
             onClick={() => setActiveTab("received")}
@@ -499,20 +534,17 @@ export default function HomeInvitationsClient({
             Sent{pendingSent > 0 ? ` (${pendingSent})` : ""}
           </button>
         </div>
-
-        <button
-          type="button"
-          onClick={() => setInviteOpen(true)}
-          className="text-sm font-medium text-indigo-300 hover:text-indigo-200"
-        >
-          + Invite a Pro
-        </button>
       </div>
 
       {/* Content */}
-      <div className="mt-6">
+      <div>
         {activeTab === "received" ? (
-          <ReceivedTab invitations={received} processing={processing} onAccept={handleAcceptClick} onDecline={handleDecline} />
+          <ReceivedTab
+            invitations={received}
+            processing={processing}
+            onAccept={handleAcceptClick}
+            onDecline={handleDecline}
+          />
         ) : (
           <SentTab invitations={sent} processing={processing} onCancel={handleCancel} />
         )}
@@ -541,7 +573,21 @@ export default function HomeInvitationsClient({
         </div>
       ) : null}
 
-      <InviteProModal open={inviteOpen} onClose={() => setInviteOpen(false)} homeId={homeId} homeAddress={homeAddress} />
-    </>
+      <InviteProModal
+        open={inviteOpen}
+        onClose={() => setInviteOpen(false)}
+        homeId={homeId}
+        homeAddress={homeAddress}
+      />
+    </div>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className={`${glass} p-4`} title={label}>
+      <p className={`text-xs ${textMeta} whitespace-nowrap`}>{label}</p>
+      <p className="mt-2 text-lg lg:text-xl font-bold text-white">{value}</p>
+    </div>
   );
 }
