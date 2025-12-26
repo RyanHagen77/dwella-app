@@ -1,9 +1,9 @@
-// src/app/home/[homeId]/reminders/RemindersPageClient.tsx
 "use client";
 
 import * as React from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 import { heading, textMeta, glass } from "@/lib/glass";
 import { useToast } from "@/components/ui/Toast";
@@ -45,20 +45,19 @@ type Props = {
   activeCount: number;
   totalVisible: number;
 
-  /** ✅ aligns “Add reminder” with the Overview row (desktop + mobile) */
   rightAction?: React.ReactNode;
 };
 
 type StatusKey = "active" | "overdue" | "upcoming" | "completed";
 type SortKey = "soonest" | "latest" | "title";
 
-/** Tight slab (match Warranties filter card) */
-const filterSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
-
-/** List row surface (match Contractors/Warranties list cards) */
-const rowSurface =
-  "group relative overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur " +
+/** Match Warranties list cards */
+const cardLink =
+  "group relative block overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur " +
   "transition hover:bg-black/30 hover:border-white/15";
+
+/** Tight + consistent filter slab */
+const filterSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
 
 /** Clean glass controls: NO rings, focus via border only */
 const fieldShell =
@@ -72,6 +71,31 @@ const fieldInner =
 const inputInner = `${fieldInner} px-4 py-2`;
 const selectInner = `${fieldInner} px-4 py-2 pr-9 appearance-none`;
 const labelCaps = "mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55";
+
+function dueLabel(r: ReminderItem) {
+  if (r.isCompleted) return "Completed";
+  if (r.isOverdue) {
+    const d = Math.abs(r.daysUntil);
+    if (d === 0) return "Overdue today";
+    if (d === 1) return "1 day overdue";
+    return `${d} days overdue`;
+  }
+  if (r.daysUntil === 0) return "Due today";
+  if (r.daysUntil === 1) return "Due tomorrow";
+  return `Due in ${r.daysUntil} days`;
+}
+
+function statusTextClass(r: ReminderItem) {
+  if (r.isCompleted) return "text-emerald-200";
+  if (r.isOverdue) return "text-red-300";
+  if (r.isDueSoon) return "text-yellow-300";
+  return "text-white/60";
+}
+
+function truncFilename(name: string) {
+  if (name.length <= 28) return name;
+  return name.slice(0, 18) + "…" + name.slice(-8);
+}
 
 export function RemindersPageClient({
   reminders,
@@ -93,14 +117,14 @@ export function RemindersPageClient({
   const [status, setStatus] = useState<StatusKey>((initialStatus as StatusKey) || "active");
   const [sort, setSort] = useState<SortKey>((initialSort as SortKey) || "soonest");
 
-  // ✅ match Contractors: collapsed by default on mobile, open on desktop
+  // ✅ parity with Warranties: collapsed by default on mobile, visible on desktop
   const [overviewExpanded, setOverviewExpanded] = useState(false);
 
   function updateFilters(updates: { search?: string; status?: string; sort?: string }) {
     const params = new URLSearchParams(searchParams?.toString());
 
     if (updates.search !== undefined) {
-      const v = updates.search;
+      const v = updates.search.trim();
       if (v) params.set("search", v);
       else params.delete("search");
     }
@@ -108,7 +132,7 @@ export function RemindersPageClient({
     if (updates.status !== undefined) {
       const v = updates.status;
       if (v && v !== "active") params.set("status", v);
-      else params.delete("status"); // active is default
+      else params.delete("status");
     }
 
     if (updates.sort !== undefined) {
@@ -126,10 +150,9 @@ export function RemindersPageClient({
       if (status === "completed") return r.isCompleted;
       if (status === "overdue") return !r.isCompleted && r.status === "overdue";
       if (status === "upcoming") return !r.isCompleted && (r.status === "due-soon" || r.status === "upcoming");
-      return !r.isCompleted; // active
+      return !r.isCompleted;
     });
 
-    // keep UI stable (query unchanged)
     list = [...list].sort((a, b) => {
       if (sort === "title") return a.title.localeCompare(b.title);
       const da = new Date(a.dueAt).getTime();
@@ -141,8 +164,8 @@ export function RemindersPageClient({
   }, [reminders, status, sort]);
 
   return (
-    <div className="space-y-6">
-      {/* ===== Overview row (match Warranties/Contractors) ===== */}
+    <div className="w-full max-w-full space-y-6 overflow-x-hidden">
+      {/* ✅ Overview (match Warranties) */}
       <section aria-labelledby="overview" className="space-y-3">
         <div className="flex items-center justify-between gap-4">
           <button
@@ -166,27 +189,18 @@ export function RemindersPageClient({
             </svg>
           </button>
 
-          <div className="flex items-center gap-4">
-            <span className={`text-sm ${textMeta}`}>
-              {activeCount} active • {completedCount} completed
-            </span>
-            {rightAction ? <div>{rightAction}</div> : null}
-          </div>
+          {rightAction ? <div>{rightAction}</div> : null}
         </div>
 
         <div className={`${overviewExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
-          <StatTile label="Overdue" value={overdueCount} highlight={overdueCount > 0 ? "red" : undefined} />
-          <StatTile
-            label="Next 7 Days"
-            value={next7DaysCount}
-            highlight={next7DaysCount > 0 ? "yellow" : undefined}
-          />
+          <StatTile label="Overdue" value={overdueCount} />
+          <StatTile label="Next 7 Days" value={next7DaysCount} />
           <StatTile label="Upcoming" value={upcomingCount} />
           <StatTile label="Completed" value={completedCount} />
         </div>
       </section>
 
-      {/* ===== Filters (tight + consistent; no rings) ===== */}
+      {/* ✅ Filters (match Warranties slab + fields) */}
       <section className={filterSurface}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-end">
           <div>
@@ -248,17 +262,17 @@ export function RemindersPageClient({
         </div>
       </section>
 
-      {/* ===== List ===== */}
+      {/* ✅ List */}
       {filteredReminders.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-10 text-center">
-          <p className="mb-2 text-white/80">No reminders match your selection.</p>
+        <div className="rounded-2xl border border-dashed border-white/20 bg-white/5 p-12 text-center">
+          <p className="mb-3 text-white/80">{search.trim() ? "No reminders match your search." : "No reminders yet."}</p>
           <p className={`text-sm ${textMeta}`}>Try a different status or search term.</p>
         </div>
       ) : (
         <ul className="space-y-3">
           {filteredReminders.map((rem) => (
             <li key={rem.id} className="list-none">
-              <ReminderRow reminder={rem} homeId={homeId} />
+              <ReminderCard reminder={rem} homeId={homeId} />
             </li>
           ))}
         </ul>
@@ -267,12 +281,11 @@ export function RemindersPageClient({
   );
 }
 
-function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: string }) {
+function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: string }) {
   const router = useRouter();
   const { push: toast } = useToast();
 
   const [editOpen, setEditOpen] = useState(false);
-  const [showDetails, setShowDetails] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [completing, setCompleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -320,12 +333,12 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
   const leftAccent = isCompleted
     ? "before:bg-emerald-400/70"
     : isOverdue
-    ? "before:bg-red-400/75"
+    ? "before:bg-red-400/80"
     : isDueSoon
-    ? "before:bg-yellow-400/75"
+    ? "before:bg-yellow-400/80"
     : "before:bg-white/12";
 
-  const statusLabel = isCompleted ? "Completed" : isOverdue ? "Overdue" : isDueSoon ? "Due soon" : "Upcoming";
+  const statusLabel = isCompleted ? "Completed" : isOverdue ? "Overdue" : isDueSoon ? "Due Soon" : "Upcoming";
 
   const statusPill = isCompleted
     ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
@@ -335,11 +348,21 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
     ? "border-yellow-400/25 bg-yellow-400/10 text-yellow-100"
     : "border-white/10 bg-white/5 text-white/60";
 
+  const meta: string[] = [];
+  meta.push(`Due: ${reminder.formattedDate}`);
+  if (!isCompleted) meta.push(dueLabel(reminder));
+  if (reminder.attachments?.length) meta.push(`Attachments: ${reminder.attachments.length}`);
+
+  // If you have a detail page, this will “just work”.
+  // If not, you can change href to "#" and keep preventDefault where needed.
+  const href = `/home/${homeId}/reminders/${reminder.id}`;
+
   return (
     <>
-      <div
+      <Link
+        href={href}
         className={[
-          rowSurface,
+          cardLink,
           "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
           leftAccent,
         ].join(" ")}
@@ -353,7 +376,7 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="truncate text-base font-semibold text-white sm:text-[15px]">{reminder.title}</h3>
+                  <h3 className="truncate text-base font-semibold text-white">{reminder.title}</h3>
 
                   <span
                     className={[
@@ -365,23 +388,29 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
                   </span>
                 </div>
 
-                <p className={`mt-1 truncate text-xs ${textMeta}`}>
-                  📅 {reminder.formattedDate}
-                  {!isCompleted ? (
-                    <>
-                      {" "}
-                      •{" "}
-                      {isOverdue
-                        ? `${Math.abs(reminder.daysUntil)} day${Math.abs(reminder.daysUntil) === 1 ? "" : "s"} overdue`
-                        : reminder.daysUntil === 0
-                        ? "Due today"
-                        : reminder.daysUntil === 1
-                        ? "Due tomorrow"
-                        : `${reminder.daysUntil} days away`}
-                    </>
-                  ) : null}
-                  {reminder.attachments?.length ? ` • 📎 ${reminder.attachments.length}` : ""}
-                </p>
+                {meta.length ? <p className="mt-1 truncate text-xs text-white/60">{meta.join(" • ")}</p> : null}
+
+                {reminder.note ? (
+                  <p className="mt-2 line-clamp-1 text-xs text-white/65">Note: {reminder.note}</p>
+                ) : null}
+
+                {reminder.attachments?.length ? (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] text-white/45">📎 {reminder.attachments.length}</span>
+                    {reminder.attachments.slice(0, 2).map((att) => (
+                      <span
+                        key={att.id}
+                        className="max-w-[260px] truncate rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] text-white/60"
+                        title={att.filename}
+                      >
+                        {truncFilename(att.filename)}
+                      </span>
+                    ))}
+                    {reminder.attachments.length > 2 ? (
+                      <span className="text-[11px] text-white/45">+{reminder.attachments.length - 2} more</span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex items-center text-white/35" aria-hidden>
@@ -398,15 +427,22 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
               </div>
             </div>
 
-            {reminder.note ? <div className="mt-3 line-clamp-1 text-xs text-white/65">Note: {reminder.note}</div> : null}
+            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/60">
+              <span className={statusTextClass(reminder)}>{dueLabel(reminder)}</span>
+            </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            {/* ✅ Hover-only actions (match Warranties) */}
+            <div className="mt-3 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
               {!isCompleted ? (
                 <button
                   type="button"
-                  onClick={() => void handleComplete()}
                   disabled={completing || deleting}
                   className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void handleComplete();
+                  }}
                 >
                   {completing ? "Marking…" : "Mark complete"}
                 </button>
@@ -414,77 +450,45 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
 
               <button
                 type="button"
-                onClick={() => setShowDetails((p) => !p)}
-                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 transition hover:bg-white/10"
-              >
-                {showDetails ? "Less" : "More"}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEditOpen(true)}
-                className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs text-white/85 transition hover:bg-white/10"
+                className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditOpen(true);
+                }}
               >
                 Edit
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+                disabled={deleting}
+                className={[
+                  "rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-60",
+                  confirmDelete
+                    ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
+                    : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/20",
+                ].join(" ")}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
 
                   if (!confirmDelete) {
                     setConfirmDelete(true);
+                    if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
                     confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2500);
                     return;
                   }
 
                   void handleDelete();
                 }}
-                disabled={deleting}
-                className={[
-                  "rounded-full border px-3 py-1.5 text-xs transition disabled:opacity-50",
-                  confirmDelete
-                    ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
-                    : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/20",
-                ].join(" ")}
               >
                 {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
               </button>
             </div>
-
-            {showDetails ? (
-              <div className="mt-4 space-y-3">
-                {reminder.note ? (
-                  <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
-                    <div className={`mb-1 text-xs font-semibold uppercase tracking-wide ${textMeta}`}>Notes</div>
-                    <p className="whitespace-pre-wrap text-sm text-white/85">{reminder.note}</p>
-                  </div>
-                ) : null}
-
-                {reminder.attachments?.length ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    {reminder.attachments.slice(0, 6).map((att) => (
-                      <button
-                        key={att.id}
-                        type="button"
-                        onClick={() => window.open(`/api/home/${homeId}/attachments/${att.id}`, "_blank")}
-                        className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-xs text-white/75 hover:bg-black/25 hover:text-white"
-                        title={att.filename}
-                      >
-                        {trunc(att.filename)}
-                      </button>
-                    ))}
-                    {reminder.attachments.length > 6 ? (
-                      <span className="text-xs text-white/60">+{reminder.attachments.length - 6} more</span>
-                    ) : null}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
           </div>
         </div>
-      </div>
+      </Link>
 
       <EditReminderModal
         open={editOpen}
@@ -497,22 +501,11 @@ function ReminderRow({ reminder, homeId }: { reminder: ReminderItem; homeId: str
 }
 
 /* Warranties-sized stat tiles */
-function StatTile({
-  label,
-  value,
-  highlight,
-}: {
-  label: string;
-  value: number;
-  highlight?: "red" | "yellow";
-}) {
-  const valueClass =
-    highlight === "red" ? "text-red-300" : highlight === "yellow" ? "text-yellow-300" : "text-white";
-
+function StatTile({ label, value }: { label: string; value: number }) {
   return (
     <div className={`${glass} p-4`} title={label}>
       <p className={`text-xs ${textMeta} whitespace-nowrap`}>{label}</p>
-      <p className={`mt-2 text-lg lg:text-xl font-bold ${valueClass}`}>{value}</p>
+      <p className="mt-2 text-lg lg:text-xl font-bold text-white">{value}</p>
     </div>
   );
 }
@@ -531,9 +524,4 @@ function Chevron() {
       />
     </svg>
   );
-}
-
-function trunc(name: string) {
-  if (name.length <= 18) return name;
-  return name.slice(0, 15) + "…";
 }

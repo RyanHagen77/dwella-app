@@ -5,6 +5,8 @@
  */
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const revalidate = 0;
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -60,7 +62,7 @@ export default async function RemindersPage({
   else if (status === "active" || !status) where.archivedAt = null;
   // status === "all" => no archivedAt filter
 
-  if (search) where.title = { contains: search, mode: "insensitive" };
+  if (search?.trim()) where.title = { contains: search.trim(), mode: "insensitive" };
 
   type OrderBy = { dueAt: "asc" | "desc" } | { title: "asc" };
   let orderBy: OrderBy = { dueAt: "asc" };
@@ -128,8 +130,8 @@ export default async function RemindersPage({
   const next7DaysCount = visibleActive.filter((r) => !r.isOverdue && r.daysUntil <= 7).length;
 
   const totalVisible = remindersWithStatus.length;
+  const hasAny = totalVisible > 0;
 
-  // ✅ one reusable indigo “link-style” trigger (desktop + mobile)
   const IndigoAddReminder = (
     <span className={indigoActionLink}>
       <AddRecordButton homeId={homeId} label="Add reminder" defaultType="reminder" />
@@ -152,8 +154,8 @@ export default async function RemindersPage({
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
       </div>
 
-      {/* ✅ FULL-WIDTH FRAME */}
-      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      {/* MATCH Warranties frame */}
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Reminders" }]} />
 
         <PageHeader
@@ -165,11 +167,19 @@ export default async function RemindersPage({
               {activeCount} active • {completedCount} completed
             </span>
           }
-          rightDesktop={IndigoAddReminder}
         />
 
-        {/* Body surface */}
-        <section className="rounded-2xl border border-white/15 bg-black/55 p-5 shadow-2xl backdrop-blur-xl sm:p-6">
+        {!hasAny ? (
+          <section className="rounded-2xl border border-white/15 bg-black/55 p-8 shadow-2xl backdrop-blur-xl">
+            <div className="py-6 text-center">
+              <div className="mb-4 text-5xl">⏰</div>
+              <h2 className="text-xl font-semibold text-white">No reminders yet</h2>
+              <p className="mx-auto mt-2 max-w-md text-sm text-white/70">
+                Add reminders for seasonal tasks, services, or follow-ups so you never miss a due date.
+              </p>
+            </div>
+          </section>
+        ) : (
           <RemindersPageClient
             reminders={remindersWithStatus}
             homeId={homeId}
@@ -184,7 +194,7 @@ export default async function RemindersPage({
             totalVisible={totalVisible}
             rightAction={IndigoAddReminder}
           />
-        </section>
+        )}
 
         <div className="h-12" />
       </div>
