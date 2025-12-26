@@ -69,11 +69,7 @@ export function GlobalHeader({
 
   return (
     <>
-      <div
-        className={`sticky top-0 z-40 transition-colors ${
-          scrolled ? "bg-black/45 backdrop-blur-md" : "bg-transparent"
-        }`}
-      >
+      <div className="sticky top-0 z-40 bg-transparent">
         {/* header row */}
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 md:py-5 text-white">
           {/* Logo (SVG) */}
@@ -354,7 +350,7 @@ export function GlobalHeader({
       {/* Claim-stats modal */}
       <ClaimHomeModal
         open={claimOpen}
-        onClose={() => setClaimOpen(false)}
+        onCloseAction={() => setClaimOpen(false)}
       />
     </>
   );

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Modal } from "@/components/ui/Modal";
-import { Button, GhostButton } from "@/components/ui/Button";
+import { GhostButton } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
 import { textMeta } from "@/lib/glass";
 
@@ -34,8 +34,13 @@ const inputInner = `${fieldInner} px-4 py-2`;
  * When the shell becomes border-2 on focus, keep the text visually aligned
  * by slightly reducing padding inside the textarea.
  */
-const textareaInner =
-  `${fieldInner} px-[15px] py-[11px] resize-none min-h-[110px]`;
+const textareaInner = `${fieldInner} px-[15px] py-[11px] resize-none min-h-[110px]`;
+
+// Indigo pill (no slab, no orange)
+const indigoPill =
+  "inline-flex items-center justify-center rounded-full border border-indigo-400/25 bg-indigo-400/10 " +
+  "px-4 py-2 text-sm font-medium text-indigo-100 transition hover:bg-indigo-400/15 hover:border-indigo-300/35 " +
+  "disabled:opacity-50 disabled:cursor-not-allowed";
 
 export function InviteProModal({
   open,
@@ -51,10 +56,7 @@ export function InviteProModal({
   const [loading, setLoading] = React.useState(false);
 
   // Always callable (prevents "onCloseAction is undefined" crashes)
-  const closeFn = React.useMemo(
-    () => onCloseAction ?? onClose ?? (() => {}),
-    [onCloseAction, onClose]
-  );
+  const closeFn = React.useMemo(() => onCloseAction ?? onClose ?? (() => {}), [onCloseAction, onClose]);
 
   const close = React.useCallback(() => {
     if (loading) return;
@@ -90,9 +92,7 @@ export function InviteProModal({
         }),
       });
 
-      const payload = (await res.json().catch(() => null)) as
-        | { error?: string }
-        | null;
+      const payload = (await res.json().catch(() => null)) as { error?: string } | null;
 
       if (!res.ok) {
         toast(payload?.error || "Failed to send invitation");
@@ -115,9 +115,7 @@ export function InviteProModal({
         <p className={`text-xs ${textMeta}`}>For {homeAddress}</p>
 
         <label className="block">
-          <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">
-            Pro Email
-          </span>
+          <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-white/55">Pro Email</span>
 
           <div className={fieldShell}>
             <input
@@ -130,9 +128,7 @@ export function InviteProModal({
             />
           </div>
 
-          <p className={`mt-2 text-xs ${textMeta}`}>
-            We’ll send them a secure link to connect to this home.
-          </p>
+          <p className={`mt-2 text-xs ${textMeta}`}>We’ll send them a secure link to connect to this home.</p>
         </label>
 
         <label className="block">
@@ -156,15 +152,18 @@ export function InviteProModal({
             Cancel
           </GhostButton>
 
-          <Button
+          <button
             type="button"
             onClick={handleInvite}
             disabled={loading || !email.trim()}
+            className={indigoPill}
           >
-            {loading ? "Sending…" : "Send Invitation"}
-          </Button>
+            {loading ? "Sending…" : "Send invitation"}
+          </button>
         </div>
       </div>
     </Modal>
   );
 }
+
+export default InviteProModal;

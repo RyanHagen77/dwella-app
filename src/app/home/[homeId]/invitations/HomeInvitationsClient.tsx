@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import AddressVerification from "@/components/AddressVerification";
-import { glassTight, textMeta, ctaPrimary } from "@/lib/glass";
+import { glassTight, textMeta } from "@/lib/glass";
 import { InviteProModal } from "./_components/InviteProModal";
 import { useToast } from "@/components/ui/Toast";
 
@@ -463,6 +463,11 @@ export default function HomeInvitationsClient({
     }
   }
 
+  // ✅ Option 1: keep as a pill, but make it indigo (no orange)
+  const invitePill =
+    "inline-flex items-center justify-center rounded-full border border-indigo-400/25 bg-indigo-400/10 px-4 py-2 " +
+    "text-sm font-medium text-indigo-100 transition hover:bg-indigo-400/15 hover:border-indigo-300/35";
+
   return (
     <>
       {/* Top row: tabs + invite (always visible, mobile-safe) */}
@@ -495,7 +500,11 @@ export default function HomeInvitationsClient({
           </button>
         </div>
 
-        <button type="button" className={ctaPrimary} onClick={() => setInviteOpen(true)}>
+        <button
+          type="button"
+          onClick={() => setInviteOpen(true)}
+          className="text-sm font-medium text-indigo-300 hover:text-indigo-200"
+        >
           + Invite a Pro
         </button>
       </div>
@@ -514,9 +523,7 @@ export default function HomeInvitationsClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gradient-to-br from-gray-900 to-gray-800 p-6 shadow-2xl backdrop-blur-xl">
             <h3 className="mb-2 text-xl font-bold text-white">Verify Property Address</h3>
-            <p className={`mb-4 text-sm ${textMeta}`}>
-              Confirm the property address before connecting this pro to your home.
-            </p>
+            <p className={`mb-4 text-sm ${textMeta}`}>Confirm the property address before connecting this pro to your home.</p>
 
             <AddressVerification onVerified={handleAddressVerified} />
 
