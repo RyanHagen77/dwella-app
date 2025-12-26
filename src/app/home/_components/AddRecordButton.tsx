@@ -20,7 +20,7 @@ type PersistAttachment = {
 
 export function AddRecordButton({
   homeId,
-  label = "+ Add Record",
+  label = "+ Add a record",
   defaultType = "record",
   variant = "button",
   className,

@@ -289,7 +289,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
 
                 <p className={`text-sm ${textMeta}`}>Last updated {formatDate(stats.lastUpdated)}</p>
 
-                {/* ✅ Put “+ Add record” in the Property Stats header row (indigo link style) */}
+                {/* ✅ Put “+ Add a record” in the Property Stats header row (indigo link style) */}
                 <PropertyStats
                   homeId={home.id}
                   stats={stats}

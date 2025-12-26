@@ -333,7 +333,7 @@ export default function ProClient() {
               {records.length === 0 ? (
                 <Empty
                   message="No records yet"
-                  actionLabel="Add record"
+                  actionLabel="Add a record"
                   onAction={() => setAddServiceOpen(true)}
                 />
               ) : (

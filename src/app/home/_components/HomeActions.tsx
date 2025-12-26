@@ -207,7 +207,7 @@ export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
     <>
       <div className="flex flex-wrap gap-3 pt-2">
         <button type="button" onClick={() => setAddModalOpen(true)} className={indigoPill}>
-          + Add record
+          + Add a record
         </button>
 
         <Link href={`/home/${homeId}/messages`} className={`${ctaGhost} relative !text-sm`}>

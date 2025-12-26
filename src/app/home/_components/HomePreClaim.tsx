@@ -498,7 +498,7 @@ function SampleClientActions({
     <div className="flex flex-col gap-4 pt-4 sm:pt-2">
       <div className="flex flex-wrap gap-2 sm:flex-nowrap">
         <button type="button" onClick={onAdd} className={`${ctaPrimary} whitespace-nowrap text-sm`}>
-          + Add Record
+          + Add a record
         </button>
 
         <button type="button" onClick={onMessages} className={`${ctaGhost} relative whitespace-nowrap text-sm`}>

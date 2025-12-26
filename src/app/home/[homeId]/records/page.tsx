@@ -165,7 +165,7 @@ export default async function RecordsPage({
   rightAction={
     <AddRecordButton
       homeId={homeId}
-      label="+ Add record"
+      label="+ Add a record"
       defaultType="record"
       variant="link"   // ✅ THIS is the key
     />
