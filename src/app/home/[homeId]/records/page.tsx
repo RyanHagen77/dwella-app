@@ -152,29 +152,22 @@ export default async function RecordsPage({
               {records.length} {records.length === 1 ? "record" : "records"}
             </span>
           }
-          rightDesktop={
-            <span className={indigoActionLink}>
-              <AddRecordButton homeId={homeId} label="+ Add record" defaultType="record" />
-            </span>
-          }
-          rightMobile={
+        />
+
+        {/* NO outer frame (matches warranties list pages) */}
+        <RecordsPageClient
+          records={records}
+          homeId={homeId}
+          initialCategory={category}
+          initialSearch={search}
+          initialSort={sort}
+          categoryCounts={categoryCounts}
+          rightAction={
             <span className={indigoActionLink}>
               <AddRecordButton homeId={homeId} label="+ Add record" defaultType="record" />
             </span>
           }
         />
-
-        {/* NO outer frame (matches warranties list pages) */}
-        <div className="space-y-6">
-          <RecordsPageClient
-            records={records}
-            homeId={homeId}
-            initialCategory={category}
-            initialSearch={search}
-            initialSort={sort}
-            categoryCounts={categoryCounts}
-          />
-        </div>
 
         <div className="h-12" />
       </div>

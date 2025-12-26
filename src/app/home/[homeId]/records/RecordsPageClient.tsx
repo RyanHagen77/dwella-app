@@ -11,16 +11,14 @@ import {
   formLabelCaps,
 } from "@/components/ui/formFields";
 
-import { textMeta } from "@/lib/glass";
+import { heading, textMeta } from "@/lib/glass";
 
 /* =========================
    Shared “standard” surfaces
-   (match Warranties list cards)
    ========================= */
 
-const filterSurface =
-  "rounded-2xl bg-black/25 p-5 backdrop-blur";
-  
+const filterSurface = "rounded-2xl bg-black/25 p-5 backdrop-blur";
+
 const cardRow =
   "group relative overflow-hidden rounded-2xl border border-white/10 bg-black/25 p-5 backdrop-blur " +
   "transition hover:bg-black/30 hover:border-white/15";
@@ -56,6 +54,9 @@ type Props = {
   initialSearch?: string;
   initialSort?: string;
   categoryCounts: Record<string, number>;
+
+  /** ✅ optional right-side action in the “top row” (like Reminders Overview row) */
+  rightAction?: React.ReactNode;
 };
 
 /* =========================
@@ -77,7 +78,6 @@ function shortName(name: string, max = 18) {
 /** Accent bar (same geometry as warranties: before:top-3/bottom-3/w-[3px]) */
 function leftAccentForKind(kind?: string | null) {
   const k = (kind || "").toLowerCase();
-
   if (k === "maintenance") return "before:bg-sky-400/70";
   if (k === "repair") return "before:bg-orange-400/70";
   if (k === "upgrade") return "before:bg-purple-400/70";
@@ -87,7 +87,6 @@ function leftAccentForKind(kind?: string | null) {
 
 function kindPillClass(kind?: string | null) {
   const k = (kind || "").toLowerCase();
-
   if (k === "maintenance") return "border-sky-400/25 bg-sky-400/10 text-sky-100";
   if (k === "repair") return "border-orange-400/25 bg-orange-400/10 text-orange-100";
   if (k === "upgrade") return "border-purple-400/25 bg-purple-400/10 text-purple-100";
@@ -139,6 +138,7 @@ export function RecordsPageClient({
   initialSearch,
   initialSort,
   categoryCounts,
+  rightAction,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -173,67 +173,77 @@ export function RecordsPageClient({
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <section className={filterSurface}>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label className={formLabelCaps}>Search</label>
-            <div className={formFieldShell}>
-              <input
-                className={formInputInner}
-                type="text"
-                placeholder="Search by title, vendor, or note"
-                value={search}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setSearch(v);
-                  updateFilters({ search: v });
-                }}
-              />
-            </div>
-          </div>
+      {/* ✅ Top row (Reminders “Overview row” pattern) */}
+      <section aria-labelledby="records-controls" className="space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <h2 id="records-controls" className={`text-lg font-semibold ${heading}`}>
+          </h2>
 
-          <div>
-            <label className={formLabelCaps}>Category</label>
-            <div className={`${formFieldShell} relative`}>
-              <select
-                className={formSelectInner}
-                value={category}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setCategory(v);
-                  updateFilters({ category: v });
-                }}
-              >
-                <option value="all">All ({safeRecords.length})</option>
-                <option value="project">Project ({categoryCounts.project || 0})</option>
-                <option value="maintenance">Maintenance ({categoryCounts.maintenance || 0})</option>
-                <option value="repair">Repair ({categoryCounts.repair || 0})</option>
-                <option value="upgrade">Upgrade ({categoryCounts.upgrade || 0})</option>
-              </select>
-              <Chevron />
-            </div>
-          </div>
+          {rightAction ? <div className="flex-shrink-0">{rightAction}</div> : null}
+        </div>
 
-          <div>
-            <label className={formLabelCaps}>Sort By</label>
-            <div className={`${formFieldShell} relative`}>
-              <select
-                className={formSelectInner}
-                value={sort}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  setSort(v);
-                  updateFilters({ sort: v });
-                }}
-              >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
-                <option value="cost-high">Highest Cost</option>
-                <option value="cost-low">Lowest Cost</option>
-                <option value="title">Title (A–Z)</option>
-              </select>
-              <Chevron />
+        {/* Filters */}
+        <div className={filterSurface}>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div>
+              <label className={formLabelCaps}>Search</label>
+              <div className={formFieldShell}>
+                <input
+                  className={formInputInner}
+                  type="text"
+                  placeholder="Search by title, vendor, or note"
+                  value={search}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSearch(v);
+                    updateFilters({ search: v });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className={formLabelCaps}>Category</label>
+              <div className={`${formFieldShell} relative`}>
+                <select
+                  className={formSelectInner}
+                  value={category}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCategory(v);
+                    updateFilters({ category: v });
+                  }}
+                >
+                  <option value="all">All ({safeRecords.length})</option>
+                  <option value="project">Project ({categoryCounts.project || 0})</option>
+                  <option value="maintenance">Maintenance ({categoryCounts.maintenance || 0})</option>
+                  <option value="repair">Repair ({categoryCounts.repair || 0})</option>
+                  <option value="upgrade">Upgrade ({categoryCounts.upgrade || 0})</option>
+                </select>
+                <Chevron />
+              </div>
+            </div>
+
+            <div>
+              <label className={formLabelCaps}>Sort By</label>
+              <div className={`${formFieldShell} relative`}>
+                <select
+                  className={formSelectInner}
+                  value={sort}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setSort(v);
+                    updateFilters({ sort: v });
+                  }}
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="cost-high">Highest Cost</option>
+                  <option value="cost-low">Lowest Cost</option>
+                  <option value="title">Title (A–Z)</option>
+                </select>
+                <Chevron />
+              </div>
             </div>
           </div>
         </div>
@@ -261,7 +271,7 @@ export function RecordsPageClient({
 }
 
 /* =========================
-   Record card (Warranties parity)
+   Record card
    ========================= */
 
 function RecordCard({ record, homeId }: { record: RecordItem; homeId: string }) {
@@ -282,7 +292,6 @@ function RecordCard({ record, homeId }: { record: RecordItem; homeId: string }) 
       ].join(" ")}
     >
       <div className="flex items-start gap-4">
-        {/* icon square (same vibe as warranties/service list) */}
         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-lg">
           🧾
         </div>
@@ -315,7 +324,6 @@ function RecordCard({ record, homeId }: { record: RecordItem; homeId: string }) 
 
               {record.note ? <p className="mt-2 line-clamp-1 text-xs text-white/65">{record.note}</p> : null}
 
-              {/* attachments chips (small + subtle) */}
               {attachments.length > 0 ? (
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/60">
                   <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
@@ -337,7 +345,6 @@ function RecordCard({ record, homeId }: { record: RecordItem; homeId: string }) 
               ) : null}
             </div>
 
-            {/* right meta + chevron */}
             <div className="flex items-center gap-3">
               <div className="hidden sm:block text-right text-xs text-white/55">
                 <div>Date</div>
@@ -347,14 +354,12 @@ function RecordCard({ record, homeId }: { record: RecordItem; homeId: string }) 
             </div>
           </div>
 
-          {/* bottom meta row (matches list-card language) */}
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/60">
             {record.date ? <span>Date {formatDate(record.date)}</span> : null}
             {record.vendor ? <span>Vendor {record.vendor}</span> : null}
             {record.cost != null ? <span>Cost ${Number(record.cost).toLocaleString()}</span> : null}
           </div>
 
-          {/* optional inset for longer note (only if you want the extra slab) */}
           {record.note && record.note.length > 140 ? (
             <div className="mt-4">
               <div className={insetSurface}>
