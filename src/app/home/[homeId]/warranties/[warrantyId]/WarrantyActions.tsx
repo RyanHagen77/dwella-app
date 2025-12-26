@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { ctaGhost } from "@/lib/glass";
@@ -20,7 +20,7 @@ export type WarrantyDetail = {
   attachments: Array<{
     id: string;
     filename: string;
-    url: string; // ✅ always string
+    url: string;
     mimeType: string | null;
     size: number | bigint | null;
     uploadedBy: string;
@@ -37,7 +37,15 @@ export function WarrantyActions({ homeId, warranty }: Props) {
 
   const [editOpen, setEditOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const confirmTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
 
   async function handleDelete() {
     setDeleting(true);
@@ -51,59 +59,41 @@ export function WarrantyActions({ homeId, warranty }: Props) {
       console.error(e);
       alert("Failed to delete warranty. Please try again.");
       setDeleting(false);
-      setShowConfirm(false);
+      setConfirmDelete(false);
     }
   }
 
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          className={ctaGhost}
-          onClick={() => setEditOpen(true)}
-          disabled={deleting}
-        >
+        <button type="button" className={ctaGhost} onClick={() => setEditOpen(true)} disabled={deleting}>
           Edit
         </button>
 
-        {showConfirm ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowConfirm(false)}
-              className="rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm text-white/90 transition-colors hover:bg-white/10"
-              disabled={deleting}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={deleting}
-              className="rounded-full border border-red-400/35 bg-red-500/15 px-4 py-2 text-sm text-red-100 transition-colors hover:bg-red-500/25 disabled:opacity-60"
-            >
-              {deleting ? "Deleting…" : "Confirm delete"}
-            </button>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowConfirm(true)}
-            disabled={deleting}
-            className="rounded-full border border-red-400/25 bg-red-500/10 px-4 py-2 text-sm text-red-200 transition-colors hover:bg-red-500/15 disabled:opacity-60"
-          >
-            Delete
-          </button>
-        )}
+        <button
+          type="button"
+          disabled={deleting}
+          className={[
+            "rounded-full border px-4 py-2 text-sm transition disabled:opacity-60",
+            confirmDelete
+              ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
+              : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/15",
+          ].join(" ")}
+          onClick={() => {
+            if (!confirmDelete) {
+              setConfirmDelete(true);
+              if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
+              confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2500);
+              return;
+            }
+            void handleDelete();
+          }}
+        >
+          {deleting ? "Deleting…" : confirmDelete ? "Confirm?" : "Delete"}
+        </button>
       </div>
 
-      <EditWarrantyModal
-        open={editOpen}
-        onClose={() => setEditOpen(false)}
-        warranty={warranty as any}
-        homeId={homeId}
-      />
+      <EditWarrantyModal open={editOpen} onClose={() => setEditOpen(false)} warranty={warranty as any} homeId={homeId} />
     </>
   );
 }
