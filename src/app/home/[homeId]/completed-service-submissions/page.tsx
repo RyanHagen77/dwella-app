@@ -1,4 +1,6 @@
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const revalidate = 0;
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
@@ -6,13 +8,13 @@ import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
 import { ServiceSubmissionStatus } from "@prisma/client";
+import Image from "next/image";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import Link from "next/link";
-import { ctaPrimary } from "@/lib/glass";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { textMeta } from "@/lib/glass";
 
 import CompletedServiceSubmissionsClient from "./CompletedServiceSubmissionsClient";
-import { PageHeader } from "@/components/ui/PageHeader";
 
 type PageProps = { params: Promise<{ homeId: string }> };
 
@@ -154,6 +156,20 @@ export default async function WorkPage({ params }: PageProps) {
 
   return (
     <main className="relative min-h-screen text-white">
+      {/* Background (standard) */}
+      <div className="fixed inset-0 -z-50">
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
+      </div>
+
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={breadcrumbItems} />
 
@@ -162,25 +178,21 @@ export default async function WorkPage({ params }: PageProps) {
           backLabel="Back to home"
           title="Requests & Submissions"
           meta={
-            <>
-              {serviceRequests.length} active {serviceRequests.length === 1 ? "request" : "requests"} •{" "}
+            <span className={textMeta}>
+              {serviceRequests.length} {serviceRequests.length === 1 ? "request" : "requests"} •{" "}
               {pendingService.length} awaiting approval
-            </>
-          }
-          rightDesktop={
-            <Link href={requestHref} className={ctaPrimary}>
-              + Request Service
-            </Link>
+            </span>
           }
         />
 
-        {/* ✅ NOT glass: avoids “washed / double layer / hover slab” */}
         <CompletedServiceSubmissionsClient
           homeId={homeId}
           requestHref={requestHref}
           pendingService={pendingService}
           serviceRequests={serviceRequests}
         />
+
+        <div className="h-12" />
       </div>
     </main>
   );
