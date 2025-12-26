@@ -336,16 +336,17 @@ function ServiceRequestsTab({
 
   return (
     <div className="space-y-4">
-      {/* Mobile row: Request + Filters */}
-      <div className="flex items-center justify-between gap-3 sm:hidden">
-        <Link href={requestHref} className={`${indigoActionLink} text-sm`}>
+      {/* Top row: Request link (all sizes) + Filters button (mobile only) */}
+      <div className="flex items-center justify-between gap-3">
+        <Link href={requestHref} className={`${indigoActionLink} text-base`}>
           + Request service
         </Link>
 
+        {/* Filters toggle only needed on mobile (desktop shows pills always) */}
         <button
           type="button"
           onClick={() => setShowFilters((v) => !v)}
-          className={miniPillButton}
+          className={`sm:hidden ${miniPillButton}`}
           aria-expanded={showFilters}
         >
           <FilterIcon />
