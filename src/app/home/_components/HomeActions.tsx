@@ -4,12 +4,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ctaPrimary, ctaGhost } from "@/lib/glass";
+import { ctaGhost } from "@/lib/glass";
 import { AddRecordModal, type UnifiedRecordPayload } from "@/app/home/_components/AddRecordModal";
 
 type HomeActionsProps = {
   homeId: string;
-  homeAddress?: string; // ✅ add this
+  homeAddress?: string;
   unreadMessages?: number;
 };
 
@@ -42,7 +42,7 @@ type PersistAttachment = {
   size: number;
   contentType: string;
   storageKey: string;
-  url: string; // ✅ persist expects string (avoid nulls)
+  url: string;
   visibility: "OWNER" | "HOME" | "PUBLIC";
   notes?: string;
 };
@@ -52,12 +52,10 @@ export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState<number>(unreadMessages ?? 0);
 
-  // Sync from server prop if provided
   useEffect(() => {
     if (typeof unreadMessages === "number") setUnreadCount(unreadMessages);
   }, [unreadMessages]);
 
-  // Fetch client-side on mount/homeId change
   useEffect(() => {
     let cancelled = false;
 
@@ -111,15 +109,12 @@ export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
 
       if (!put.ok) continue;
 
-      // ✅ Avoid null url (type + downstream UI expects a string)
-      const finalUrl = publicUrl ?? "";
-
       uploaded.push({
         filename: file.name,
         size: file.size,
         contentType: file.type || "application/octet-stream",
         storageKey: key,
-        url: finalUrl,
+        url: publicUrl ?? "",
         visibility: "OWNER",
       });
     }
@@ -139,7 +134,6 @@ export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
     });
 
     if (!persist.ok) {
-      // don’t fail the whole create; attachments can be retried later
       console.warn("Persist attachments failed:", await persist.text().catch(() => ""));
     }
   }
@@ -200,14 +194,23 @@ export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
     router.refresh();
   }
 
+  // ✅ Indigo *pill* (NOT a link). Force size + remove any “tiny” defaults.
+  const indigoPill =
+    `${ctaGhost} ` +
+    "!text-sm !font-medium " +
+    "!bg-white/5 hover:!bg-white/10 " +
+    "!border-white/20 hover:!border-white/30 " +
+    "!text-indigo-200 hover:!text-indigo-100 " +
+    "!shadow-none";
+
   return (
     <>
       <div className="flex flex-wrap gap-3 pt-2">
-        <button type="button" onClick={() => setAddModalOpen(true)} className={`${ctaPrimary} text-sm`}>
-          + Add Record
+        <button type="button" onClick={() => setAddModalOpen(true)} className={indigoPill}>
+          + Add record
         </button>
 
-        <Link href={`/home/${homeId}/messages`} className={`${ctaGhost} relative text-sm`}>
+        <Link href={`/home/${homeId}/messages`} className={`${ctaGhost} relative !text-sm`}>
           💬 Messages
           {unreadCount > 0 ? (
             <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-xs font-bold text-white">
@@ -216,16 +219,20 @@ export function HomeActions({ homeId, unreadMessages }: HomeActionsProps) {
           ) : null}
         </Link>
 
-        <Link href={`/home/${homeId}/completed-service-submissions`} className={`${ctaGhost} text-sm`}>
+        <Link href={`/home/${homeId}/completed-service-submissions`} className={`${ctaGhost} !text-sm`}>
           🔧 Request Service
         </Link>
 
-        <Link href={`/home/${homeId}/invitations`} className={`${ctaGhost} text-sm`}>
+        <Link href={`/home/${homeId}/invitations`} className={`${ctaGhost} !text-sm`}>
           ✉️ Invite Pro
         </Link>
       </div>
 
-      <AddRecordModal open={addModalOpen} onCloseAction={() => setAddModalOpen(false)} onCreateAction={handleCreateAction} />
+      <AddRecordModal
+        open={addModalOpen}
+        onCloseAction={() => setAddModalOpen(false)}
+        onCreateAction={handleCreateAction}
+      />
     </>
   );
 }

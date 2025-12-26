@@ -1,11 +1,5 @@
 /**
  * HOME DASHBOARD - REDESIGNED
- *
- * - Hero with home photo + address + verification badge
- * - Property stats
- * - Needs Attention (pending work / requests / invitations / messages / reminders / warranties)
- * - Connected pros
- * - Recent maintenance, reminders, warranties
  */
 
 import { prisma } from "@/lib/prisma";
@@ -16,7 +10,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 
-import { glass, textMeta, heading } from "@/lib/glass";
+import { glass, textMeta, heading, indigoActionLink } from "@/lib/glass";
 import { HomeActions } from "@/app/home/_components/HomeActions";
 import { ClientCard } from "@/app/home/_components/ClientCard";
 import { HomePicker } from "@/app/home/_components/HomePicker";
@@ -24,6 +18,7 @@ import { PropertyStats } from "@/app/home/_components/PropertyStats";
 import { ConnectedPros } from "@/app/home/_components/ConnectedPros";
 import { HomeVerificationBadge } from "@/components/home/HomeVerificationBadge";
 import { UnreadMessagesAlert } from "@/app/home/_components/UnreadMessagesAlert";
+import AddRecordButton from "@/app/home/_components/AddRecordButton";
 import type { HomeVerificationStatus } from "@prisma/client";
 
 type HomeMeta = {
@@ -92,18 +87,13 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
-
   await requireHomeAccess(homeId, session.user.id);
 
   const userHomesCount = await prisma.home.count({
     where: {
       OR: [
         { ownerId: session.user.id },
-        {
-          connections: {
-            some: { contractorId: session.user.id, status: "ACTIVE" },
-          },
-        },
+        { connections: { some: { contractorId: session.user.id, status: "ACTIVE" } } },
       ],
     },
   });
@@ -127,15 +117,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
       records: {
         orderBy: { date: "desc" },
         take: 5,
-        select: {
-          id: true,
-          title: true,
-          note: true,
-          kind: true,
-          date: true,
-          vendor: true,
-          cost: true,
-        },
+        select: { id: true, title: true, note: true, kind: true, date: true, vendor: true, cost: true },
       },
 
       reminders: {
@@ -175,22 +157,22 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
 
   if (!home) notFound();
 
-  const pendingServiceSubmissionsCount = await prisma.serviceRecord.count({
-    where: {
-      homeId,
-      isVerified: false,
-      status: { in: ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED", "DISPUTED"] },
-      archivedAt: null,
-    },
-  });
-
-  const pendingServiceRequestsCount = await prisma.serviceRequest.count({
-    where: { homeId, status: { in: ["PENDING", "QUOTED"] } },
-  });
-
-  const pendingInvitationsCount = await prisma.invitation.count({
-    where: { homeId, status: "PENDING" },
-  });
+  const [pendingServiceSubmissionsCount, pendingServiceRequestsCount, pendingInvitationsCount] = await Promise.all([
+    prisma.serviceRecord.count({
+      where: {
+        homeId,
+        isVerified: false,
+        status: { in: ["PENDING_REVIEW", "DOCUMENTED_UNVERIFIED", "DOCUMENTED", "DISPUTED"] },
+        archivedAt: null,
+      },
+    }),
+    prisma.serviceRequest.count({
+      where: { homeId, status: { in: ["PENDING", "QUOTED"] } },
+    }),
+    prisma.invitation.count({
+      where: { homeId, status: "PENDING" },
+    }),
+  ]);
 
   const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
 
@@ -253,10 +235,24 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
 
   return (
     <main className="relative min-h-screen text-white">
-      {/* ✅ FULL WIDTH PAGE FRAME (no max-w-7xl here) */}
-      <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+      {/* Background (standard) */}
+      <div className="fixed inset-0 -z-50">
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
+      </div>
+
+      {/* Standard frame */}
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
         {/* HERO */}
-        <section aria-labelledby="home-hero" className={`${glass} w-full relative z-[20] overflow-visible`}>
+        <section aria-labelledby="home-hero" className={`${glass} relative overflow-hidden`}>
           <h2 id="home-hero" className="sr-only">
             Home overview
           </h2>
@@ -268,7 +264,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
                 alt={addrLine}
                 width={1400}
                 height={788}
-                className="aspect-video w-full rounded-md object-cover"
+                className="aspect-video w-full rounded-2xl object-cover"
               />
             </div>
 
@@ -293,26 +289,23 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
 
                 <p className={`text-sm ${textMeta}`}>Last updated {formatDate(stats.lastUpdated)}</p>
 
-                <PropertyStats homeId={home.id} stats={stats} />
+                {/* ✅ Put “+ Add record” in the Property Stats header row (indigo link style) */}
+                <PropertyStats
+                  homeId={home.id}
+                  stats={stats}
+                                  />
               </div>
 
+              {/* ✅ Keep actions as pills only */}
               <HomeActions homeId={home.id} homeAddress={addrLine} unreadMessages={0} />
             </div>
           </div>
         </section>
-
-        {/* NEEDS ATTENTION (✅ restore orange-tinted surface vibe) */}
+        
+        {/* NEEDS ATTENTION (standard glass, colored count badges) */}
         {showNeedsAttention ? (
-          <section
-            className={[
-              glass,
-              "w-full",
-              // orange warmth + subtle vignette like your earlier look
-              "border border-orange-400/20",
-              "bg-[radial-gradient(circle_at_top_left,rgba(251,146,60,0.18),transparent_55%),radial-gradient(circle_at_bottom_right,rgba(251,146,60,0.10),transparent_60%)]",
-            ].join(" ")}
-          >
-            <h2 className={`mb-4 text-lg font-semibold text-orange-300 ${heading}`}>⚡ Needs Your Attention</h2>
+          <section className={`${glass} w-full`}>
+            <h2 className={`mb-4 text-lg font-semibold ${heading}`}>Needs Your Attention</h2>
 
             <div className="space-y-3">
               <UnreadMessagesAlert homeId={home.id} />
@@ -320,18 +313,18 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
               {pendingServiceSubmissionsCount > 0 ? (
                 <Link
                   href={`/home/${home.id}/completed-service-submissions`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">📋</span>
                     <div>
                       <p className="text-sm font-medium text-white">Review Completed Work</p>
                       <p className="text-xs text-white/60">
-                        {pendingServiceSubmissionsCount} submission{pendingServiceSubmissionsCount !== 1 ? "s" : ""} awaiting
-                        approval
+                        {pendingServiceSubmissionsCount} submission{pendingServiceSubmissionsCount !== 1 ? "s" : ""} awaiting approval
                       </p>
                     </div>
                   </div>
+
                   <span className="rounded-full bg-green-500 px-2.5 py-0.5 text-xs font-bold text-white">
                     {pendingServiceSubmissionsCount}
                   </span>
@@ -341,7 +334,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
               {pendingServiceRequestsCount > 0 ? (
                 <Link
                   href={`/home/${home.id}/service-requests`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">🔧</span>
@@ -352,6 +345,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
                       </p>
                     </div>
                   </div>
+
                   <span className="rounded-full bg-blue-500 px-2.5 py-0.5 text-xs font-bold text-white">
                     {pendingServiceRequestsCount}
                   </span>
@@ -361,7 +355,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
               {pendingInvitationsCount > 0 ? (
                 <Link
                   href={`/home/${home.id}/invitations`}
-                  className="flex items-center justify-between rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-xl">✉️</span>
@@ -372,6 +366,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
                       </p>
                     </div>
                   </div>
+
                   <span className="rounded-full bg-orange-500 px-2.5 py-0.5 text-xs font-bold text-white">
                     {pendingInvitationsCount}
                   </span>
@@ -381,7 +376,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
               {overdueReminders.length > 0 ? (
                 <Link
                   href={`/home/${home.id}/reminders`}
-                  className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white">⚠️ Overdue Reminders ({overdueReminders.length})</p>
@@ -392,6 +387,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
                       {overdueReminders.length > 3 ? <li>+{overdueReminders.length - 3} more…</li> : null}
                     </ul>
                   </div>
+
                   <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
                 </Link>
               ) : null}
@@ -399,7 +395,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
               {dueSoonReminders.length > 0 ? (
                 <Link
                   href={`/home/${home.id}/reminders`}
-                  className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white">⏰ Upcoming Reminders (next 7 days)</p>
@@ -410,6 +406,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
                       {dueSoonReminders.length > 3 ? <li>+{dueSoonReminders.length - 3} more…</li> : null}
                     </ul>
                   </div>
+
                   <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
                 </Link>
               ) : null}
@@ -417,7 +414,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
               {expiringSoonWarranties.length > 0 ? (
                 <Link
                   href={`/home/${home.id}/warranties`}
-                  className="flex items-start justify-between gap-3 rounded-lg bg-white/5 p-3 transition hover:bg-white/10"
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-white">🛡️ Warranties Expiring Soon ({expiringSoonWarranties.length})</p>
@@ -431,6 +428,7 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
                       {expiringSoonWarranties.length > 3 ? <li>+{expiringSoonWarranties.length - 3} more…</li> : null}
                     </ul>
                   </div>
+
                   <span className="whitespace-nowrap text-sm text-indigo-300 hover:text-indigo-200">View</span>
                 </Link>
               ) : null}
@@ -495,17 +493,40 @@ export default async function HomePage({ params }: { params: Promise<{ homeId: s
     </main>
   );
 }
+function recordKindPillClass(kind?: string | null) {
+  const k = (kind || "").toLowerCase();
+  if (k === "maintenance") return "border-sky-400/25 bg-sky-400/10 text-sky-100";
+  if (k === "repair") return "border-orange-400/25 bg-orange-400/10 text-orange-100";
+  if (k === "upgrade") return "border-purple-400/25 bg-purple-400/10 text-purple-100";
+  if (k === "project") return "border-indigo-400/25 bg-indigo-400/10 text-indigo-100";
+  return "border-white/12 bg-white/5 text-white/70";
+}
 
 function RecordItem({ record, homeId }: { record: HomeRecord; homeId: string }) {
   return (
-    <Link href={`/home/${homeId}/records/${record.id}`} className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10">
+    <Link
+      href={`/home/${homeId}/records/${record.id}`}
+      className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-medium text-white">{record.title}</h3>
+
             {record.kind ? (
-              <span className="inline-flex items-center rounded bg-blue-400/20 px-2 py-0.5 text-xs font-medium text-blue-300">
+              <span
+                className={[
+                  "inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
+                  recordKindPillClass(record.kind),
+                ].join(" ")}
+              >
                 {record.kind}
+              </span>
+            ) : null}
+
+            {record.cost != null ? (
+              <span className="inline-flex items-center rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-xs font-medium text-emerald-100">
+                ${Number(record.cost).toLocaleString()}
               </span>
             ) : null}
           </div>
@@ -513,7 +534,6 @@ function RecordItem({ record, homeId }: { record: HomeRecord; homeId: string }) 
           <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-white/70">
             {record.date ? <span>📅 {formatDate(record.date)}</span> : null}
             {record.vendor ? <span>🔧 {record.vendor}</span> : null}
-            {record.cost != null ? <span className="font-medium text-green-300">${Number(record.cost).toLocaleString()}</span> : null}
           </div>
 
           {record.note ? <p className="mt-2 line-clamp-2 text-sm text-white/80">{record.note}</p> : null}
@@ -532,16 +552,21 @@ function ReminderItem({ reminder, homeId, today }: { reminder: Reminder; homeId:
   const daysUntilDue = Math.ceil((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   return (
-    <Link href={`/home/${homeId}/reminders/${reminder.id}`} className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10">
+    <Link
+      href={`/home/${homeId}/reminders/${reminder.id}`}
+      className="block rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium text-white">{reminder.title}</h3>
+          <h3 className="truncate text-base font-semibold text-white">{reminder.title}</h3>
         </div>
 
         <div className="flex flex-col items-end gap-1">
-          <span className={`text-xs font-medium ${isOverdue ? "text-red-400" : "text-white/70"}`}>{formatDate(dueDate)}</span>
+          <span className={`text-xs font-medium ${isOverdue ? "text-red-300" : "text-white/60"}`}>{formatDate(dueDate)}</span>
           {!isOverdue && daysUntilDue <= 7 ? (
-            <span className="text-xs text-yellow-400">{daysUntilDue === 0 ? "Today" : daysUntilDue === 1 ? "Tomorrow" : `${daysUntilDue} days`}</span>
+            <span className="text-xs text-yellow-300">
+              {daysUntilDue === 0 ? "Today" : daysUntilDue === 1 ? "Tomorrow" : `${daysUntilDue} days`}
+            </span>
           ) : null}
         </div>
       </div>
@@ -554,23 +579,26 @@ function WarrantyItem({ warranty, homeId, now }: { warranty: Warranty; homeId: s
   const expiringSoon = isWarrantyExpiringSoon(expiresAt, now);
 
   return (
-    <Link href={`/home/${homeId}/warranties/${warranty.id}`} className="block rounded-lg bg-white/5 p-3 transition-colors hover:bg-white/10">
+    <Link
+      href={`/home/${homeId}/warranties/${warranty.id}`}
+      className="block rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur transition hover:bg-black/30 hover:border-white/15"
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-medium text-white">{warranty.item}</h3>
-          {warranty.provider ? <p className="text-sm text-white/70">{warranty.provider}</p> : null}
+          <h3 className="truncate text-base font-semibold text-white">{warranty.item}</h3>
+          {warranty.provider ? <p className="text-xs text-white/60">{warranty.provider}</p> : null}
         </div>
 
         <div className="flex flex-col items-end gap-1">
           {expiresAt ? (
             <>
-              <span className={`text-xs font-medium ${expiringSoon ? "text-yellow-400" : "text-white/70"}`}>
+              <span className={`text-xs font-medium ${expiringSoon ? "text-yellow-300" : "text-white/60"}`}>
                 {formatDate(expiresAt)}
               </span>
-              <span className="text-xs text-white/60">Expires</span>
+              <span className="text-xs text-white/45">Expires</span>
             </>
           ) : (
-            <span className="text-xs text-white/60">No expiry</span>
+            <span className="text-xs text-white/45">No expiry</span>
           )}
         </div>
       </div>
