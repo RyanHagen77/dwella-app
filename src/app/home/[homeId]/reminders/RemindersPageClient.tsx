@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 
 import { heading, textMeta, glass } from "@/lib/glass";
 import { useToast } from "@/components/ui/Toast";
@@ -357,10 +356,9 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
   // If not, you can change href to "#" and keep preventDefault where needed.
   const href = `/home/${homeId}/reminders/${reminder.id}`;
 
-  return (
+    return (
     <>
-      <Link
-        href={href}
+      <div
         className={[
           cardLink,
           "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-full",
@@ -412,37 +410,20 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
                   </div>
                 ) : null}
               </div>
-
-              <div className="flex items-center text-white/35" aria-hidden>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  strokeWidth={1.5}
-                  stroke="currentColor"
-                  className="h-5 w-5"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                </svg>
-              </div>
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/60">
               <span className={statusTextClass(reminder)}>{dueLabel(reminder)}</span>
             </div>
 
-            {/* ✅ Hover-only actions (match Warranties) */}
+            {/* Hover-only actions (same feel as Warranties) */}
             <div className="mt-3 flex justify-end gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
               {!isCompleted ? (
                 <button
                   type="button"
                   disabled={completing || deleting}
                   className="rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-xs text-emerald-100 transition hover:bg-emerald-400/15 disabled:opacity-60"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void handleComplete();
-                  }}
+                  onClick={() => void handleComplete()}
                 >
                   {completing ? "Marking…" : "Mark complete"}
                 </button>
@@ -451,11 +432,7 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
               <button
                 type="button"
                 className="rounded-full border border-white/20 bg-white/5 px-3 py-1.5 text-xs text-white/85 hover:bg-white/10"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setEditOpen(true);
-                }}
+                onClick={() => setEditOpen(true)}
               >
                 Edit
               </button>
@@ -469,17 +446,13 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
                     ? "border-red-400/45 bg-red-500/20 text-red-100 hover:bg-red-500/30"
                     : "border-red-400/25 bg-red-500/10 text-red-200 hover:bg-red-500/20",
                 ].join(" ")}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-
+                onClick={() => {
                   if (!confirmDelete) {
                     setConfirmDelete(true);
                     if (confirmTimerRef.current) window.clearTimeout(confirmTimerRef.current);
                     confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2500);
                     return;
                   }
-
                   void handleDelete();
                 }}
               >
@@ -488,7 +461,7 @@ function ReminderCard({ reminder, homeId }: { reminder: ReminderItem; homeId: st
             </div>
           </div>
         </div>
-      </Link>
+      </div>
 
       <EditReminderModal
         open={editOpen}
