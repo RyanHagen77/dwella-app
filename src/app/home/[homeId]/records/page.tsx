@@ -5,18 +5,21 @@
  */
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const revalidate = 0;
 
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
-import { RecordsHeader } from "@/components/ui/RecordsHeader";
+import { PageHeader } from "@/components/ui/PageHeader";
 import AddRecordButton from "@/app/home/_components/AddRecordButton";
 import { RecordsPageClient } from "./RecordsPageClient";
-import { textMeta } from "@/lib/glass";
+import { textMeta, indigoActionLink } from "@/lib/glass";
 
 export default async function RecordsPage({
   params,
@@ -30,14 +33,12 @@ export default async function RecordsPage({
 
   const session = await getServerSession(authConfig);
   if (!session?.user?.id) notFound();
-
   await requireHomeAccess(homeId, session.user.id);
 
   const home = await prisma.home.findUnique({
     where: { id: homeId },
     select: { address: true, city: true, state: true, zip: true },
   });
-
   if (!home) notFound();
 
   const addrLine = [home.address, home.city, home.state, home.zip].filter(Boolean).join(", ");
@@ -77,7 +78,7 @@ export default async function RecordsPage({
         select: {
           id: true,
           filename: true,
-          url: true, // ✅ include url to match client type
+          url: true,
           mimeType: true,
           size: true,
           uploadedBy: true,
@@ -86,7 +87,7 @@ export default async function RecordsPage({
     },
   });
 
-  /* ---------------- Serialization (MATCH CLIENT TYPE) ---------------- */
+  /* ---------------- Serialization ---------------- */
 
   const records = recordsRaw.map((r) => ({
     id: r.id,
@@ -101,9 +102,9 @@ export default async function RecordsPage({
       .map((a) => ({
         id: a.id,
         filename: a.filename,
-        url: a.url ?? null, // ✅ REQUIRED BY CLIENT TYPE
+        url: a.url ?? null,
         mimeType: a.mimeType ?? null,
-        size: typeof a.size === "bigint" ? Number(a.size) : a.size,
+        size: typeof a.size === "bigint" ? Number(a.size) : (a.size ?? 0),
         uploadedBy: a.uploadedBy as string,
       })),
   }));
@@ -121,25 +122,45 @@ export default async function RecordsPage({
     if (g.kind) categoryCounts[g.kind] = g._count;
   });
 
+  const backHref = `/home/${homeId}`;
+
   return (
     <main className="relative min-h-screen text-white">
-      <div className="mx-auto max-w-7xl space-y-6 p-6">
-        <Breadcrumb items={[{ label: addrLine, href: `/home/${homeId}` }, { label: "Records" }]} />
+      {/* Background (standard) */}
+      <div className="fixed inset-0 -z-50">
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
+      </div>
 
-        <RecordsHeader
+      <div className="mx-auto max-w-7xl space-y-6 p-6">
+        <Breadcrumb items={[{ label: addrLine, href: backHref }, { label: "Records" }]} />
+
+        <PageHeader
+          backHref={backHref}
+          backLabel="Back to home"
           title="Records"
           meta={
             <span className={textMeta}>
               {records.length} {records.length === 1 ? "record" : "records"}
             </span>
           }
-          backHref={`/home/${homeId}`}
-          backLabel="Back to home"
-          right={<AddRecordButton homeId={homeId} label="+ Add Record" defaultType="record" />}
+          rightDesktop={
+            <span className={indigoActionLink}>
+              <AddRecordButton homeId={homeId} label="+ Add record" defaultType="record" />
+            </span>
+          }
         />
 
-        {/* Single body surface (NO glass-on-glass) */}
-        <section className="rounded-2xl border border-white/15 bg-black/55 p-6 shadow-2xl backdrop-blur-xl">
+        {/* NO outer frame (matches warranties list pages) */}
+        <div className="space-y-6">
           <RecordsPageClient
             records={records}
             homeId={homeId}
@@ -148,7 +169,9 @@ export default async function RecordsPage({
             initialSort={sort}
             categoryCounts={categoryCounts}
           />
-        </section>
+        </div>
+
+        <div className="h-12" />
       </div>
     </main>
   );
