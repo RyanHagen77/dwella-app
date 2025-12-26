@@ -136,7 +136,7 @@ export default async function RemindersPage({
   const IndigoAddReminder = (
     <AddRecordButton
       homeId={homeId}
-      label="Add reminder"
+      label="+ Add reminder"
       defaultType="reminder"
       variant="link"
     />
