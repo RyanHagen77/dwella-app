@@ -235,9 +235,9 @@ export function AddRecordButton({
         type="button"
         onClick={() => setAddOpen(true)}
         className={[
-          variant === "link" ? linkClasses : `${ctaPrimary} text-sm`,
-          className ?? "",
-        ].join(" ")}
+        variant === "link" ? linkClasses : ctaPrimary, // ✅ Removed text-sm
+        className ?? "",
+      ].join(" ")}
       >
         {label}
       </button>

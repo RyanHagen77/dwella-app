@@ -144,21 +144,21 @@ export function WarrantiesPageClient({
   }, [homeId, search, searchParams]);
 
   // Indigo action link styling (no slab/hover)
-  const IndigoAddWarranty = (
-    <span
-      className={[
-        indigoActionLink,
-        "text-sm",
-        "[&_button]:!bg-transparent [&_button:hover]:!bg-transparent",
-        "[&_button]:!border-0 [&_button]:!shadow-none [&_button:hover]:!shadow-none",
-        "[&_button]:!p-0 [&_button]:!rounded-none",
-        "[&_button]:!text-indigo-300 [&_button:hover]:!text-indigo-200",
-        "[&_button]:inline-flex [&_button]:items-center",
-      ].join(" ")}
-    >
-      <AddRecordButton homeId={homeId} label="Add warranty" defaultType="warranty" />
-    </span>
-  );
+const IndigoAddWarranty = (  // or IndigoAddReminder
+  <span
+    className={[
+      "[&_button]:!bg-transparent [&_button:hover]:!bg-transparent",
+      "[&_button]:!border-0 [&_button]:!shadow-none [&_button:hover]:!shadow-none",
+      "[&_button]:!p-0 [&_button]:!rounded-none",
+      "[&_button]:!text-base",  // ← Control size here (text-sm, text-base, text-lg, etc.)
+      "[&_button]:!font-medium",
+      "[&_button]:!text-indigo-300 [&_button:hover]:!text-indigo-200",
+      "[&_button]:inline-flex [&_button]:items-center",
+    ].join(" ")}
+  >
+    <AddRecordButton homeId={homeId} label="Add warranty" defaultType="warranty" />
+  </span>
+);
 
   return (
     <div className="w-full max-w-full space-y-6 overflow-x-hidden">
