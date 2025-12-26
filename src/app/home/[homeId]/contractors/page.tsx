@@ -1,9 +1,11 @@
 // app/home/[homeId]/contractors/page.tsx
+
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
 import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -12,6 +14,8 @@ import { ContractorsListClient } from "./ContractorsListClient";
 import { ContractorActions } from "./ContractorActions";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+export const revalidate = 0;
 
 export default async function ContractorsPage({
   params,
@@ -139,6 +143,21 @@ export default async function ContractorsPage({
 
   return (
     <main className="relative min-h-screen text-white">
+      {/* Background (standard) */}
+      <div className="fixed inset-0 -z-50">
+        <Image
+          src="/myhomedox_home3.webp"
+          alt=""
+          fill
+          sizes="100vw"
+          className="object-cover object-center"
+          priority
+        />
+        <div className="absolute inset-0 bg-black/45" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,rgba(0,0,0,0.45))]" />
+      </div>
+
+      {/* Standard frame */}
       <div className="mx-auto max-w-7xl space-y-6 p-6">
         <Breadcrumb items={breadcrumbItems} />
 
@@ -148,8 +167,9 @@ export default async function ContractorsPage({
           title="Your Trusted Pros"
           meta={
             <span className={textMeta}>
-              {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"} •{" "}
-              {totalVerifiedServices} verified {totalVerifiedServices === 1 ? "job" : "jobs"} •{" "}
+              {totalContractors} {totalContractors === 1 ? "contractor" : "contractors"} • {totalVerifiedServices}{" "}
+              verified {totalVerifiedServices === 1 ? "job" : "jobs"} •{" "}
+              {totalSpentAmount > 0 ? `$${totalSpentAmount.toLocaleString()} spent` : "$0 spent"}
             </span>
           }
         />

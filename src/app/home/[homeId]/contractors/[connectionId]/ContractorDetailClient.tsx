@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ctaPrimary, ctaGhost, heading, textMeta } from "@/lib/glass";
 
@@ -67,12 +68,16 @@ type Tab = "requests" | "submissions";
    Styles (match your new standard)
    ========================= */
 
-const cardSurface = "rounded-2xl border border-white/12 bg-black/25 p-5";
+// give cards the same “list row” feel (subtle hover + blur)
+const cardSurface =
+  "rounded-2xl border border-white/12 bg-black/25 p-5 backdrop-blur " +
+  "transition hover:bg-black/30 hover:border-white/15";
+
 const insetSurface = "rounded-2xl border border-white/10 bg-black/20 p-4";
 
-const pillWrap = "inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm";
-const pillBase =
-  "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium";
+const pillWrap =
+  "inline-flex overflow-hidden rounded-full border border-white/20 bg-white/5 p-0.5 backdrop-blur-sm";
+const pillBase = "px-4 py-1.5 text-sm rounded-full transition flex items-center justify-center font-medium";
 const pillActive =
   "bg-white/10 text-white shadow-[0_0_0_2px_rgba(255,255,255,0.12),0_10px_26px_rgba(0,0,0,0.35)]";
 const pillInactive = "text-white/80 hover:text-white hover:bg-white/5";
@@ -119,8 +124,7 @@ export function ContractorDetailClient({
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("requests");
 
-  const displayName =
-    contractor.proProfile?.businessName || contractor.name || contractor.email;
+  const displayName = contractor.proProfile?.businessName || contractor.name || contractor.email;
 
   const meta = useMemo(() => {
     const connected = `Connected ${formatDate(connection.createdAt)}`;
@@ -142,7 +146,6 @@ export function ContractorDetailClient({
 
   return (
     <div className="space-y-6">
-      {/* Standard header */}
       <PageHeader
         title={displayName}
         meta={meta}
@@ -151,7 +154,7 @@ export function ContractorDetailClient({
         rightDesktop={desktopActions}
       />
 
-      {/* Mobile actions (since PageHeader only renders rightDesktop on sm+) */}
+      {/* Mobile actions (PageHeader rightDesktop is sm+) */}
       <div className="flex gap-2 sm:hidden">
         <Link href={messageHref} className={`${ctaGhost} flex-1`}>
           Message
@@ -161,7 +164,7 @@ export function ContractorDetailClient({
         </Link>
       </div>
 
-      {/* Details card (NOT a header) */}
+      {/* Details card */}
       <section className={cardSurface}>
         <div className="flex items-start gap-4">
           {contractor.image ? (
@@ -173,20 +176,16 @@ export function ContractorDetailClient({
               className="h-14 w-14 rounded-2xl border border-white/10 object-cover"
             />
           ) : (
-            <div className="h-14 w-14 rounded-2xl border border-white/10 bg-black/20 flex items-center justify-center text-white/80">
-              <span className={`text-lg font-semibold ${heading}`}>
-                {(displayName?.[0] ?? "C").toUpperCase()}
-              </span>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-white/80">
+              <span className={`text-lg font-semibold ${heading}`}>{(displayName?.[0] ?? "C").toUpperCase()}</span>
             </div>
           )}
 
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0">
-                <div className={`text-base font-semibold text-white ${heading} truncate`}>
-                  {displayName}
-                </div>
-                <div className={`mt-1 text-sm ${textMeta} truncate`}>
+                <div className={`truncate text-base font-semibold text-white ${heading}`}>{displayName}</div>
+                <div className={`mt-1 truncate text-sm ${textMeta}`}>
                   {contractor.proProfile?.company || contractor.name || "—"}
                 </div>
               </div>
@@ -206,8 +205,7 @@ export function ContractorDetailClient({
 
             <div className="mt-3 grid grid-cols-1 gap-2 text-sm text-white/75 sm:grid-cols-2">
               <div className="truncate">
-                <span className="text-white/55">Phone:</span>{" "}
-                {contractor.proProfile?.phone || "—"}
+                <span className="text-white/55">Phone:</span> {contractor.proProfile?.phone || "—"}
               </div>
               <div className="truncate">
                 <span className="text-white/55">Email:</span> {contractor.email}
@@ -217,7 +215,7 @@ export function ContractorDetailClient({
         </div>
       </section>
 
-      {/* Stats grid (separate section, standard) */}
+      {/* Stats grid */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Total Jobs" value={String(stats.totalJobs)} />
         <StatCard label="Verified Jobs" value={String(stats.verifiedJobs)} />
@@ -243,7 +241,6 @@ export function ContractorDetailClient({
         </button>
       </div>
 
-      {/* Content */}
       {activeTab === "requests" ? (
         <RequestsList homeId={homeId} serviceRequests={serviceRequests} />
       ) : (
@@ -267,7 +264,7 @@ function StatCard({
   tone?: "green";
 }) {
   return (
-    <div className="rounded-2xl border border-white/12 bg-black/25 p-4">
+    <div className="rounded-2xl border border-white/12 bg-black/25 p-4 backdrop-blur">
       <div className="text-xs text-white/55">{label}</div>
       <div className={`mt-2 text-2xl font-semibold ${tone === "green" ? "text-emerald-300" : "text-white"}`}>
         {value}
@@ -299,18 +296,18 @@ function RequestsList({
         <Link
           key={r.id}
           href={`/home/${homeId}/service-requests/${r.id}`}
-          className="block rounded-2xl border border-white/12 bg-black/25 p-5 hover:bg-black/30 transition"
+          className={cardSurface}
         >
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="text-base font-semibold text-white">{r.title}</div>
-              <div className="mt-1 text-sm text-white/70 line-clamp-2">{r.description}</div>
+              <div className="mt-1 line-clamp-2 text-sm text-white/70">{r.description}</div>
               <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/55">
                 <span>Status: {r.status}</span>
                 {r.category ? <span>• {r.category}</span> : null}
               </div>
             </div>
-            <div className="shrink-0 text-xs text-white/55 text-right">
+            <div className="shrink-0 text-right text-xs text-white/55">
               <div>Created</div>
               <div>{formatDate(r.createdAt)}</div>
             </div>
@@ -389,7 +386,7 @@ function PendingSubmissionsList({
             {s.description ? (
               <div className="mt-4">
                 <div className={insetSurface}>
-                  <p className="text-sm text-white/80 whitespace-pre-wrap">{s.description}</p>
+                  <p className="whitespace-pre-wrap text-sm text-white/80">{s.description}</p>
                 </div>
               </div>
             ) : null}
@@ -437,7 +434,7 @@ function PendingSubmissionsList({
                           href={`/api/home/${homeId}/attachments/${a.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-4"
+                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-4 transition hover:bg-black/25"
                         >
                           <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-white/10 bg-black/20">
                             <span className="text-lg">{a.mimeType?.includes("pdf") ? "📄" : "📎"}</span>
@@ -448,7 +445,8 @@ function PendingSubmissionsList({
                             <div className="text-xs text-white/60">{(a.size / 1024).toFixed(1)} KB</div>
                           </div>
 
-                          <span className={ctaGhost}>Open</span>
+                          {/* this should NOT use ctaGhost (it’s for buttons); keep it subtle */}
+                          <span className="text-xs text-white/60">Open</span>
                         </a>
                       ))}
                     </div>
@@ -458,7 +456,6 @@ function PendingSubmissionsList({
             ) : null}
 
             <div className="mt-5 flex flex-wrap gap-2">
-              {/* Use your standard orange primary */}
               <button type="button" onClick={() => handleApprove(s.id)} className={ctaPrimary}>
                 ✓ Approve &amp; add to records
               </button>

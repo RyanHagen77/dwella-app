@@ -3,14 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { heading } from "@/lib/glass";
-import {
-  Phone,
-  Mail,
-  SlidersHorizontal,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+import { heading, textMeta, indigoActionLink } from "@/lib/glass";
+import { Phone, Mail, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 
 function formatMoney(amount?: number | null) {
   if (amount == null) return "—";
@@ -20,6 +14,15 @@ function formatMoney(amount?: number | null) {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
+const iconBtn =
+  "inline-flex h-9 w-9 items-center justify-center rounded-xl " +
+  "border border-white/15 bg-black/20 text-white/80 " +
+  "transition hover:bg-black/25 hover:text-white";
+
+const iconBtnDisabled =
+  "inline-flex h-9 w-9 items-center justify-center rounded-xl " +
+  "border border-white/10 bg-black/15 text-white/30";
 
 export function ContractorHeaderDrawer({
   title,
@@ -52,11 +55,7 @@ export function ContractorHeaderDrawer({
     <div className="space-y-3">
       <header className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <Link
-            href={backHref}
-            aria-label={backLabel ?? "Back"}
-            className="mt-1 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl border border-white/15 bg-black/20 text-white/80"
-          >
+          <Link href={backHref} aria-label={backLabel ?? "Back"} className={iconBtn}>
             ←
           </Link>
 
@@ -66,33 +65,22 @@ export function ContractorHeaderDrawer({
         </div>
 
         <div className="flex flex-shrink-0 items-center gap-1">
-          {/* Call (enabled if phone exists, otherwise disabled) */}
           {hasPhone ? (
-            <a
-              href={`tel:${phone}`}
-              aria-label="Call contractor"
-              title="Call"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 hover:bg-white/5 hover:text-white"
-            >
+            <a href={`tel:${phone}`} aria-label="Call contractor" title="Call" className={iconBtn}>
               <Phone className="h-[18px] w-[18px]" />
             </a>
           ) : (
-            <span
-              aria-label="No phone number on file"
-              title="No phone number"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/30"
-            >
+            <span aria-label="No phone number on file" title="No phone number" className={iconBtnDisabled}>
               <Phone className="h-[18px] w-[18px]" />
             </span>
           )}
 
-          {/* Message */}
           <button
             type="button"
             onClick={() => router.push(messageHref)}
             aria-label="Message contractor"
             title="Message"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-white/85 hover:bg-white/5 hover:text-white"
+            className={iconBtn}
           >
             <Mail className="h-[18px] w-[18px]" />
           </button>
@@ -100,24 +88,29 @@ export function ContractorHeaderDrawer({
       </header>
 
       <div className="flex items-center justify-between gap-3">
-        <div className="text-sm font-medium text-[#33C17D]">
-          {spent} spent <span className="mx-2 text-white/35">•</span> {jobs} verified jobs
+        {/* keep this subtle + consistent with list meta */}
+        <div className={`text-sm ${textMeta}`}>
+          <span className="text-white/85">{spent}</span> spent <span className="mx-2 text-white/35">•</span>{" "}
+          <span className="text-white/85">{jobs}</span> verified jobs
         </div>
 
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="inline-flex items-center gap-2 text-sm text-white/70 hover:text-white"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
-          <span>Details</span>
-          {open ? (
-            <ChevronUp className="h-4 w-4 text-white/55" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-white/55" />
-          )}
-        </button>
+        {/* optional: make this match your indigo link standard */}
+        <span className={indigoActionLink}>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="inline-flex items-center gap-2"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span>Details</span>
+            {open ? (
+              <ChevronUp className="h-4 w-4 text-white/55" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-white/55" />
+            )}
+          </button>
+        </span>
       </div>
 
       <div

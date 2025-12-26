@@ -5,7 +5,7 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
-import { glass, heading, textMeta } from "@/lib/glass";
+import { glass, heading, textMeta, indigoActionLink } from "@/lib/glass";
 import { ContractorActions } from "./ContractorActions";
 
 type ContractorConnection = {
@@ -27,9 +27,7 @@ type ContractorConnection = {
 
 type Props = {
   homeId: string;
-  /** needed for Invite Pro modal */
   homeAddress: string;
-
   activeConnections: ContractorConnection[];
   archivedConnections: ContractorConnection[];
   stats: {
@@ -54,17 +52,14 @@ export function ContractorsListClient({
   const active = activeConnections ?? [];
   const archived = archivedConnections ?? [];
 
-  // collapsed by default only on mobile (PropertyStats pattern)
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // We’ll keep ContractorActions mounted but visually hidden, then “click” its trigger.
   const actionsHostRef = useRef<HTMLDivElement | null>(null);
 
   function openInviteModal() {
     const host = actionsHostRef.current;
     if (!host) return;
 
-    // Try common interactive triggers inside ContractorActions
     const trigger =
       (host.querySelector('button[type="button"]') as HTMLButtonElement | null) ??
       (host.querySelector("button") as HTMLButtonElement | null) ??
@@ -75,14 +70,12 @@ export function ContractorsListClient({
 
   return (
     <div className="w-full max-w-full space-y-6 overflow-x-hidden">
-      {/* Hidden actions (keeps your existing modal behavior) */}
       <div ref={actionsHostRef} className="sr-only">
         <ContractorActions homeId={homeId} homeAddress={homeAddress} />
       </div>
 
-      {/* ✅ Stats: collapsible on mobile, always visible on desktop */}
       <section aria-labelledby="contractor-stats" className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <button
             type="button"
             onClick={() => setIsExpanded((prev) => !prev)}
@@ -102,14 +95,12 @@ export function ContractorsListClient({
             </svg>
           </button>
 
-          {/* ✅ Inline indigo link (opens modal) */}
-          <button
-            type="button"
-            onClick={openInviteModal}
-            className="text-sm text-indigo-300 hover:text-indigo-200"
-          >
-            Invite Pro
-          </button>
+          {/* ✅ Indigo link-style trigger */}
+          <span className={indigoActionLink}>
+            <button type="button" onClick={openInviteModal}>
+              Invite Pro
+            </button>
+          </span>
         </div>
 
         <div className={`${isExpanded ? "grid" : "hidden"} grid-cols-2 gap-3 lg:grid lg:grid-cols-4 lg:gap-4`}>
@@ -123,15 +114,9 @@ export function ContractorsListClient({
         </div>
       </section>
 
-      {/* Lists */}
       {active.length > 0 ? (
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
-              Active ({active.length})
-            </div>
-          </div>
-
+          <div className="text-xs font-semibold uppercase tracking-wide text-white/55">Active ({active.length})</div>
           <div className="space-y-3">
             {active.map((conn) => (
               <ContractorCard key={conn.id} homeId={homeId} connection={conn} statusLabel="Active" />
@@ -145,7 +130,6 @@ export function ContractorsListClient({
           <div className="text-xs font-semibold uppercase tracking-wide text-white/55">
             Archived ({archived.length})
           </div>
-
           <div className="space-y-3">
             {archived.map((conn) => (
               <ContractorCard key={conn.id} homeId={homeId} connection={conn} statusLabel="Archived" dimmed />
@@ -174,11 +158,7 @@ function ContractorCard({
   const name = contractor?.businessName || contractor?.name || contractor?.email || "Contractor";
 
   const lastServiceDate = connection.lastServiceDate
-    ? new Date(connection.lastServiceDate).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
+    ? new Date(connection.lastServiceDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : null;
 
   const createdAtLabel = new Date(connection.createdAt).toLocaleDateString("en-US", {
@@ -198,7 +178,6 @@ function ContractorCard({
       ].join(" ")}
     >
       <div className="flex items-start gap-4">
-        {/* Avatar */}
         {contractor?.image ? (
           <Image
             src={contractor.image}
@@ -214,7 +193,6 @@ function ContractorCard({
         )}
 
         <div className="min-w-0 flex-1">
-          {/* Top row */}
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -236,20 +214,12 @@ function ContractorCard({
             </div>
 
             <div className="flex items-center text-white/35" aria-hidden>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                strokeWidth={1.5}
-                stroke="currentColor"
-                className="h-5 w-5"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="h-5 w-5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
               </svg>
             </div>
           </div>
 
-          {/* Meta row */}
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-white/60">
             <span>Connected {createdAtLabel}</span>
             {lastServiceDate ? <span>Last work: {lastServiceDate}</span> : null}

@@ -1,3 +1,4 @@
+// app/home/[homeId]/contractors/[connectionId]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authConfig } from "@/lib/auth";
@@ -5,7 +6,7 @@ import { requireHomeAccess } from "@/lib/authz";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 
-import { textMeta } from "@/lib/glass";
+import { textMeta, indigoActionLink } from "@/lib/glass";
 import Breadcrumb from "@/components/ui/Breadcrumb";
 import { ContractorDetailTabs } from "./_components/ContractorDetailTabs";
 import { DisconnectContractor } from "./DisconnectContractor";
@@ -286,8 +287,7 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
   const tab = searchParams.tab;
   const activeTab = tab === "pending" ? "submissions" : "requests";
 
-  const contractorLabel =
-    contractorData.businessName || contractorData.name || contractorData.email || "Contractor";
+  const contractorLabel = contractorData.businessName || contractorData.name || contractorData.email || "Contractor";
 
   const messageHref = `/home/${homeId}/messages/${connectionData.id}`;
 
@@ -316,18 +316,17 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
           ]}
         />
 
-        {/* Header: NO window wrapper */}
         <ContractorHeaderDrawer
           title={contractorLabel}
           backHref={`/home/${homeId}/contractors`}
           backLabel="Back to contractors"
           messageHref={messageHref}
-          phone={contractorData.phone}   // <-- this must be present
+          phone={contractorData.phone}
           spendAmount={totalSpent}
           verifiedJobs={verifiedServicesCount}
         >
           {/* Details content (hidden until opened) */}
-          <div className="rounded-2xl border border-white/12 bg-black/25 p-5">
+          <div className="rounded-2xl border border-white/12 bg-black/25 p-5 backdrop-blur transition hover:bg-black/30 hover:border-white/15">
             <div className="flex items-start gap-4">
               {contractorData.image ? (
                 <Image
@@ -338,7 +337,7 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
                   className="h-14 w-14 flex-shrink-0 rounded-2xl border border-white/10 object-cover"
                 />
               ) : (
-                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/10 text-xl font-bold text-white/85">
+                <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-xl font-bold text-white/85">
                   {(contractorLabel[0] || "C").toUpperCase()}
                 </div>
               )}
@@ -379,18 +378,14 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
                   </a>
 
                   {contractorData.website ? (
-                    <a
-                      href={contractorData.website}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-white/60 underline-offset-2 hover:text-white/90 hover:underline"
-                    >
-                      Website
-                    </a>
+                    <span className={indigoActionLink}>
+                      <a href={contractorData.website} target="_blank" rel="noopener noreferrer">
+                        Website
+                      </a>
+                    </span>
                   ) : null}
                 </div>
 
-                {/* Moved here so it doesn’t crowd the header */}
                 <p className={`mt-3 text-sm ${textMeta}`}>
                   Connected {formatDate(connectionData.createdAt)} • {activeRequestsCount} active request
                   {activeRequestsCount === 1 ? "" : "s"} • {pendingSubmissionsCount} pending submission
@@ -407,7 +402,6 @@ export default async function ContractorDetailPage({ params, searchParams }: Pag
           </div>
         </ContractorHeaderDrawer>
 
-        {/* Tabs + content */}
         <ContractorDetailTabs
           homeId={homeId}
           pendingService={pendingService}
