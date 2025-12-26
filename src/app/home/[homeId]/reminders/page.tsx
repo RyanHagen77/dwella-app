@@ -167,8 +167,6 @@ export default async function RemindersPage({
               {activeCount} active • {completedCount} completed
             </span>
           }
-          rightDesktop={IndigoAddReminder}
-          rightMobile={IndigoAddReminder}
         />
 
         {!hasAny ? (

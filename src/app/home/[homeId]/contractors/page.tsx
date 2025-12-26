@@ -174,16 +174,6 @@ export default async function ContractorsPage({
                 : "$0 spent"}
             </span>
           }
-          rightDesktop={
-            <span className="text-base">
-              <ContractorActions homeId={homeId} homeAddress={addrLine} />
-            </span>
-          }
-          rightMobile={
-            <span className="text-base">
-              <ContractorActions homeId={homeId} homeAddress={addrLine} />
-            </span>
-          }
         />
 
         {!hasAny ? (
