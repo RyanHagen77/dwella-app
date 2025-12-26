@@ -126,7 +126,7 @@ export default function ContractorRemindersClient({ initialReminders }: Props) {
           className={ctaPrimary + " inline-flex items-center justify-center px-4 py-2"}
           onClick={handleAddClick}
         >
-          + Add Reminder
+          + Add a reminder
         </button>
       </div>
 

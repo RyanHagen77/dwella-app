@@ -156,7 +156,7 @@ const IndigoAddWarranty = (  // or IndigoAddReminder
       "[&_button]:inline-flex [&_button]:items-center",
     ].join(" ")}
   >
-    <AddRecordButton homeId={homeId} label="+ Add warranty" defaultType="warranty" />
+    <AddRecordButton homeId={homeId} label="+ Add a warranty" defaultType="warranty" />
   </span>
 );
 
